@@ -8,17 +8,17 @@ const followModel = require('./models/followModel');
 
 
 config = {
-    host    : "localhost",
+    host    : "127.0.0.1",
     port    : "5432",
     dialect: 'postgres'
-
 }
 
 const DB_USER = process.env.DB_USER || "me";
-const DB_NAME = process.env.DB_NAME || "db";
+const DB_NAME = process.env.DB_NAME || "mydatabase";
 const DB_PASS = process.env.DB_PASS || "12345";
-
-const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, config);
+//postgres://me:lsPSfleqDzppRgD5W4KLRtknBz64VQEi@dpg-cmsecdacn0vc73bgrilg-a.oregon-postgres.render.com/db_lne3
+//dialect://username:password@host:port/database
+const sequelize = new Sequelize('postgresql://ahmedahmedhamedahmed0:aTz8debUZcJ1@ep-royal-breeze-a54m0erd.us-east-2.aws.neon.tech/db?sslmode=require');
 
 const User = userModel(sequelize, DataTypes);
 const Profile = profileModel(sequelize, DataTypes);
