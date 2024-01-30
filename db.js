@@ -6,7 +6,6 @@ const commentModel = require('./models/commentModel');
 const videoLikeModel = require('./models/videoLikeModel');
 const followModel = require('./models/followModel');
 
-
 config = {
     host    : "127.0.0.1",
     port    : "5432",
@@ -76,7 +75,20 @@ User.hasMany(Follow, {
     as: 'followers',
 });
 
-sequelize.sync({ alter: true });
+//handle the creation of user before the profile
+// await User.sync();
+// await Profile.sync();
+
+async function syncModels() {
+    await User.sync({alter: true});
+    await Profile.sync({alter: true});
+    await Video.sync({alter: true});
+    await Comment.sync({alter: true});
+    await VideoLike.sync({alter: true});
+    await Follow.sync({alter: true});
+}
+
+syncModels().catch(console.error);
 
 module.exports = {
     User,
