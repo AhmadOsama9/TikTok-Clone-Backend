@@ -40,9 +40,18 @@ async function handleFacebookCallback(req, res) {
  * /api/auth/facebook:
  *   get:
  *     summary: Start facebook OAuth flow
+ *     parameters:
+ *       - in: header
+ *         name: X-API-KEY
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: API key
  *     responses:
  *       302:
  *         description: Redirect to facebook's OAuth consent page
+ *       403:
+ *         description: Invalid API key
  */
 router.get(
   "/facebook", 
@@ -54,6 +63,13 @@ router.get(
  * /api/auth/facebook/callback:
  *   get:
  *     summary: Handle callback from facebook OAuth
+ *     parameters:
+ *       - in: header
+ *         name: X-API-KEY
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: API key
  *     responses:
  *       200:
  *         description: Authentication successful, returns a JWT
@@ -65,6 +81,8 @@ router.get(
  *                 token:
  *                   type: string
  *                   description: The JWT for the authenticated user
+ *       403:
+ *         description: Invalid API key
  *       500:
  *         description: An error occurred during authentication
  *         content:
@@ -81,7 +99,6 @@ router.get(
   passport.authenticate("facebook", { failureRedirect: "/login" }),
   handleFacebookCallback,
 )
-
 
 module.exports = router;
 
