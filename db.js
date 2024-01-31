@@ -75,19 +75,25 @@ User.hasMany(Follow, {
     as: 'followers',
 });
 
-//handle the creation of user before the profile
-// await User.sync();
-// await Profile.sync();
-
 async function syncModels() {
     await User.sync({alter: true});
-    await Profile.sync({alter: true});
     await Video.sync({alter: true});
+    await Profile.sync({alter: true});
     await Comment.sync({alter: true});
     await VideoLike.sync({alter: true});
     await Follow.sync({alter: true});
 }
 
+async function dropModels() {
+    await Comment.drop();
+    await VideoLike.drop();
+    await Follow.drop();
+    await Profile.drop();
+    await Video.drop();
+    await User.drop();
+}
+
+//dropModels().catch(console.error);
 syncModels().catch(console.error);
 
 module.exports = {
@@ -96,6 +102,7 @@ module.exports = {
     Video,
     Comment,
     VideoLike,
-    Follow
+    Follow,
+    sequelize
 }
 
