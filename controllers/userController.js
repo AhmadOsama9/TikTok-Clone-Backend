@@ -132,7 +132,7 @@ const login = async (req, res) => {
         }
 
         if (user.isBanned) {
-            return res.status(400).json({error: "You are banned"});
+            return res.status(403).json({error: "You are banned"});
         }
 
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
