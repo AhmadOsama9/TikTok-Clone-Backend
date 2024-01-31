@@ -7,6 +7,7 @@ const {
     login,
     forgotPassword,
     changePassword,
+    getAllUsersAndReturnEmails,
 } = require("../controllers/userController");
 
 /**
@@ -185,5 +186,31 @@ router.post("/forgot-password", forgotPassword);
  *         description: Server error
  */
 router.post("/change-password", changePassword);
+
+/**
+ * @swagger
+ * /api/user/get-all-emails:
+ *   get:
+ *     summary: Retrieve all user emails
+ *     description: Retrieve and return all user emails from the database.
+ *     responses:
+ *       200:
+ *         description: A list of user emails.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       email:
+ *                         type: string
+ *       500:
+ *         description: Server error
+ */
+router.get("/get-all-emails", getAllUsersAndReturnEmails);
 
 module.exports = router;
