@@ -81,14 +81,12 @@ router.post("/signup", signup);
  *         description: Server error
  */
 router.post("/verify-email-code", verifyEmailCode);
-
-
 /**
  * @swagger
  * /api/user/login:
  *   post:
  *     summary: Log in a user
- *     description: Log in a user and return a JWT token
+ *     description: Log in a user and return a JWT token. If the user is banned, a status of 403 is returned.
  *     requestBody:
  *       required: true
  *       content:
@@ -112,6 +110,8 @@ router.post("/verify-email-code", verifyEmailCode);
  *                   type: string
  *       400:
  *         description: Login failed
+ *       403:
+ *         description: User is banned
  *       500:
  *         description: Server error
  */

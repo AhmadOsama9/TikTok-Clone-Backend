@@ -131,6 +131,10 @@ const login = async (req, res) => {
             return res.status(400).json({ error: 'Invalid password' });
         }
 
+        if (user.isBanned) {
+            return res.status(400).json({error: "You are banned"});
+        }
+
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
 
         res.status(200).json({ token });
