@@ -11,7 +11,7 @@ const port = 3000;
 
 //routes
 const userRoutes = require("./routes/userRoutes");
-const googleRoutes = require("./routes/googleRoutes");
+const googleRoutes = require("./routes/facebookRoutes");
 
 app.use(express.json());
 
