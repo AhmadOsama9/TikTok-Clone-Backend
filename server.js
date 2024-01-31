@@ -17,8 +17,15 @@ app.use(express.json());
 
 app.use(bodyParser.json());
 
-const pathToExclude = ['/api/user/signup', '/api/user/login', '/api/user/forgot-password', '/api/user/verify-email-code', '/api/user/get-all-emails'];
+app.use((req, res, next) => {
+    const apiKey = req.get('X-API-KEY');
+    if (!apiKey || apiKey !== process.env.API_KEY) {
+        return res.status(403).json({ error: 'Invalid API key' });
+    }
+    next();
+});
 
+const pathToExclude = ['/api/user/signup', '/api/user/login', '/api/user/forgot-password', '/api/user/verify-email-code', '/api/user/get-all-emails'];
 
 // Middleware to validate JWT and populate req.user
 app.use((req, res, next) => {
@@ -36,13 +43,6 @@ app.use((err, req, res, next) => {
     }
 });
 
-app.use((req, res, next) => {
-    const apiKey = req.get('X-API-KEY');
-    if (!apiKey || apiKey !== process.env.API_KEY) {
-        return res.status(403).json({ error: 'Invalid API key' });
-    }
-    next();
-});
 
 app.use(
     bodyParser.urlencoded({
