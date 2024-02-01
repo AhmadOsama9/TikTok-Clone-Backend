@@ -1,5 +1,8 @@
 const User = require("../db").User;
 const Profile = require("../db").Profile;
+const Video = require("../db").Video;
+const VideoLike = require("../db").VideoLike;
+const Follow = require("../db").Follow;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
@@ -19,7 +22,7 @@ const signup = async (req, res) => {
 
         email = email.toLowerCase();
 
-        const emailRegex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+        const emailRegex = /^[\w-]+(\.[\w-]+)*@(gmail\.com|yahoo\.com|outlook\.com)$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({ error: 'Invalid email format' });
         }
@@ -29,9 +32,9 @@ const signup = async (req, res) => {
             return res.status(400).json({ error: 'User with this email already exists' });
         }
 
-        const existingNameUser = await User.findOne({ where: { name } });
-        if (existingNameUser) {
-            return res.status(400).json({ error: 'User with this name already exists' });
+        const existingPhoneUser = await User.findOne({ where: { phone } });
+        if (existingPhoneUser) {
+            return res.status(400).json({ error: 'User with this phone number already exists' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -82,7 +85,8 @@ const signup = async (req, res) => {
 
         res.status(200).json({ message: "Sent The Code to that email" });
     } catch (error) {
-        if (transaction) await transaction.rollback();
+        if (transaction) 
+            await transaction.rollback();
         res.status(500).json({ error: error.message });
     }
 };
@@ -96,6 +100,10 @@ const verifyEmailCode = async (req, res) => {
             return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
+        if (!user.otp) {
+            return res.status(400).json({ error: 'No verification code sent' });
+        }
+        
         if (code !== user.otp) {
             return res.status(400).json({ error: 'Invalid verification code' });
         }
@@ -111,10 +119,35 @@ const verifyEmailCode = async (req, res) => {
 
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
 
-        const trendingVideos = await Video.findAll({ where: { isTrending: true } });
-        const trendingVideosUrls = trendingVideos.map(video => video.url);
-        
-        res.status(200).json({ token, username: user.name, trendingVideosUrls});
+        const followers = await Follow.findAll({ where: { followingId: user.id } });
+        const following = await Follow.findAll({ where: { followerId: user.id } });
+
+        const videos = await Video.findAll({ where: { creatorId: user.id } });
+        let totalLikes = 0;
+        for (let video of videos) {
+            const likes = await VideoLike.count({ where: { videoId: video.id } });
+            totalLikes += likes;
+        }
+
+        const profile = await Profile.findOne({ where: { userId: user.id } });
+
+        res.status(200).json({
+            uid: user.id,
+            name: user.name,
+            email: user.email,
+            photoUrl: profile ? profile.photoUrl : null,
+            token: token,
+            phone: user.phone,
+            isBanned: user.isBanned,
+            followers: followers.length,
+            following: following.length,
+            isverified: user.isVerified,
+            referralCode: user.referralCode,
+            referrals: user.referrals,
+            totalLikes: totalLikes,
+            userName: user.userName,
+        });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -138,13 +171,41 @@ const login = async (req, res) => {
             return res.status(403).json({error: "You are banned"});
         }
 
+        if (!user.verifiedEmail) {
+            return res.status(400).json({error: "Your email is not verified"});
+        }
+
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
 
-        // Fetch trending videos from your database
-        const trendingVideos = await Video.findAll({ where: { isTrending: true } });
-        const trendingVideosUrls = trendingVideos.map(video => video.url);
+        const followers = await Follow.findAll({ where: { followingId: user.id } });
+        const following = await Follow.findAll({ where: { followerId: user.id } });
 
-        res.status(200).json({ token, username: user.name, trendingVideosUrls });
+        const videos = await Video.findAll({ where: { creatorId: user.id } });
+        let totalLikes = 0;
+        for (let video of videos) {
+            const likes = await VideoLike.count({ where: { videoId: video.id } });
+            totalLikes += likes;
+        }
+
+        const profile = await Profile.findOne({ where: { userId: user.id } });
+
+        res.status(200).json({
+            uid: user.id,
+            name: user.name,
+            email: user.email,
+            photoUrl: profile ? profile.photoUrl : null,
+            token: token,
+            phone: user.phone,
+            isBanned: user.isBanned,
+            followers: followers.length,
+            following: following.length,
+            isverified: user.isVerified,
+            referralCode: user.referralCode,
+            referrals: user.referrals,
+            totalLikes: totalLikes,
+            userName: user.userName,
+        });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

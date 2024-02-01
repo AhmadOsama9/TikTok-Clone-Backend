@@ -69,21 +69,21 @@ app.use((req, res, next) => {
     next();
 });
 
-function sanitizeInput(req, res, next) {
-    for (let key in req.body) {
-        if (req.body.hasOwnProperty(key) && typeof req.body[key] === 'string') {
-            req.body[key] = sanitizer.value(req.body[key], 'string');
-        }
-    }
-    for (let key in req.params) {
-        if (req.params.hasOwnProperty(key) && typeof req.params[key] === 'string') {
-            req.params[key] = sanitizer.value(req.params[key], 'string');
-        }
-    }
-    next();
-}
+// function sanitizeInput(req, res, next) {
+//     for (let key in req.body) {
+//         if (req.body.hasOwnProperty(key) && typeof req.body[key] === 'string') {
+//             req.body[key] = sanitizer.value(req.body[key], 'string');
+//         }
+//     }
+//     for (let key in req.params) {
+//         if (req.params.hasOwnProperty(key) && typeof req.params[key] === 'string') {
+//             req.params[key] = sanitizer.value(req.params[key], 'string');
+//         }
+//     }
+//     next();
+// }
 
-app.use(sanitizeInput);
+// app.use(sanitizeInput);
 
 const swaggerOptions = {
     definition: {

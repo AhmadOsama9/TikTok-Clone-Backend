@@ -55,12 +55,13 @@ const {
  *         description: Internal server error
  */
 router.post("/signup", signup);
+
 /**
  * @swagger
  * /api/user/verify-email-code:
  *   post:
  *     summary: Verify the email code for a user
- *     description: Verify the email code for a user and mark the user's email as verified. Returns a JWT token, username, and trending videos URLs. Requires API key in the X-API-KEY header.
+ *     description: Verify the email code for a user and mark the user's email as verified. Returns a JWT token, user data and profile data. Requires API key in the X-API-KEY header.
  *     parameters:
  *       - in: header
  *         name: X-API-KEY
@@ -89,12 +90,32 @@ router.post("/signup", signup);
  *               properties:
  *                 token:
  *                   type: string
- *                 username:
+ *                 uid:
  *                   type: string
- *                 trendingVideosUrls:
- *                   type: array
- *                   items:
- *                     type: string
+ *                 name:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 photoUrl:
+ *                   type: string
+ *                 phone:
+ *                   type: string
+ *                 isBanned:
+ *                   type: boolean
+ *                 followers:
+ *                   type: integer
+ *                 following:
+ *                   type: integer
+ *                 isverified:
+ *                   type: boolean
+ *                 referralCode:
+ *                   type: string
+ *                 referrals:
+ *                   type: integer
+ *                 totalLikes:
+ *                   type: integer
+ *                 userName:
+ *                   type: string
  *       400:
  *         description: Verification failed
  *       403:
@@ -109,7 +130,7 @@ router.post("/verify-email-code", verifyEmailCode);
  * /api/user/login:
  *   post:
  *     summary: Log in a user
- *     description: Log in a user and return a JWT token, username, and trending videos URLs. If the user is banned, a status of 403 is returned. Requires API key in the X-API-KEY header.
+ *     description: Log in a user and return a JWT token, user data and profile data. If the user is banned or email is not verified, a status of 403 or 400 is returned respectively. Requires API key in the X-API-KEY header.
  *     parameters:
  *       - in: header
  *         name: X-API-KEY
@@ -138,14 +159,34 @@ router.post("/verify-email-code", verifyEmailCode);
  *               properties:
  *                 token:
  *                   type: string
- *                 username:
+ *                 uid:
  *                   type: string
- *                 trendingVideosUrls:
- *                   type: array
- *                   items:
- *                     type: string
+ *                 name:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 photoUrl:
+ *                   type: string
+ *                 phone:
+ *                   type: string
+ *                 isBanned:
+ *                   type: boolean
+ *                 followers:
+ *                   type: integer
+ *                 following:
+ *                   type: integer
+ *                 isverified:
+ *                   type: boolean
+ *                 referralCode:
+ *                   type: string
+ *                 referrals:
+ *                   type: integer
+ *                 totalLikes:
+ *                   type: integer
+ *                 userName:
+ *                   type: string
  *       400:
- *         description: Login failed
+ *         description: Login failed or Email not verified
  *       403:
  *         description: User is banned or Invalid API key
  *       500:

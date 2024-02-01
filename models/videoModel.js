@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
     return sequelize.define('Video', {
-      userId: {
+      creatorId: {
         type: DataTypes.INTEGER,
         references: {
           model: 'Users',
