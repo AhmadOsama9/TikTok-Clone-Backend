@@ -4,6 +4,7 @@ require("dotenv").config();
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const bodyParser = require("body-parser");
+var sanitizer = require('sanitize')();
 const authenticateJWT = require('./authMiddleware');
 //I need to check the cors later on
 //even so it's not like a sercurity measure but whatever
@@ -11,6 +12,7 @@ const port = 3000;
 
 //routes
 const userRoutes = require("./routes/userRoutes");
+const profileRoutes = require("./routes/profileRoutes");
 const googleRoutes = require("./routes/facebookRoutes");
 
 app.use(express.json());
@@ -67,6 +69,22 @@ app.use((req, res, next) => {
     next();
 });
 
+function sanitizeInput(req, res, next) {
+    for (let key in req.body) {
+        if (req.body.hasOwnProperty(key) && typeof req.body[key] === 'string') {
+            req.body[key] = sanitizer.value(req.body[key], 'string');
+        }
+    }
+    for (let key in req.params) {
+        if (req.params.hasOwnProperty(key) && typeof req.params[key] === 'string') {
+            req.params[key] = sanitizer.value(req.params[key], 'string');
+        }
+    }
+    next();
+}
+
+app.use(sanitizeInput);
+
 const swaggerOptions = {
     definition: {
         openapi: "3.0.0",
@@ -91,7 +109,9 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
+//Routes
 app.use("/api/user/", userRoutes);
+app.use("/api/profile", profileRoutes);
 app.use("/api/auth/", googleRoutes);
 
 

@@ -8,10 +8,12 @@ module.exports = (sequelize, DataTypes) => {
         }
       },
       url: DataTypes.STRING,
+      thumbnailUrl: DataTypes.STRING,
       viewsCount: DataTypes.INTEGER,
       category: DataTypes.STRING,
       shareCount: DataTypes.INTEGER,
       smalldescription: DataTypes.STRING,
       rating: DataTypes.DOUBLE,
+      isTrending: DataTypes.BOOLEAN,
     });
 };

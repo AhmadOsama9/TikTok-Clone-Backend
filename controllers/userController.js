@@ -111,7 +111,10 @@ const verifyEmailCode = async (req, res) => {
 
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
 
-        res.status(200).json({ token });
+        const trendingVideos = await Video.findAll({ where: { isTrending: true } });
+        const trendingVideosUrls = trendingVideos.map(video => video.url);
+        
+        res.status(200).json({ token, username: user.name, trendingVideosUrls});
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -137,7 +140,11 @@ const login = async (req, res) => {
 
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
 
-        res.status(200).json({ token });
+        // Fetch trending videos from your database
+        const trendingVideos = await Video.findAll({ where: { isTrending: true } });
+        const trendingVideosUrls = trendingVideos.map(video => video.url);
+
+        res.status(200).json({ token, username: user.name, trendingVideosUrls });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
