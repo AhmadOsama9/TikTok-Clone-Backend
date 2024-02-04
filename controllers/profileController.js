@@ -24,7 +24,7 @@ const bcrypt = require("bcrypt")
 
         1-followersListIds (people that follow me):
             -return username and the profilePhotoUrl
-            
+
 
 
 */
@@ -154,7 +154,7 @@ const getOtherUserProfile = async (req, res) => {
         Parameters:
             - new photoUrl */
 
-const changeProfilePicture = async (req, res) => { 
+const changeProfilePhoto = async (req, res) => { 
     try {
         const { userId } = req.user;
         const { photoUrl } = req.body;
@@ -334,7 +334,6 @@ const verificationAndSetNewEmail = async (req, res) => {
         }
 
         user.email = newEmail;
-        user.verifiedEmail = true;
         user.verificationCode = null;
         user.verificationCodeExpiry = null;
         await user.save();
@@ -448,4 +447,12 @@ const changeProfileBio = async (req, res) => {
 module.exports = {
     getUserProfile,
     getOtherUserProfile,
+    changeProfilePhoto,
+    changeProfilePassword,
+    changeProfileName,
+    sendVerificationToNewEmail,
+    verificationAndSetNewEmail,
+    changeProfilePhone,
+    changeProfileUsername,
+    changeProfileBio
 }
