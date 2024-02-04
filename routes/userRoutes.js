@@ -6,7 +6,7 @@ const {
     verifyEmailCode,
     login,
     forgotPassword,
-    changePassword,
+    verifyOtpAndSetNewPassword,
     getAllUsersAndReturnEmails,
 } = require("../controllers/userController");
 /**
@@ -125,6 +125,8 @@ router.post("/signup", signup);
  */
 router.post("/verify-email-code", verifyEmailCode);
 
+
+
 /**
  * @swagger
  * /api/user/login:
@@ -198,8 +200,8 @@ router.post("/login", login);
  * @swagger
  * /api/user/forgot-password:
  *   post:
- *     summary: Generate a temporary password for a user
- *     description: Generate a temporary password for a user and send it to the user's email. Requires API key in the X-API-KEY header.
+ *     summary: Send OTP to the user's email
+ *     description: This endpoint sends an OTP to the user's email for password reset. Requires API key in the X-API-KEY header.
  *     parameters:
  *       - in: header
  *         name: X-API-KEY
@@ -217,23 +219,51 @@ router.post("/login", login);
  *               email:
  *                 type: string
  *     responses:
- *       200:
+ *        200:
  *         description: Temporary password has been sent to your email
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
  *       400:
  *         description: User with this email does not exist
- *       403:
- *         description: Invalid API key
  *       500:
  *         description: Server error
  */
 router.post("/forgot-password", forgotPassword);
+
+/**
+ * @swagger
+ * /api/user/verify-otp-and-set-new-password:
+ *   post:
+ *     summary: Verify OTP and set new password
+ *     description: This endpoint verifies the OTP and sets a new password for the user.
+ *     parameters:
+ *       - in: header
+ *         name: X-API-KEY
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               otp:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       '200':
+ *         description: Password has been changed successfully
+ *       '400':
+ *         description: User with this email does not exist / Invalid OTP / OTP expired
+ *       '500':
+ *         description: Server error
+ */
+router.post("/verify-otp-and-set-new-password", verifyOtpAndSetNewPassword);
+
 
 /**
  * @swagger
@@ -278,7 +308,7 @@ router.post("/forgot-password", forgotPassword);
  *       500:
  *         description: Server error
  */
-router.post("/change-password", changePassword);
+//router.post("/change-password", changePassword);
 
 /**
  * @swagger

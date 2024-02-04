@@ -13,7 +13,8 @@ const port = 3000;
 //routes
 const userRoutes = require("./routes/userRoutes");
 const profileRoutes = require("./routes/profileRoutes");
-const googleRoutes = require("./routes/facebookRoutes");
+const facebookRoutes = require("./routes/facebookRoutes");
+const transactionRoutes = require("./routes/transactionRoutes");
 
 app.use(express.json());
 
@@ -112,7 +113,8 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 //Routes
 app.use("/api/user/", userRoutes);
 app.use("/api/profile", profileRoutes);
-app.use("/api/auth/", googleRoutes);
+app.use("/api/auth/", facebookRoutes);
+app.use("/api/transaction/", transactionRoutes);
 
 
 app.get("/", (req, res) => {

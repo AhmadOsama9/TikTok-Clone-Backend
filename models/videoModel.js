@@ -15,5 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       smalldescription: DataTypes.STRING,
       rating: DataTypes.DOUBLE,
       isTrending: DataTypes.BOOLEAN,
+      videoSize: DataTypes.INTEGER,
+      videoName: DataTypes.STRING,
     });
 };

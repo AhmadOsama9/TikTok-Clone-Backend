@@ -5,18 +5,21 @@ const videoModel = require('./models/videoModel');
 const commentModel = require('./models/commentModel');
 const videoLikeModel = require('./models/videoLikeModel');
 const followModel = require('./models/followModel');
+const transactionModel = require('./models/transactionModel');
 
-config = {
-    host    : "127.0.0.1",
-    port    : "5432",
-    dialect: 'postgres'
-}
+// config = {
+//     host    : "127.0.0.1",
+//     port    : "5432",
+//     dialect: 'postgres'
+// }
 
-const DB_USER = process.env.DB_USER || "me";
-const DB_NAME = process.env.DB_NAME || "mydatabase";
-const DB_PASS = process.env.DB_PASS || "12345";
-//postgres://me:lsPSfleqDzppRgD5W4KLRtknBz64VQEi@dpg-cmsecdacn0vc73bgrilg-a.oregon-postgres.render.com/db_lne3
-//dialect://username:password@host:port/database
+// const DB_USER = process.env.DB_USER || "me";
+// const DB_NAME = process.env.DB_NAME || "mydatabase";
+// const DB_PASS = process.env.DB_PASS || "12345";
+// //postgres://me:lsPSfleqDzppRgD5W4KLRtknBz64VQEi@dpg-cmsecdacn0vc73bgrilg-a.oregon-postgres.render.com/db_lne3
+// //dialect://username:password@host:port/database
+
+
 const sequelize = new Sequelize('postgresql://ahmedahmedhamedahmed0:aTz8debUZcJ1@ep-royal-breeze-a54m0erd.us-east-2.aws.neon.tech/db?sslmode=require');
 
 const User = userModel(sequelize, DataTypes);
@@ -25,6 +28,7 @@ const Video = videoModel(sequelize, DataTypes);
 const Comment = commentModel(sequelize, DataTypes);
 const VideoLike = videoLikeModel(sequelize, DataTypes);
 const Follow = followModel(sequelize, DataTypes);
+const Transaction = transactionModel(sequelize, DataTypes);
 
 //Relations between tables
 
@@ -82,6 +86,7 @@ async function syncModels() {
     await Comment.sync({alter: true});
     await VideoLike.sync({alter: true});
     await Follow.sync({alter: true});
+    await Transaction.sync({alter: true});
 }
 
 async function dropModels() {
@@ -90,6 +95,7 @@ async function dropModels() {
     await Follow.drop();
     await Profile.drop();
     await Video.drop();
+    await Transaction.drop();
     await User.drop();
 }
 

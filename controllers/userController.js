@@ -4,6 +4,7 @@ const Video = require("../db").Video;
 const VideoLike = require("../db").VideoLike;
 const Follow = require("../db").Follow;
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const sequelize = require("../db").sequelize;
@@ -61,7 +62,7 @@ const signup = async (req, res) => {
         const mailOptions = {
             from: 'Story App <no-reply@storyapp.com>',//process.env.EMAIL_ADDRESS, can't use this because of gmail security
             to: email,
-            subject: 'Verification OTP',
+            subject: 'Verification Code',
             text: `Your Code for verification is: ${verificationCode}`,
             html: `
                 <h1>Welcome to Story App!</h1>
@@ -77,17 +78,17 @@ const signup = async (req, res) => {
             throw Error("Couldn't send the code to the email");
         }
 
-        user.otp = verificationCode;
-        user.otp_expiry = Date.now() + 600000;
+        user.verificationCode = verificationCode;
+        user.verificationCodeExpiry = Date.now() + 600000;
         await user.save({ transaction });
 
         await transaction.commit();
 
-        res.status(200).json({ message: "Sent The Code to that email" });
+        return res.status(200).json({ message: "Sent The Code to that email" });
     } catch (error) {
         if (transaction) 
             await transaction.rollback();
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 };
 
@@ -100,21 +101,21 @@ const verifyEmailCode = async (req, res) => {
             return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
-        if (!user.otp) {
+        if (!user.verificationCode) {
             return res.status(400).json({ error: 'No verification code sent' });
         }
-        
-        if (code !== user.otp) {
+
+        if (code !== user.verificationCode) {
             return res.status(400).json({ error: 'Invalid verification code' });
         }
 
-        if (user.otp_expiry < Date.now()) {
+        if (user.verificationCodeExpiry < Date.now()) {
             return res.status(400).json({ error: 'Verification code expired' });
         }
 
         user.verifiedEmail = true;
-        user.otp = null;
-        user.otp_expiry = null;
+        user.verificationCode = null;
+        user.verificationCodeExpiry = null;
         await user.save();
 
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
@@ -131,7 +132,7 @@ const verifyEmailCode = async (req, res) => {
 
         const profile = await Profile.findOne({ where: { userId: user.id } });
 
-        res.status(200).json({
+        return res.status(200).json({
             uid: user.id,
             name: user.name,
             email: user.email,
@@ -149,7 +150,7 @@ const verifyEmailCode = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 }
 
@@ -189,7 +190,7 @@ const login = async (req, res) => {
 
         const profile = await Profile.findOne({ where: { userId: user.id } });
 
-        res.status(200).json({
+        return res.status(200).json({
             uid: user.id,
             name: user.name,
             email: user.email,
@@ -207,10 +208,26 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 }
 
+
+
+/*
+8-  Profile Password
+        Description: This api is used to reset the profile password of the user.
+        An email verification will be sent to the email. The user must verify the email to complete the process. The system will redirect the user to change the password.
+        Parameters:
+            - email
+        A new request needed to get the OTP. If the OTP is correct, the user will be redirected to change the password.
+
+        1-send otp to the email
+        2-verify otp and set New password 
+*/
+
+
+//1-send otp to the email
 const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
@@ -225,8 +242,8 @@ const forgotPassword = async (req, res) => {
             charset: 'numeric',
         });
 
-        const hashedOtp = await bcrypt.hash(otp, 10);
-        user.password = hashedOtp;
+        user.otp = otp;
+        user.otpExpiry = Date.now() + 3600000; // 3600000 milliseconds = 1 hour
         await user.save();
 
         const transporter = nodemailer.createTransport({
@@ -246,46 +263,61 @@ const forgotPassword = async (req, res) => {
 
         await transporter.sendMail(mailOptions);
 
-        res.status(200).json({ message: 'Temporary password has been sent to your email' });
+        return res.status(200).json({ message: 'Temporary password has been sent to your email' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 }
 
-const changePassword = async (req, res) => {
+//2-verify otp and set New password
+const verifyOtpAndSetNewPassword = async (req, res) => {
     try {
-        const { newPassword } = req.body;
-        const { userId } = req.user;
+        const { email, otp, newPassword } = req.body;
 
-        const user = await User.findOne({ where: { id: userId } });
+        const user = await User.findOne({ where: { email } });
         if (!user) {
-            return res.status(400).json({ error: 'User does not exist' });
+            return res.status(400).json({ error: 'User with this email does not exist' });
+        }
+
+        if (user.otp !== otp) {
+            return res.status(400).json({ error: 'Invalid OTP' });
+        }
+
+        if (user.otpExpiry < Date.now()) {
+            return res.status(400).json({ error: 'OTP expired' });
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
+        user.otp = null;
+        user.otpExpiry = null;
         await user.save();
 
-        res.status(200).json({ message: 'Password has been changed successfully' });
+        return res.status(200).json({ message: 'Password has been changed successfully' });
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 }
+
+
 
 const getAllUsersAndReturnEmails = async (req, res) => {
     try {
         const users = await User.findAll({ attributes: ['email'] });
-        res.status(200).json({ users });
+        return res.status(200).json({ users });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 }
+
+
 
 module.exports = {
     signup,
     verifyEmailCode,
     login,
     forgotPassword,
-    changePassword,
+    verifyOtpAndSetNewPassword,
     getAllUsersAndReturnEmails,
 }
