@@ -5,10 +5,11 @@ const {
     signup,
     verifyEmailCode,
     login,
-    forgotPassword,
+    sendOtp,
     verifyOtpAndSetNewPassword,
     getAllUsersAndReturnEmails,
 } = require("../controllers/userController");
+
 /**
  * @swagger
  * /api/user/signup:
@@ -195,13 +196,13 @@ router.post("/verify-email-code", verifyEmailCode);
  *         description: Server error
  */
 router.post("/login", login);
-
 /**
  * @swagger
- * /api/user/forgot-password:
+ * /api/user/forgot-password/send-otp:
  *   post:
- *     summary: Send OTP to the user's email
- *     description: This endpoint sends an OTP to the user's email for password reset. Requires API key in the X-API-KEY header.
+ *     summary: Send OTP for password reset
+ *     description: |
+ *       This API is used to send OTP for password reset to the user's email. It requires X-API-KEY in the header.
  *     parameters:
  *       - in: header
  *         name: X-API-KEY
@@ -209,31 +210,36 @@ router.post("/login", login);
  *         schema:
  *           type: string
  *         description: API key
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
+ *       - in: body
+ *         name: body
+ *         required: true
+ *         description: Request body
+ *         schema:
+ *           type: object
+ *           properties:
+ *             email:
+ *               type: string
+ *               description: User's email
  *     responses:
- *        200:
- *         description: Temporary password has been sent to your email
+ *       200:
+ *         description: OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       400:
- *         description: User with this email does not exist
+ *         description: User with this email does not exist or Internal Server Error
  *       500:
- *         description: Server error
- */
-router.post("/forgot-password", forgotPassword);
+ *         description: Internal Server Error
 
-/**
- * @swagger
- * /api/user/verify-otp-and-set-new-password:
+ * /api/user/forgot-password/verify-otp-and-set-new-password:
  *   post:
  *     summary: Verify OTP and set new password
- *     description: This endpoint verifies the OTP and sets a new password for the user.
+ *     description: |
+ *       This API is used to verify OTP and set a new password for the user. It requires X-API-KEY in the header.
  *     parameters:
  *       - in: header
  *         name: X-API-KEY
@@ -241,28 +247,39 @@ router.post("/forgot-password", forgotPassword);
  *         schema:
  *           type: string
  *         description: API key
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *               otp:
- *                 type: string
- *               newPassword:
- *                 type: string
+ *       - in: body
+ *         name: body
+ *         required: true
+ *         description: Request body
+ *         schema:
+ *           type: object
+ *           properties:
+ *             email:
+ *               type: string
+ *               description: User's email
+ *             otp:
+ *               type: string
+ *               description: OTP sent to the email
+ *             newPassword:
+ *               type: string
+ *               description: User's new password
  *     responses:
- *       '200':
- *         description: Password has been changed successfully
- *       '400':
- *         description: User with this email does not exist / Invalid OTP / OTP expired
- *       '500':
- *         description: Server error
+ *       200:
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: User with this email does not exist, Invalid OTP, OTP expired, or Internal Server Error
+ *       500:
+ *         description: Internal Server Error
  */
-router.post("/verify-otp-and-set-new-password", verifyOtpAndSetNewPassword);
+router.post("/forgot-password/send-otp", sendOtp);
+router.post("/forgot-password/verify-otp-and-set-new-password", verifyOtpAndSetNewPassword);
 
 
 /**

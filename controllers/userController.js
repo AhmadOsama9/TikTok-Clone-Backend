@@ -228,7 +228,7 @@ const login = async (req, res) => {
 
 
 //1-send otp to the email
-const forgotPassword = async (req, res) => {
+const sendOtp = async (req, res) => {
     try {
         const { email } = req.body;
 
@@ -317,7 +317,7 @@ module.exports = {
     signup,
     verifyEmailCode,
     login,
-    forgotPassword,
+    sendOtp,
     verifyOtpAndSetNewPassword,
     getAllUsersAndReturnEmails,
 }
