@@ -56,8 +56,6 @@ async function deleteUnUsedFiles() {
 listFiles();
 
 
-
-
 /*
 10- Get Profile Data (me)
         Description: This api is used to get the profile data of the user.
