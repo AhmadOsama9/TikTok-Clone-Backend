@@ -21,6 +21,42 @@ const storage = require("../config/cloudStorage");
 
 const bucketName = "kn_story_app";
 
+async function listFiles() {
+    const [files] = await storage.bucket(bucketName).getFiles();
+
+    console.log('Files:');
+    files.forEach(file => {
+        console.log(file.name);
+    });
+}
+
+const { Op } = require('sequelize');
+
+async function deleteUnUsedFiles() {
+    const [files] = await storage.bucket(bucketName).getFiles();
+
+    console.log('Files:');
+    for (const file of files) {
+        console.log(file.name);
+
+        // Check if there's a profile with the same imageFileName
+        const profile = await Profile.findOne({ where: { imageFileName: file.name } });
+
+        // If not, delete the file from the bucket
+        if (!profile) {
+            console.log(`Deleting file ${file.name}...`);
+            await file.delete();
+            console.log(`File ${file.name} deleted.`);
+        }
+    }
+}
+
+// deleteUnUsedFiles().catch(console.error);
+
+listFiles();
+
+
+
 
 /*
 10- Get Profile Data (me)
@@ -245,6 +281,16 @@ const changeProfileImage = async (req, res) => {
 
         stream.on("finish", async () => { 
             console.log("imageFileName: ", fileName);
+            
+            if (profile.imageFileName) { 
+
+                const oldFile = bucket.file(profile.imageFileName);
+                oldFile.delete().then(() => { 
+                    console.log("Old image deleted from cloud storage");
+                }).catch(err => {
+                    console.log("Failed to delete old image from cloud storage", err);
+                });
+            }
         
             profile.imageFileName = fileName;
             try {
@@ -309,6 +355,7 @@ const getProfileImage = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 }
+
 
 const getOtherUserProfileImage = async (req, res) => {
     try {

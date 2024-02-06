@@ -88,6 +88,7 @@ const signup = async (req, res) => {
     } catch (error) {
         if (transaction) 
             await transaction.rollback();
+        console.log("error", error);
         return res.status(500).json({ error: error.message });
     }
 };
