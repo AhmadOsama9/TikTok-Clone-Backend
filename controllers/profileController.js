@@ -1,12 +1,26 @@
-const User = require("../db").User;
-const Profile = require("../db").Profile;
-const Follow = require("../db").Follow;
-const Video = require("../db").Video;
-const VideoLike = require("../db").VideoLike;
-const Comment = require("../db").Comment;
+const User = require("../config/db").User;
+const Profile = require("../config/db").Profile;
+const Follow = require("../config/db").Follow;
+const Video = require("../config/db").Video;
+const VideoLike = require("../config/db").VideoLike;
+const Comment = require("../config/db").Comment;
 const nodemailer = require("nodemailer");
 const randomstring = require('randomstring');
 const bcrypt = require("bcrypt")
+
+const nsfwjs = require("nsfwjs");
+const fetch = require("node-fetch");
+const fs = require("fs");
+const tf = require("@tensorflow/tfjs-node");
+const mmmagic = require("mmmagic");
+const Magic = mmmagic.Magic;
+const multer = require("multer");
+const sharp = require("sharp");
+
+const storage = require("../config/cloudStorage");
+
+const bucketName = "kn_story_app";
+
 
 /*
 10- Get Profile Data (me)
@@ -153,28 +167,173 @@ const getOtherUserProfile = async (req, res) => {
         Description: This api is used to change the profile picture of the user (no need to send the old picture or the password, He's already logged in).
         Parameters:
             - new photoUrl */
-
-const changeProfilePhoto = async (req, res) => { 
+//They said it's the best practice to not let other users
+//play with the profile picture of other users or the bucket in general
+const changeProfileImage = async (req, res) => { 
     try {
         const { userId } = req.user;
-        const { photoUrl } = req.body;
+        const { image } = req.body;
 
-        const user = await User.findONe({ where: { id: userId } });
+        const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
         const profile = await Profile.findOne({ where: { userId } });
-        //Here I should connect to the cloud storage and store it
-        //then I take the url and set it here
-        profile.photoUrl = photoUrl;
-        await profile.save();
+        if (!profile) {
+            return res.status(404).json({ error: "Profile not found" });
+        }
 
-        res.status(200).json({ message: "Profile picture changed successfully" });
+        if (!req.file.buffer || typeof req.file.buffer !== 'object' || !(req.file.buffer.buffer instanceof Buffer)) {
+            return res.status(400).json({ error: "Invalid file upload" });
+        }
+
+        const imageBuffer = await sharp(req.file.buffer)
+            .resize(500, 500) // Resize to 500x500 pixels
+            .toBuffer();
+
+        const FileType = (await import('file-type')).default;
+        const fileType = await FileType.fromBuffer(imageBuffer);
+        if (!fileType || (fileType.ext !== "png" && fileType.ext !== "jpg" && fileType.ext !== "jpeg")) {
+            return res.status(400).json({ error: "Invalid image format" });
+        }
+
+        const model = await nsfwjs.load();
+        const predictions = await model.classify(imageBuffer);
+
+        const pornThreshold = 0.7;
+        const sexyThreshold = 0.7;
+        const hentaiThreshold = 0.7;
+
+        const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
+        const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
+        const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability;
+
+        if (pornProbability > pornThreshold || sexyProbability > sexyThreshold || hentaiProbability > hentaiThreshold) {
+            return res.status(400).json({ error: "Inappropriate content" });
+        }
+
+        const bucket = storage.bucket(bucketName);
+        const fileName = `profileImages/${userId}/${Date.now()}.${fileType.ext}`;
+        const file = bucket.file(fileName);
+
+        const stream = file.createWriteStream({ 
+            metadata: {
+                contentType: `image/${fileType.ext}`
+            }
+        });
+
+        stream.on("error", (error) => { 
+            console.log("error: ", error);
+            res.status(500).json({ error: error.message });
+        });
+
+        stream.on("finish", async () => { 
+            console.log("imageFileName: ", fileName);
+        
+            profile.imageFileName = fileName;
+            try {
+                await profile.save();
+                res.status(200).json({ message: "Profile picture changed successfully" });
+            } catch (error) {
+                console.log("Failed to update profile, deleting image from cloud storage...");
+                file.delete().then(() => {
+                    console.log("Image deleted from cloud storage");
+                }).catch(err => {
+                    console.log("Failed to delete image from cloud storage", err);
+                });
+                res.status(500).json({ error: "Failed to update profile picture" });
+            }
+        });
+
+        stream.end(imageBuffer);
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}   
+}
+
+const getProfileImage = async (req, res) => {
+    try {
+
+        const { userId } = req.user;
+
+        const user = await User.findOne({ where: { id: userId } });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const profile = await Profile.findOne({ where: { userId } });
+        if (!profile) {
+            return res.status(404).json({ error: "Profile not found" });
+        }
+
+        if (!profile.imageFileName) {
+            return res.status(404).json({ error: "Profile Image not found" });
+        }
+
+        const bucket = storage.bucket(bucketName);
+        const file = bucket.file(profile.imageFileName);
+
+        const options = {
+            version: "v4",
+            action: "read",
+            expires: Date.now() + 15 * 60 * 1000 // 15 minutes
+        };
+
+        const [url] = file.getSignedUrl(options);
+
+        return res.status(200).json({ imageUrl: url });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const getOtherUserProfileImage = async (req, res) => {
+    try {
+
+        const { userId } = req.user;
+        const { otherUserId  } = req.params;
+
+        const user = await User.findOne({ where: { id: userId } });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const otherUser =  await User.findOne({ where: { id: otherUserId } });
+        if (!otherUser) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const otherUserProfile = await Profile.findOne({ where: { userId: otherUserId } });
+        if (!otherUserProfile) {
+            return res.status(404).json({ error: "Profile not found" });
+        }
+
+        if (!otherUserProfile.imageFileName) { 
+            return res.status(404).json({ error: "Profile Image not found" });
+        }
+
+        const bucket = storage.bucket(bucketName);
+        const file = bucket.file(otherUserProfile.imageFileName);
+
+        const options = {
+            version: "v4",
+            action: "read",
+            expires: Date.now() + 15 * 60 * 1000 // 15 minutes
+        };
+
+        const [url] = file.getSignedUrl(options);
+
+        return res.status(200).json({ otherUserImageUrl: url });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+
 
 /*
 2- Change Profile Password
@@ -447,12 +606,14 @@ const changeProfileBio = async (req, res) => {
 module.exports = {
     getUserProfile,
     getOtherUserProfile,
-    changeProfilePhoto,
+    changeProfileImage,
     changeProfilePassword,
     changeProfileName,
     sendVerificationToNewEmail,
     verificationAndSetNewEmail,
     changeProfilePhone,
     changeProfileUsername,
-    changeProfileBio
+    changeProfileBio,
+    getProfileImage,
+    getOtherUserProfileImage,
 }

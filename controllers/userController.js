@@ -1,13 +1,13 @@
-const User = require("../db").User;
-const Profile = require("../db").Profile;
-const Video = require("../db").Video;
-const VideoLike = require("../db").VideoLike;
-const Follow = require("../db").Follow;
+const User = require("../config/db").User;
+const Profile = require("../config/db").Profile;
+const Video = require("../config/db").Video;
+const VideoLike = require("../config/db").VideoLike;
+const Follow = require("../config/db").Follow;
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
-const sequelize = require("../db").sequelize;
+const sequelize = require("../config/db").sequelize;
 const randomstring = require('randomstring')
 
 

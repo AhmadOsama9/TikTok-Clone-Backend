@@ -1,11 +1,11 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const userModel = require('./models/userModel');
-const profileModel = require('./models/profileModel');
-const videoModel = require('./models/videoModel');
-const commentModel = require('./models/commentModel');
-const videoLikeModel = require('./models/videoLikeModel');
-const followModel = require('./models/followModel');
-const transactionModel = require('./models/transactionModel');
+const userModel = require('../models/userModel');
+const profileModel = require('../models/profileModel');
+const videoModel = require('../models/videoModel');
+const commentModel = require('../models/commentModel');
+const videoLikeModel = require('../models/videoLikeModel');
+const followModel = require('../models/followModel');
+const transactionModel = require('../models/transactionModel');
 
 // config = {
 //     host    : "127.0.0.1",
@@ -100,7 +100,7 @@ async function dropModels() {
 }
 
 //dropModels().catch(console.error);
-syncModels().catch(console.error);
+//syncModels().catch(console.error);
 
 module.exports = {
     User,

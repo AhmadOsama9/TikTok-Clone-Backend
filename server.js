@@ -5,7 +5,7 @@ const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const bodyParser = require("body-parser");
 var sanitizer = require('sanitize')();
-const authenticateJWT = require('./authMiddleware');
+const authenticateJWT = require('./middlewares/authMiddleware');
 //I need to check the cors later on
 //even so it's not like a sercurity measure but whatever
 const port = 3000;
@@ -34,6 +34,8 @@ app.use((req, res, next) => {
     } else {
         const apiKey = req.get('X-API-KEY');
         if (!apiKey || apiKey !== process.env.API_KEY) {
+            console.log("API Key from request:", apiKey);
+            console.log("API Key from environment:", process.env.API_KEY);
             return res.status(403).json({ error: 'Invalid API key' });
         }
         next();
@@ -112,7 +114,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 //Routes
 app.use("/api/user/", userRoutes);
-app.use("/api/profile", profileRoutes);
+app.use("/api/profile/", profileRoutes);
 app.use("/api/auth/", facebookRoutes);
 app.use("/api/transaction/", transactionRoutes);
 

@@ -24,8 +24,6 @@ module.exports = (sequelize, DataTypes) => {
       otpExpiry: DataTypes.DATE,
       verificationCode: DataTypes.STRING,
       verificationCodeExpiry: DataTypes.DATE,
-      passwordResetCode: DataTypes.STRING,
-      passwordResetCodeExpiry: DataTypes.DATE,
       verifiedEmail: DataTypes.BOOLEAN,
       facebookId: DataTypes.STRING,
       facebookLoggedIn: DataTypes.BOOLEAN,

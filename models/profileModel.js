@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         }
       },
-      photoUrl: DataTypes.STRING,
+      imageFileName: DataTypes.STRING,
       bio: DataTypes.STRING,
     });
 };

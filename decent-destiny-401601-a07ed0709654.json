@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "decent-destiny-401601",
+  "private_key_id": "a07ed0709654135de7321cc1288cd828b1fb4129",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC81KrAVI/IM5Ah\natN89K+0+mEmTDpyp8MoWKIAYYLjZ5/DECd0ucARj5O7Ik4cmV3+P9+0YaC7odoB\nUw7t+foLPL6LSvIpQtGRW7QL3HuQ0AMA5kwaVjrhhC+jveCKCpQ+EzHWiEn3k28k\nfgoTYXjLp0DNJXVCzUs+2N2kv2VqRQFua2l5zZhfxihBq7pwFgOUQY9N9Uh7LDIz\nd9N5DmL64Jpr+I0QXFmkiKxy/adodMRqd9O1IVEhCLD9ZsJyH7KsSqeEhus6VR6H\nT8q+NcgqgLf55qf1F9Q4R9dlFCavabhhI5vxUdPtuZnrv8kVFLbTFUYGmuHX7YWz\nFatKa2FZAgMBAAECgf9XsYh+dBxR+dkuj1FvYRaqSvJhSJOjVkW9k2vhpPWV+6Y2\nRfTweVMrRmX/13zg564UZVybE2Z1hAosIYMGVxEdtRgd0SIzXJu9yUp+4lfVk29f\n3yIjUeh4KECiPDa1q/ssZxL3AFQ9F5CGDK1L4RTi1JDR0T4yALNi7jeO9cWxk8bq\nvYn7AjWv2BCfxFDN3mme6sf1BiKf7FlUt5pKLJp0c5sh3efHsRNM9ESgrkhPK++o\nMlD5D8Hw2s7mknVkLVljZH9Z9SJDwt+J0rcpSvX8qOLfPzP97fXLalTJnsPvPlBf\nQcP2oQ3yB2y7Nh5OGWf23MrTIgcGWzJtflcV+5kCgYEA5TtW+4i6uJUitlNtA4jr\np1JH11O9fEFZBnm9Dn8RY6XH1PRd+vo/1B9zQYzRV2ZgMT7CaaZ9Zu+UWmMZm1Ei\n/p20+oEpw75ndzEFDDIs6RTFL/lIalQUc4VEejACdbfjSHaT8VdoVpXOGKLzSS16\n+gJ0Qa+3LWOAYxpz9yd1gucCgYEA0uGTr9vMH9lbPyiBmHwP0K0rGKq6OwnZNXdQ\ncfDmBSfCgmpiQ+S8agW83a8EEoqsNf33BuGQoyFNZuuLx/w1fId8FSkkmlM9/Brk\nwTZdTbwcs5j5eSrGtf0XML92LtC/UpkutlQoX9/f8Q2Hrezfvh0XA5PSFEtn31pf\n7jk7sb8CgYEAtTGZiMvEJEEmJg59ngytkR3V0ZvMrJoO37J8wSepvCV/dpIOc2M5\n7tdJSGgh1T8EDAj6rX4/o4z+rA+nXwDcc3x/YH+WXrZznGBwB/rlSvvy/f/CwOFj\nJQkTXq3yU9Cd5FpuiJc5zy8ssIalXZOIoHQuJvnZBhSfmDaBsbxMA8MCgYEAvrgC\ngI6RitBiJLm2kzjIeNrUWie168UZa7Bv0cyjy0/NK3OZUXviJyTvTbKGRVqjKuV3\n7wI7dD2fKhCnR4PCv9AsmVqvXt8f9QxBjLhlI/OYJZmZLktQkbDGs3DFKsvh7Irb\nY0yzgxoPB4xMBDFxnRfkA3lCCtazp52tmt6qLTMCgYEAzHRkBX8DlW9TgkticSr6\nVfb+y2+aFFIBI5rYA6C0DSIZxU2N0jNwjYcZbIHUoHVPjsEdMdYzq/d69KC8LWmg\n2oB+T4K0v/F++89HSafjH2RnlQCqMJSLCCtWJz/00b1gY+btbGiDxSsc2Y1i1faT\nEQVC65sWS1oLGiLltzxbb3k=\n-----END PRIVATE KEY-----\n",
+  "client_email": "kn-store-bucket-account@decent-destiny-401601.iam.gserviceaccount.com",
+  "client_id": "115920357438806065518",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/kn-store-bucket-account%40decent-destiny-401601.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

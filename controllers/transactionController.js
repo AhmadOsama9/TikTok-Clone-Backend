@@ -1,5 +1,5 @@
-const User = require("../db").User;
-const Transaction = require("../db").Transaction;
+const User = require("../config/db").User;
+const Transaction = require("../config/db").Transaction;
 const { Op } = require('sequelize');
 
 
