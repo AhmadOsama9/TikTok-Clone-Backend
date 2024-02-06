@@ -218,7 +218,10 @@ const changeProfileImage = async (req, res) => {
         const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability;
 
         if (pornProbability > pornThreshold || sexyProbability > sexyThreshold || hentaiProbability > hentaiThreshold) {
-            return res.status(400).json({ error: "Inappropriate content" });
+            return res.status(400).
+            json({ error: "Inappropriate content",
+            message: "pornProability is " + pornProbability + " sexyProbability is " + sexyProbability + " hentaiProbability is " + hentaiProbability + " and the threshold is " + pornThreshold + " " + sexyThreshold + " " + hentaiThreshold + " respectively."
+            });
         } else {
             console.log("PornProbability: ", pornProbability);
             console.log("SexyProbability: ", sexyProbability);
@@ -246,7 +249,11 @@ const changeProfileImage = async (req, res) => {
             profile.imageFileName = fileName;
             try {
                 await profile.save();
-                res.status(200).json({ message: "Profile picture changed successfully" });
+                res.status(200).
+                json({ 
+                    message1: "Profile picture changed successfully", 
+                    message2: "pornProability is " + pornProbability + " sexyProbability is " + sexyProbability + " hentaiProbability is " + hentaiProbability + " and the threshold is " + pornThreshold + " " + sexyThreshold + " " + hentaiThreshold + " respectively.",
+                });
             } catch (error) {
                 console.log("Failed to update profile, deleting image from cloud storage...");
                 file.delete().then(() => {
@@ -309,9 +316,8 @@ const getOtherUserProfileImage = async (req, res) => {
         const { userId } = req.user;
         const { otherUserId  } = req.params;
 
-        const user = await User.findOne({ where: { id: userId } });
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
+        if (!userId) {
+            return res.status(400).json({ error: "User not found" });
         }
 
         const otherUser =  await User.findOne({ where: { id: otherUserId } });
@@ -337,7 +343,7 @@ const getOtherUserProfileImage = async (req, res) => {
             expires: Date.now() + 15 * 60 * 1000 // 15 minutes
         };
 
-        const [url] = file.getSignedUrl(options);
+        const [url] = await file.getSignedUrl(options);
 
         return res.status(200).json({ otherUserImageUrl: url });
 
