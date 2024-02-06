@@ -172,7 +172,14 @@ const getOtherUserProfile = async (req, res) => {
 const changeProfileImage = async (req, res) => { 
     try {
         const { userId } = req.user;
-        const { image } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({ error: "Please provide an image" });
+        }
+
+        if (!req.file.buffer || !(req.file.buffer instanceof Buffer)) {
+            return res.status(400).json({ error: "Invalid file upload" });
+        }
 
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
@@ -184,22 +191,23 @@ const changeProfileImage = async (req, res) => {
             return res.status(404).json({ error: "Profile not found" });
         }
 
-        if (!req.file.buffer || typeof req.file.buffer !== 'object' || !(req.file.buffer.buffer instanceof Buffer)) {
-            return res.status(400).json({ error: "Invalid file upload" });
-        }
+        
 
         const imageBuffer = await sharp(req.file.buffer)
             .resize(500, 500) // Resize to 500x500 pixels
             .toBuffer();
 
-        const FileType = (await import('file-type')).default;
-        const fileType = await FileType.fromBuffer(imageBuffer);
+        const { fileTypeFromBuffer } = await import('file-type');
+        const fileType = await fileTypeFromBuffer(imageBuffer);
         if (!fileType || (fileType.ext !== "png" && fileType.ext !== "jpg" && fileType.ext !== "jpeg")) {
             return res.status(400).json({ error: "Invalid image format" });
         }
 
+        const imageTensor = tf.node.decodeImage(imageBuffer);
+
+
         const model = await nsfwjs.load();
-        const predictions = await model.classify(imageBuffer);
+        const predictions = await model.classify(imageTensor);
 
         const pornThreshold = 0.7;
         const sexyThreshold = 0.7;
@@ -211,6 +219,10 @@ const changeProfileImage = async (req, res) => {
 
         if (pornProbability > pornThreshold || sexyProbability > sexyThreshold || hentaiProbability > hentaiThreshold) {
             return res.status(400).json({ error: "Inappropriate content" });
+        } else {
+            console.log("PornProbability: ", pornProbability);
+            console.log("SexyProbability: ", sexyProbability);
+            console.log("HentaiProbability: ", hentaiProbability);
         }
 
         const bucket = storage.bucket(bucketName);
@@ -249,6 +261,7 @@ const changeProfileImage = async (req, res) => {
         stream.end(imageBuffer);
 
     } catch (error) {
+        console.log("error", error);
         res.status(500).json({ error: error.message });
     }
 }
@@ -281,7 +294,7 @@ const getProfileImage = async (req, res) => {
             expires: Date.now() + 15 * 60 * 1000 // 15 minutes
         };
 
-        const [url] = file.getSignedUrl(options);
+        const [url] = await file.getSignedUrl(options);
 
         return res.status(200).json({ imageUrl: url });
 
