@@ -204,11 +204,7 @@ router.get("/profile/:userId", getOtherUserProfile);
  *       500:
  *         description: Internal Server Error
  */
-router.post("/change-profile-image", upload.single("image"), (req, res, next) => {
-    console.log(req.file);
-    console.log(req.body);
-    next();
-  }, changeProfileImage);
+router.post("/change-profile-image", upload.single("image"), changeProfileImage);
 
 
 /**

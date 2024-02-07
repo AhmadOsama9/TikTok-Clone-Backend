@@ -6,9 +6,10 @@ const {
     addBalance, 
     sendGift 
 } = require("../controllers/transactionController");
+
 /**
  * @swagger
- * /api/user/get-balance-and-transactions:
+ * /api/transaction/get-balance-and-transactions:
  *   get:
  *     summary: Get user balance and transactions
  *     description: |
@@ -79,7 +80,7 @@ router.get("/get-balance-and-transactions", getBalanceAndTransactions);
 
 /**
  * @swagger
- * /api/user/add-balance:
+ * /api/transaction/add-balance:
  *   post:
  *     summary: Add balance to the user
  *     description: |
@@ -133,7 +134,7 @@ router.post("/add-balance", addBalance);
 
 /**
  * @swagger
- * /api/user/send-gift:
+ * /api/transaction/send-gift:
  *   post:
  *     summary: Send a gift to another user
  *     description: |

@@ -224,11 +224,6 @@ const changeProfileImage = async (req, res) => {
             return res.status(404).json({ error: "Profile not found" });
         }
 
-        
-
-        // const imageBuffer = await sharp(req.file.buffer)
-        //     .resize(500, 500) // Resize to 500x500 pixels
-        //     .toBuffer();
 
         const { fileTypeFromBuffer } = await import('file-type');
         const fileType = await fileTypeFromBuffer(imageBuffer);
