@@ -15,7 +15,6 @@ const tf = require("@tensorflow/tfjs-node");
 const mmmagic = require("mmmagic");
 const Magic = mmmagic.Magic;
 const multer = require("multer");
-const sharp = require("sharp");
 
 const storage = require("../config/cloudStorage");
 
@@ -227,9 +226,9 @@ const changeProfileImage = async (req, res) => {
 
         
 
-        const imageBuffer = await sharp(req.file.buffer)
-            .resize(500, 500) // Resize to 500x500 pixels
-            .toBuffer();
+        // const imageBuffer = await sharp(req.file.buffer)
+        //     .resize(500, 500) // Resize to 500x500 pixels
+        //     .toBuffer();
 
         const { fileTypeFromBuffer } = await import('file-type');
         const fileType = await fileTypeFromBuffer(imageBuffer);
