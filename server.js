@@ -34,8 +34,6 @@ app.use((req, res, next) => {
     } else {
         const apiKey = req.get('X-API-KEY');
         if (!apiKey || apiKey !== process.env.API_KEY) {
-            console.log("API Key from request:", apiKey);
-            console.log("API Key from environment:", process.env.API_KEY);
             return res.status(403).json({ error: 'Invalid API key' });
         }
         next();

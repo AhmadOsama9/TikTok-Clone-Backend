@@ -40,7 +40,7 @@ const getBalanceAndTransactions = async (req, res) => {
         return res.status(200).send({ balance: user.balance, transactions: transactions });
 
     } catch (error) {
-        return res.status(500).send({ message: "Internal Server Error" });
+        return res.status(500).send({ error: error.message });
     }
 }
 /*
@@ -70,7 +70,7 @@ const addBalance = async (req, res) => {
         return res.status(200).send({ message: "Balance added successfully" });
 
     } catch (error) { 
-        return res.status(500).send({ message: "Internal Server Error" });
+        return res.status(500).send({ error: error.message });
     }
 }
 
@@ -125,7 +125,7 @@ const addBalance = async (req, res) => {
 
     } catch (error) {
         await t.rollback();
-        return res.status(500).send({ message: "Internal Server Error" });
+        return res.status(500).send({ error: error.message });
     }
 }
 
