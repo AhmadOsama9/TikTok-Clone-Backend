@@ -27,7 +27,11 @@ module.exports = (sequelize, DataTypes) => {
       verifiedEmail: DataTypes.BOOLEAN,
       facebookId: DataTypes.STRING,
       facebookLoggedIn: DataTypes.BOOLEAN,
-      balance: DataTypes.DOUBLE,
+      balance: {
+        type: DataTypes.DOUBLE,
+        allowNull: false,
+        defaultValue: 0
+      },
       referralCode: DataTypes.STRING,
       referrals: DataTypes.INTEGER,
       isVerified: DataTypes.BOOLEAN,

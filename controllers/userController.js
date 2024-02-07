@@ -119,7 +119,7 @@ const verifyEmailCode = async (req, res) => {
         user.verificationCodeExpiry = null;
         await user.save();
 
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
 
         const followers = await Follow.findAll({ where: { followingId: user.id } });
         const following = await Follow.findAll({ where: { followerId: user.id } });
@@ -177,7 +177,7 @@ const login = async (req, res) => {
             return res.status(400).json({error: "Your email is not verified"});
         }
 
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '3d' });
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
 
         const followers = await Follow.findAll({ where: { followingId: user.id } });
         const following = await Follow.findAll({ where: { followerId: user.id } });
