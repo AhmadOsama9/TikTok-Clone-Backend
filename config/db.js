@@ -100,7 +100,7 @@ async function dropModels() {
 }
 
 //dropModels().catch(console.error);
-syncModels().catch(console.error);
+//syncModels().catch(console.error);
 
 module.exports = {
     User,

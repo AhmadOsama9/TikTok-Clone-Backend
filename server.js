@@ -1,48 +1,43 @@
 const express = require("express");
 const app = express();
-require("dotenv").config();
+
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
-const bodyParser = require("body-parser");
 var sanitizer = require('sanitize')();
-const authenticateJWT = require('./middlewares/authMiddleware');
+port = process.env.PORT || 3000;
 //I need to check the cors later on
 //even so it's not like a sercurity measure but whatever
-const port = 3000;
+
+//configs
+const swaggerOptions = require("./config/swaggerConfig");
+require("dotenv").config();
+
+//middlewares
+const authenticateJWT = require('./middlewares/authMiddleware');
+const apiKeyMiddleware = require('./middlewares/apiKeyMiddleware');
+const { generalLimiter, videoUploadLimiter, imageUploadLimiter } = require('./middlewares/rateLimiterMiddleware');
+
 
 //routes
 const userRoutes = require("./routes/userRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const facebookRoutes = require("./routes/facebookRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
+const videoRoutes = require("./routes/videoRoutes");
 
-app.use(express.json());
 
-app.use(bodyParser.json());
+//Middlewares
 
-// app.use((req, res, next) => {
-//     const apiKey = req.get('X-API-KEY');
-//     if (!apiKey || apiKey !== process.env.API_KEY) {
-//         return res.status(403).json({ error: 'Invalid API key' });
-//     }
-//     next();
-// });
+// Middleware to check for API key
+app.use(apiKeyMiddleware);
 
-app.use((req, res, next) => {
-    if (req.path.startsWith("/api-docs")) {
-        next();
-    } else {
-        const apiKey = req.get('X-API-KEY');
-        if (!apiKey || apiKey !== process.env.API_KEY) {
-            return res.status(403).json({ error: 'Invalid API key' });
-        }
-        next();
-    }
-});
+app.use(generalLimiter);
 
-const pathToExclude = ['/api/user/signup', '/api/user/login', '/api/user/forgot-password', '/api/user/verify-email-code', '/api/user/get-all-emails'];
+app.use("/change-profile-image", imageUploadLimiter);
+app.use("/upload-video", videoUploadLimiter);
 
 // Middleware to validate JWT and populate req.user
+const pathToExclude = ['/api/user/signup', '/api/user/login', '/api/user/forgot-password', '/api/user/verify-email-code', "/api/user/send-verification-code"];
 app.use((req, res, next) => {
     if (pathToExclude.includes(req.path) || req.path.startsWith("/api-docs")) {
         next();
@@ -51,20 +46,17 @@ app.use((req, res, next) => {
     }
 });
 
-
+// Error handler for express-jwt
 app.use((err, req, res, next) => {
     if (err.name === 'UnauthorizedError') {
         res.status(401).json({ error: 'Invalid token' });
     }
 });
 
+//To convert json string to a json object
+app.use(express.json());
 
-app.use(
-    bodyParser.urlencoded({
-        extended: true,
-    })
-);
-
+//Middleware to log the request method and path
 app.use((req, res, next) => {
     console.log(req.path, req.method);
     next();
@@ -86,27 +78,8 @@ app.use((req, res, next) => {
 
 // app.use(sanitizeInput);
 
-const swaggerOptions = {
-    definition: {
-        openapi: "3.0.0",
-        info: {
-            title: "APP API",
-            version: "1.0.0",
-            description: "Story APP API",
-        },
-        components: {
-            securitySchemes: {
-                bearerAuth: {
-                    type: 'http',
-                    scheme: 'bearer',
-                    bearerFormat: 'JWT',
-                },
-            },
-        },
-    },
-    apis: ["./routes/*.js"],
-};
 
+//swagger documentation
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
@@ -115,13 +88,10 @@ app.use("/api/user/", userRoutes);
 app.use("/api/profile/", profileRoutes);
 app.use("/api/auth/", facebookRoutes);
 app.use("/api/transaction/", transactionRoutes);
+app.use("/api/video/", videoRoutes);
 
 
-app.get("/", (req, res) => {
-    res.send("Works fine");
-});
-
-
+//starting the server
 app.listen(port, () => {
     console.log("Listening on port 3000")
 });

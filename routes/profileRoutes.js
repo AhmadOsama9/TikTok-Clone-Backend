@@ -1,8 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const multer = require('multer');
-const storage = multer.memoryStorage()
-const upload = multer({ storage: storage })
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 1024 * 1024 * 0.2 // 0.2MB
+  }
+});
 
 const {
     getUserProfile,
@@ -22,7 +26,7 @@ const {
 
 /**
  * @swagger
- * /api/profile:
+ * /api/profile/user:
  *   get:
  *     summary: Retrieve the user's profile
  *     description: Retrieve the user's profile. Only authenticated users can access this route.
@@ -87,11 +91,11 @@ const {
  *       500:
  *         description: Internal Server Error
  */
-router.get("/profile", getUserProfile);
+router.get("/user", getUserProfile);
 
 /**
  * @swagger
- * /api/profile/{userId}:
+ * /api/otheruser/{userId}:
  *   get:
  *     summary: Retrieve another user's profile
  *     description: Retrieve another user's profile. Only authenticated users can access this route.
@@ -162,11 +166,11 @@ router.get("/profile", getUserProfile);
  *       500:
  *         description: Internal Server Error
  */
-router.get("/profile/:userId", getOtherUserProfile);
+router.get("/otheruser/:userId", getOtherUserProfile);
 
 /**
  * @swagger
- * /api/profile/change-profile-image:
+ * /api/profile/change-image:
  *   post:
  *     summary: Change profile image
  *     description: This API is used to change the profile image of the user. It requires a valid JWT token in the Authorization header and an X-API-KEY in the X-API-KEY header. The user must send an image as multipart/form-data. The image will be analyzed for inappropriate content before updating the profile picture.
@@ -180,7 +184,7 @@ router.get("/profile/:userId", getOtherUserProfile);
  *        required: true
  *        schema:
  *          type: string
- *        description: API key
+ *          description: API key
  *      - in: formData
  *        name: image
  *        description: The uploaded file data
@@ -199,33 +203,35 @@ router.get("/profile/:userId", getOtherUserProfile);
  *                   type: string
  *       400:
  *         description: Invalid image format, image dimensions too small, or inappropriate content
+ *       401:
+ *         description: Invalid token
+ *       403:
+ *         description: Invalid API key
  *       404:
  *         description: User or Profile not found
  *       500:
  *         description: Internal Server Error
  */
-router.post("/change-profile-image", upload.single("image"), changeProfileImage);
-
+router.put("/change-image", upload.single("image"), changeProfileImage);
 
 /**
  * @swagger
- * /api/profile/get-profile-image:
+ * /api/profile/get-image:
  *   get:
- *     summary: Get user's profile image
- *     description: |
- *       This API is used to get the profile image of the authenticated user. It requires a valid JWT token in the Authorization header and an X-API-KEY in the X-API-KEY header.
+ *     summary: Get profile image
+ *     description: This API is used to get the profile image of the user. It requires a valid JWT token in the Authorization header.
  *     security:
  *      - bearerAuth: []
- *      parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
  *     responses:
  *       200:
- *         description: Successful response
+ *         description: Successfully retrieved image URL
  *         content:
  *           application/json:
  *             schema:
@@ -234,37 +240,36 @@ router.post("/change-profile-image", upload.single("image"), changeProfileImage)
  *                 imageUrl:
  *                   type: string
  *       404:
- *         description: User or Profile not found, or Profile Image not found
+ *         description: User, Profile or Profile Image not found
  *       500:
  *         description: Internal Server Error
  */
-router.get("/get-profile-image", getProfileImage);
+router.get("/get-image", getProfileImage);
 
 /**
  * @swagger
  * /api/profile/get-other-user-profile-image/{otherUserId}:
  *   get:
  *     summary: Get other user's profile image
- *     description: |
- *       This API is used to get the profile image of another user. It requires a valid JWT token in the Authorization header and an X-API-KEY in the X-API-KEY header.
+ *     description: This API is used to get the profile image of another user. It requires a valid JWT token in the Authorization header.
  *     security:
  *      - bearerAuth: []
- *      parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: path
- *         name: otherUserId
- *         required: true
- *         description: ID of the other user
- *         schema:
- *           type: integer
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *      - in: path
+ *        name: otherUserId
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The ID of the other user
  *     responses:
  *       200:
- *         description: Successful response
+ *         description: Successfully retrieved image URL
  *         content:
  *           application/json:
  *             schema:
@@ -272,8 +277,10 @@ router.get("/get-profile-image", getProfileImage);
  *               properties:
  *                 otherUserImageUrl:
  *                   type: string
+ *       400:
+ *         description: User not found
  *       404:
- *         description: User or other user not found, or Profile Image not found
+ *         description: Profile or Profile Image not found
  *       500:
  *         description: Internal Server Error
  */
@@ -282,33 +289,32 @@ router.get("/get-other-user-profile-image/{otherUserId}", getOtherUserProfileIma
 
 /**
  * @swagger
- * /api/profile/change-profile-password:
- *   post:
+ * /api/profile/change-password:
+ *   put:
  *     summary: Change profile password
- *     description: |
- *       This API is used to change the profile password of the user. It requires a valid JWT token in the Authorization header.
+ *     description: This API is used to change the profile password of the user. It requires a valid JWT token in the Authorization header.
  *     security:
  *      - bearerAuth: []
- *      parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             oldPassword:
- *               type: string
- *               description: The old password
- *             newPassword:
- *               type: string
- *               description: The new password
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *                 description: The old password
+ *               newPassword:
+ *                 type: string
+ *                 description: The new password
  *     responses:
  *       200:
  *         description: Password changed successfully
@@ -323,34 +329,37 @@ router.get("/get-other-user-profile-image/{otherUserId}", getOtherUserProfileIma
  *         description: User not found or Invalid password
  *       500:
  *         description: Internal Server Error
-
- * /api/profile/change-profile-name:
- *   post:
+ */
+router.put("/change-password", changeProfilePassword);
+ 
+/**
+ * @swagger
+ * /api/profile/change-name:
+ *   put:
  *     summary: Change profile name
- *     description: |
- *       This API is used to change the profile name of the user. It requires a valid JWT token in the Authorization header.
+ *     description: This API is used to change the profile name of the user. It requires a valid JWT token in the Authorization header.
  *     security:
  *      - bearerAuth: []
- *      parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             newName:
- *               type: string
- *               description: The new name
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newName:
+ *                 type: string
+ *                 description: The new name
  *     responses:
  *       200:
- *         description: Profile name changed successfully
+ *         description: Name changed successfully
  *         content:
  *           application/json:
  *             schema:
@@ -363,35 +372,33 @@ router.get("/get-other-user-profile-image/{otherUserId}", getOtherUserProfileIma
  *       500:
  *         description: Internal Server Error
  */
-router.post("/change-profile-password", changeProfilePassword);
-router.post("/change-profile-name", changeProfileName);
+router.put("/change-name", changeProfileName);
 
 /**
  * @swagger
- * /api/profile/change-profile-phone:
- *   post:
+ * /api/profile/change-phone:
+ *   put:
  *     summary: Change profile phone
- *     description: |
- *       This API is used to change the profile phone of the user. It requires a valid JWT token in the Authorization header.
+ *     description: This API is used to change the profile phone of the user. It requires a valid JWT token in the Authorization header.
  *     security:
  *      - bearerAuth: []
- *      parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             newPhone:
- *               type: string
- *               description: The new phone number
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newPhone:
+ *                 type: string
+ *                 description: The new phone
  *     responses:
  *       200:
  *         description: Phone changed successfully
@@ -406,73 +413,74 @@ router.post("/change-profile-name", changeProfileName);
  *         description: User not found or Phone already exists
  *       500:
  *         description: Internal Server Error
+ */
+router.put("/change-phone", changeProfilePhone);
 
- * /api/profile/change-profile-username:
- *   post:
- *     summary: Change profile username
- *     description: |
- *       This API is used to change the profile username of the user. It requires a valid JWT token in the Authorization header.
+/**
+ * @swagger
+ * /api/profile/change-username:
+ *   put:
+ *     summary: Change Profile Username
+ *     description: This API is used to change the username of the user's profile. It requires a valid JWT token in the Authorization header and the new username in the request body.
  *     security:
  *      - bearerAuth: []
- *      parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             newUsername:
- *               type: string
- *               description: The new username
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newUsername:
+ *                 type: string
+ *                 description: The new username
  *     responses:
  *       200:
  *         description: Username changed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
  *       400:
- *         description: User not found or Username already exists
+ *         description: Username already exists
+ *       404:
+ *         description: User not found
  *       500:
  *         description: Internal Server Error
+ */
+router.put("/change-username", changeProfileUsername);
 
- * /api/profile/change-profile-bio:
- *   post:
+/**
+ * @swagger
+ * /api/profile/change-bio:
+ *   put:
  *     summary: Change profile bio
- *     description: |
- *       This API is used to change the profile bio of the user. It requires a valid JWT token in the Authorization header.
+ *     description: This API is used to change the profile bio of the user. It requires a valid JWT token in the Authorization header.
  *     security:
  *      - bearerAuth: []
- *      parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             newBio:
- *               type: string
- *               description: The new bio
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newBio:
+ *                 type: string
+ *                 description: The new bio
  *     responses:
  *       200:
- *         description: Profile bio changed successfully
+ *         description: Bio changed successfully
  *         content:
  *           application/json:
  *             schema:
@@ -485,96 +493,83 @@ router.post("/change-profile-name", changeProfileName);
  *       500:
  *         description: Internal Server Error
  */
-router.post("/change-profile-phone", changeProfilePhone);
-router.post("/change-profile-username", changeProfileUsername);
-router.post("/change-profile-bio", changeProfileBio);
+router.put("/change-bio", changeProfileBio);
 
 /**
  * @swagger
- * /api/profile/change-profile-email/send-verification:
+ * /api/profile/change-email/send-verification-to-new-email:
  *   post:
- *     summary: Send verification code to new email
- *     description: |
- *       This API is used to send a verification code to the new email for changing the user's profile email.
- *       It requires a valid JWT token in the Authorization header.
+ *     summary: Send verification to new email
+ *     description: This API is used to send a verification code to a new email address. It requires a valid JWT token in the Authorization header.
  *     security:
  *      - bearerAuth: []
- *      parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             newEmail:
- *               type: string
- *               description: The new email address to be verified
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newEmail:
+ *                 type: string
+ *                 description: The new email
  *     responses:
  *       200:
  *         description: Verification code sent successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
  *       400:
- *         description: User not found, Email already exists, or Invalid email format
- *       500:
- *         description: Internal Server Error
-
- * /api/profile/change-profile-email/verify-and-set-new-email:
- *   post:
- *     summary: Verify code and set new email
- *     description: |
- *       This API is used to verify the code and set the new email for changing the user's profile email.
- *       It requires a valid JWT token in the Authorization header.
- *     security:
- *      - bearerAuth: []
- *      parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             verificationCode:
- *               type: string
- *               description: The verification code sent to the new email
- *             newEmail:
- *               type: string
- *               description: The new email address to be set after verification
- *     responses:
- *       200:
- *         description: Email changed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *       400:
- *         description: User not found, Invalid verification code, Verification code expired, or Internal Server Error
+ *         description: Email already exists or Invalid email format
+ *       404:
+ *         description: User not found
  *       500:
  *         description: Internal Server Error
  */
-router.post("/change-profile-email/send-verification", sendVerificationToNewEmail);
-router.post("/change-profile-email/verify-and-set-new-email", verificationAndSetNewEmail);
+router.post("/change-email/send-verification-to-new-email", sendVerificationToNewEmail);
+
+/**
+ * @swagger
+ * /api/profile/change-email/verify-and-set-new-email:
+ *   put:
+ *     summary: Verify and set new email
+ *     description: This API is used to verify the code sent to the new email and set it as the user's email. It requires a valid JWT token in the Authorization header.
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newEmail:
+ *                 type: string
+ *                 description: The new email
+ *               verificationCode:
+ *                 type: string
+ *                 description: The verification code
+ *     responses:
+ *       200:
+ *         description: Email changed successfully
+ *       400:
+ *         description: Invalid verification code or Verification code expired
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ */
+router.put("/change-email/verify-and-set-new-email", verificationAndSetNewEmail);
 
 module.exports = router;

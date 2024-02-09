@@ -14,7 +14,6 @@ const fs = require("fs");
 const tf = require("@tensorflow/tfjs-node");
 const mmmagic = require("mmmagic");
 const Magic = mmmagic.Magic;
-const multer = require("multer");
 
 const storage = require("../config/cloudStorage");
 
@@ -202,6 +201,8 @@ const getOtherUserProfile = async (req, res) => {
             - new photoUrl */
 //They said it's the best practice to not let other users
 //play with the profile picture of other users or the bucket in general
+
+//Seems like an error in the buffer
 const changeProfileImage = async (req, res) => { 
     try {
         const { userId } = req.user;
@@ -213,6 +214,8 @@ const changeProfileImage = async (req, res) => {
         if (!req.file.buffer || !(req.file.buffer instanceof Buffer)) {
             return res.status(400).json({ error: "Invalid file upload" });
         }
+
+        const buffer = req.file.buffer;
 
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
@@ -226,20 +229,21 @@ const changeProfileImage = async (req, res) => {
 
 
         const { fileTypeFromBuffer } = await import('file-type');
-        const fileType = await fileTypeFromBuffer(imageBuffer);
+        const fileType = await fileTypeFromBuffer(buffer);
+
         if (!fileType || (fileType.ext !== "png" && fileType.ext !== "jpg" && fileType.ext !== "jpeg")) {
             return res.status(400).json({ error: "Invalid image format" });
         }
 
-        const imageTensor = tf.node.decodeImage(imageBuffer);
+        const imageTensor = tf.node.decodeImage(buffer);
 
 
         const model = await nsfwjs.load();
         const predictions = await model.classify(imageTensor);
 
-        const pornThreshold = 0.7;
-        const sexyThreshold = 0.7;
-        const hentaiThreshold = 0.7;
+        const pornThreshold = 0.65;
+        const sexyThreshold = 0.75;
+        const hentaiThreshold = 0.75;
 
         const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
         const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
@@ -303,7 +307,7 @@ const changeProfileImage = async (req, res) => {
             }
         });
 
-        stream.end(imageBuffer);
+        stream.end(buffer);
 
     } catch (error) {
         console.log("error", error);
@@ -572,6 +576,8 @@ const verificationAndSetNewEmail = async (req, res) => {
             - new phone
 */
 
+
+
 const changeProfilePhone = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -626,8 +632,6 @@ const changeProfileUsername = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-
-
 }
 
 

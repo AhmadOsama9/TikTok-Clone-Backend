@@ -8,7 +8,8 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const sequelize = require("../config/db").sequelize;
-const randomstring = require('randomstring')
+const randomstring = require('randomstring');
+const validator = require('validator');
 
 
 
@@ -23,9 +24,8 @@ const signup = async (req, res) => {
 
         email = email.toLowerCase();
 
-        const emailRegex = /^[\w-]+(\.[\w-]+)*@(gmail\.com|yahoo\.com|outlook\.com)$/;
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({ error: 'Invalid email format' });
+        if (!validator.isEmail(email)) {
+            return res.status(400).json({ error: 'Invalid email address' });
         }
         
         const existingEmailUser = await User.findOne({ where: { email } });
@@ -95,7 +95,13 @@ const signup = async (req, res) => {
 
 const verifyEmailCode = async (req, res) => {
     try {
-        const { email, code } = req.body;
+        let { email, code } = req.body;
+
+        email = email.toLowerCase();
+
+        if (!validator.isEmail(email)) {
+            return res.status(400).json({ error: 'Invalid email address' });
+        }
 
         const user = await User.findOne({ where: { email } });
         if (!user) {
@@ -157,7 +163,13 @@ const verifyEmailCode = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        let { email, password } = req.body;
+
+        email = email.toLowerCase();
+
+        if (!validator.isEmail(email)) {
+            return res.status(400).json({ error: 'Invalid email address' });
+        }
 
         const user = await User.findOne({ where: { email } });
         if (!user) {
@@ -231,7 +243,13 @@ const login = async (req, res) => {
 //1-send otp to the email
 const sendOtp = async (req, res) => {
     try {
-        const { email } = req.body;
+        let { email } = req.body;
+
+        email = email.toLowerCase();
+
+        if (!validator.isEmail(email)) {
+            return res.status(400).json({ error: 'Invalid email address' });
+        }
 
         const user = await User.findOne({ where: { email } });
         if (!user) {
@@ -302,11 +320,55 @@ const verifyOtpAndSetNewPassword = async (req, res) => {
 }
 
 
-
-const getAllUsersAndReturnEmails = async (req, res) => {
+const sendVerificationCode = async (req, res) => {
     try {
-        const users = await User.findAll({ attributes: ['email'] });
-        return res.status(200).json({ users });
+        const { email } = req.body;
+
+        const user = await User.findOne({ where: { email } });
+        if (!user) {
+            return res.status(400).json({ error: 'User with this email does not exist' });
+        }
+
+        if (user.verifiedEmail) {
+            return res.status(400).json({ error: 'Email already verified' });
+        }
+
+        const verificationCode = randomstring.generate({
+            length: 6,
+            charset: 'numeric',
+        });
+
+        const transporter = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: process.env.EMAIL_ADDRESS,
+                pass: process.env.EMAIL_PASSWORD,
+            },
+        });
+
+        const mailOptions = {
+            from: 'Story App',
+            to: email,
+            subject: 'Verification Code',
+            text: `Your Code for verification is: ${verificationCode}`,
+            html: `
+                <h1>Welcome to Story App!</h1>
+                <p>Thanks for signing up. To verify your email address, please use the following code:</p>
+                <h2>${verificationCode}</h2>
+                <p>If you didn't request this, you can safely ignore this email.</p>
+                <p>Best,</p>
+                <p>The Story App Team</p>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        user.verificationCode = verificationCode;
+        user.verificationCodeExpiry = Date.now() + 600000;
+        await user.save();
+
+        return res.status(200).json({ message: 'Verification code sent to your email' });
+
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
@@ -320,5 +382,5 @@ module.exports = {
     login,
     sendOtp,
     verifyOtpAndSetNewPassword,
-    getAllUsersAndReturnEmails,
+    sendVerificationCode,
 }

@@ -7,7 +7,7 @@ const {
     login,
     sendOtp,
     verifyOtpAndSetNewPassword,
-    getAllUsersAndReturnEmails,
+    sendVerificationCode,
 } = require("../controllers/userController");
 
 /**
@@ -196,30 +196,30 @@ router.post("/verify-email-code", verifyEmailCode);
  *         description: Server error
  */
 router.post("/login", login);
+
 /**
  * @swagger
  * /api/user/forgot-password/send-otp:
  *   post:
- *     summary: Send OTP for password reset
- *     description: |
- *       This API is used to send OTP for password reset to the user's email. It requires X-API-KEY in the header.
+ *     summary: Send OTP
+ *     description: This API is used to send a One-Time Password (OTP) to the user's email. It requires the user's email in the request body.
  *     parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             email:
- *               type: string
- *               description: User's email
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The user's email
  *     responses:
  *       200:
  *         description: OTP sent successfully
@@ -231,72 +231,25 @@ router.post("/login", login);
  *                 message:
  *                   type: string
  *       400:
- *         description: User with this email does not exist or Internal Server Error
- *       500:
- *         description: Internal Server Error
-
- * /api/user/forgot-password/verify-otp-and-set-new-password:
- *   post:
- *     summary: Verify OTP and set new password
- *     description: |
- *       This API is used to verify OTP and set a new password for the user. It requires X-API-KEY in the header.
- *     parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             email:
- *               type: string
- *               description: User's email
- *             otp:
- *               type: string
- *               description: OTP sent to the email
- *             newPassword:
- *               type: string
- *               description: User's new password
- *     responses:
- *       200:
- *         description: Password changed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *       400:
- *         description: User with this email does not exist, Invalid OTP, OTP expired, or Internal Server Error
+ *         description: Invalid email address or User with this email does not exist
  *       500:
  *         description: Internal Server Error
  */
 router.post("/forgot-password/send-otp", sendOtp);
-router.post("/forgot-password/verify-otp-and-set-new-password", verifyOtpAndSetNewPassword);
-
 
 /**
  * @swagger
- * /api/user/change-password:
+ * /api/user/forgot-password/verify-otp-and-set-new-password:
  *   post:
- *     summary: Change a user's password
- *     description: Change a user's password. This operation requires a valid JWT and API key in the X-API-KEY header.
+ *     summary: Verify OTP and set new password
+ *     description: This API is used to verify the OTP and set a new password for the user. It requires the user's email, OTP, and new password in the request body.
  *     parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *     security:
- *      - bearerAuth: []
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
  *     requestBody:
  *       required: true
  *       content:
@@ -304,62 +257,56 @@ router.post("/forgot-password/verify-otp-and-set-new-password", verifyOtpAndSetN
  *           schema:
  *             type: object
  *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The user's email
+ *               otp:
+ *                 type: string
+ *                 description: The OTP
  *               newPassword:
  *                 type: string
+ *                 description: The new password
  *     responses:
  *       200:
  *         description: Password has been changed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
  *       400:
- *         description: User does not exist
- *       401:
- *         description: Invalid token
- *       403:
- *         description: Invalid API key
+ *         description: User with this email does not exist, Invalid OTP, or OTP expired
  *       500:
- *         description: Server error
+ *         description: Internal Server Error
  */
-//router.post("/change-password", changePassword);
+router.post("/forgot-password/verify-otp-and-set-new-password", verifyOtpAndSetNewPassword);
 
 /**
  * @swagger
- * /api/user/get-all-emails:
- *   get:
- *     summary: Retrieve all user emails
- *     description: Retrieve and return all user emails from the database. Requires API key in the X-API-KEY header.
+ * /api/user/send-verification-code:
+ *   post:
+ *     summary: Send Verification Code
+ *     description: This API is used to send a verification code to the user's email. It requires the user's email in the request body.
  *     parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The user's email
  *     responses:
  *       200:
- *         description: A list of user emails.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 users:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       email:
- *                         type: string
- *       403:
- *         description: Invalid API key
+ *         description: Verification code sent to your email
+ *       400:
+ *         description: User with this email does not exist or Email already verified
  *       500:
- *         description: Server error
+ *         description: Internal Server Error
  */
-router.get("/get-all-emails", getAllUsersAndReturnEmails);
+router.post("/send-verification-code", sendVerificationCode);
 
 module.exports = router;
