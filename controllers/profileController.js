@@ -630,7 +630,7 @@ const changeProfileUsername = async (req, res) => {
         await user.save();
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 }
 

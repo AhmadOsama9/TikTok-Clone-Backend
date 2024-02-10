@@ -52,6 +52,7 @@ const getBalanceAndTransactions = async (req, res) => {
 //make it take the balance that we want to add for now
 */
 const addBalance = async (req, res) => { 
+    const transaction = await sequelize.transaction();
     try {
         const { userId } = req.user;
         const { balance } = req.body;
@@ -66,10 +67,22 @@ const addBalance = async (req, res) => {
         }
 
         user.balance += balance;
-        await user.save();
+        await user.save({ transaction });
+
+        await Transaction.create({
+            amount: balance,
+            senderId: null,
+            receiverId: userId,
+            senderUsername: null,
+            receiverUsername: user.username,
+        }, { transaction });
+
+        await transaction.commit();
+
         return res.status(200).send({ message: "Balance added successfully" });
 
     } catch (error) { 
+        await transaction.rollback();
         return res.status(500).send({ error: error.message });
     }
 }
