@@ -93,6 +93,7 @@ const signup = async (req, res) => {
     }
 };
 
+
 const verifyEmailCode = async (req, res) => {
     try {
         let { email, code } = req.body;
@@ -123,36 +124,28 @@ const verifyEmailCode = async (req, res) => {
         user.verifiedEmail = true;
         user.verificationCode = null;
         user.verificationCodeExpiry = null;
+
+        const idLength = user.id.toString().length;
+        const referralCodeLength = idLength < 4 ? 6 : idLength + 3;
+
+        user.referralCode = user.id + randomstring.generate({
+            length: referralCodeLength - idLength,
+            charset: 'alphanumeric',
+            capitalization: 'lowercase'
+        });
+
         await user.save();
 
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
-
-        const followers = await Follow.findAll({ where: { followingId: user.id } });
-        const following = await Follow.findAll({ where: { followerId: user.id } });
-
-        const videos = await Video.findAll({ where: { creatorId: user.id } });
-        let totalLikes = 0;
-        for (let video of videos) {
-            const likes = await VideoLike.count({ where: { videoId: video.id } });
-            totalLikes += likes;
-        }
-
-        const profile = await Profile.findOne({ where: { userId: user.id } });
 
         return res.status(200).json({
             uid: user.id,
             name: user.name,
             email: user.email,
-            photoUrl: profile ? profile.photoUrl : null,
             token: token,
             phone: user.phone,
-            isBanned: user.isBanned,
-            followers: followers.length,
-            following: following.length,
             isverified: user.isVerified,
             referralCode: user.referralCode,
-            referrals: user.referrals,
-            totalLikes: totalLikes,
             userName: user.userName,
         });
 
@@ -191,32 +184,14 @@ const login = async (req, res) => {
 
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
 
-        const followers = await Follow.findAll({ where: { followingId: user.id } });
-        const following = await Follow.findAll({ where: { followerId: user.id } });
-
-        const videos = await Video.findAll({ where: { creatorId: user.id } });
-        let totalLikes = 0;
-        for (let video of videos) {
-            const likes = await VideoLike.count({ where: { videoId: video.id } });
-            totalLikes += likes;
-        }
-
-        const profile = await Profile.findOne({ where: { userId: user.id } });
-
         return res.status(200).json({
             uid: user.id,
             name: user.name,
             email: user.email,
-            photoUrl: profile ? profile.photoUrl : null,
             token: token,
             phone: user.phone,
-            isBanned: user.isBanned,
-            followers: followers.length,
-            following: following.length,
             isverified: user.isVerified,
             referralCode: user.referralCode,
-            referrals: user.referrals,
-            totalLikes: totalLikes,
             userName: user.userName,
         });
 
@@ -224,7 +199,6 @@ const login = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 }
-
 
 
 /*
@@ -374,6 +348,25 @@ const sendVerificationCode = async (req, res) => {
     }
 }
 
+const checkBanStatus = async (req, res) => {
+    try {
+        const { userId } = req.user;
+
+        const user = await User.findOne({ where: { id: userId } });
+        if (!user) {
+            return res.status(400).json({ error: 'User with this id does not exist' });
+        }
+
+        if (user.isBanned) {
+            return res.status(403).json({error: "You are banned"});
+        }
+
+        return res.status(200).json({ message: "You are not banned" });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
 
 
 module.exports = {
@@ -383,4 +376,5 @@ module.exports = {
     sendOtp,
     verifyOtpAndSetNewPassword,
     sendVerificationCode,
+    checkBanStatus,
 }

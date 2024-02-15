@@ -3,229 +3,466 @@ const Video = require("../config/db").Video;
 
 const nsfwjs = require("nsfwjs");
 const tf = require("@tensorflow/tfjs-node");
-
-const fs = require("fs");
-const util = require("util");
+const sharp = require("sharp");
+const ffmpeg = require("fluent-ffmpeg");
+const stream = require("stream");
+const { Readable, PassThrough } = require('stream');
 
 const storage = require("../config/cloudStorage");
 
 const bucketName = "kn_story_app";
 
+//I plan on finding the best algorithm
+//for the detection of the inappropriate content
+//like checking multiple repetative frames and if they 
+//have the same or soo near ratio then mostly true
+//also I need to the best way for the getting the frames
+//Also I need to check the audio if there's anything free
+//like NSFW audio or something like that
 
-const checkVideoContent = async (buffer) => {
+const mm = require('music-metadata');
+
+const getVideoBitrate = async (videoBuffer) => {
     try {
+      const metadata = await mm.parseBuffer(videoBuffer, 'video/mp4', { duration: true });
+      return metadata.format.bitrate;
+    } catch (err) {
+      console.error('Error in music-metadata:', err);
+      console.error('Error details:', err.message, err.stack);
+      throw err;
+    }
+};
+
+const compressVideo = (req, videoBuffer, bitrate) => {
+    return new Promise((resolve, reject) => {
+        const input = new stream.PassThrough();
+        input.end(videoBuffer);
+
+        const output = new PassThrough();
+
+        let targetBitrate = '1000k';
+
+        if (bitrate > 2500000) { 
+            targetBitrate = '2000k'; 
+        } else if (bitrate > 2000000) {
+            targetBitrate = '1500k';
+        } else if (bitrate > 1500000) {
+            targetBitrate = '1000k';
+        }
+
+        ffmpeg(input)
+            .outputOptions('-f', 'matroska')
+        .on('error', error => {
+            console.error('Error:', error);
+            reject(error);
+        })
+        .on('end', () => {
+            console.log('FFmpeg process ended');
+            resolve(output);
+        })
+        .on('stderr', stderrLine => {
+            console.log('Stderr output:', stderrLine);
+        })
+        .pipe(output, { end: true });
+
+        req.on('close', () => {
+            console.log('Request cancelled, stopping FFmpeg process');
+            ffmpegProcess.kill(); // Stop the FFmpeg process
+        });
+
+    });
+};
+
+const extractFramesFromVideo = (videoBuffer, fps = 1) => {
+    return new Promise((resolve, reject) => {
+        const videoStream = new PassThrough();
+        videoStream.end(videoBuffer);
+
+        let frames = [];
+        const output = new PassThrough();
+
+        console.log("Starting FFmpeg process");
+
+        ffmpeg(videoStream)
+            .outputOptions('-vf', `fps=${fps}`) // Extract fps frames per second
+            .outputOptions('-f', 'image2pipe') // Force output format to image2pipe
+            .on('error', error => {
+                console.error('Error:', error);
+                reject(error);
+            })
+            .on('end', () => {
+                console.log('FFmpeg process ended');
+                resolve(frames);
+            })
+            .pipe(output, { end: true }); // Pipe the output to the PassThrough stream
+
+        output.on('data', chunk => {
+            console.log('Received frame chunk');
+            frames.push(chunk);
+        });
+
+    });
+};
+
+
+
+
+const checkVideoContent = async (videoBuffer ,res) => {
+    try {
+        console.log("checkVideoContent function called")
         const model = await nsfwjs.load();
-        const tensor = tf.node.decodeImage(buffer);
 
-        const predictions = await model.classify(tensor);
+        const pornThreshold = 0.8;
+        const sexyThreshold = 0.85;
+        const hentaiThreshold = 0.9;
 
-        const pornThreshold = 0.65;
-            const sexyThreshold = 0.75;
-            const hentaiThreshold = 0.75;
+        console.log("Before extracting frames from video");
+        const framesStream = await extractFramesFromVideo(videoBuffer, 2);
+        console.log("After extracting frames from video");
+
+        console.log("Frames size is : ", framesStream.length);
+
+        for (const frame of framesStream) {
+            const tensor = tf.node.decodeImage(frame);
+            const predictions = await model.classify(tensor);
 
             const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
             const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
-            const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability;
+            const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability
 
             if (pornProbability > pornThreshold || sexyProbability > sexyThreshold || hentaiProbability > hentaiThreshold) {
-                return res.status(400).
-                json({ error: "Inappropriate content",
-                message: "pornProability is " + pornProbability + " sexyProbability is " + sexyProbability + " hentaiProbability is " + hentaiProbability + " and the threshold is " + pornThreshold + " " + sexyThreshold + " " + hentaiThreshold + " respectively."
-                });
+                console.log("pornProbability: ", pornProbability);
+                console.log("sexyProbability: ", sexyProbability);
+                console.log("hentaiProbability: ", hentaiProbability);
+                throw new Error("Inappropriate content");
+            } else {
+                console.log("No inappropriate content found");
             }
+        }
 
-        return predictions;
+        
 
     } catch (error) {
-        return res.status(500).json({error : error.message});
+        console.log("Error in checkVideoContent: ", error);
+        throw Error(error);
     }
-
 }
 
-const checkAndUploadThumbnail = async (buffer, videoId) => { 
+const checkAndUploadThumbnail = async (buffer) => { 
+
+    if (buffer.length > 0.2 * 1024 * 1024) {
+        throw new Error("File size too large. Please upload a thumbnail less than 200KB.");
+    }
+
+    const { fileTypeFromBuffer } = await import('file-type');
+    const fileType = await fileTypeFromBuffer(buffer);
+
+    if (!fileType || (fileType.ext !== "png" && fileType.ext !== "jpg" && fileType.ext !== "jpeg")) {
+        throw new Error("Invalid file type. Please upload a png, jpg, or jpeg file");
+    }
+
     try {
-        const { fileTypeFromBuffer } = await import('file-type');
-        const fileType = await fileTypeFromBuffer(buffer);
+        await sharp(buffer).metadata();
+    } catch (error) {
+        throw new Error("Invalid image file");
+    }
 
-        if (!fileType || (fileType.ext !== "png" && fileType.ext !== "jpg" && fileType.ext !== "jpeg")) {
-            return res.status(400).json({ error: "Invalid image format" });
-        }
-
-        const video = await Video.findOne({ where: { id: videoId } });
-        if (!video) {
-            return res.status(404).json({ error: "Video not found" });
-        }
-
-        const imageTensor = tf.node.decodeImage(buffer);
+    const imageTensor = tf.node.decodeImage(buffer);
 
 
-        const model = await nsfwjs.load();
-        const predictions = await model.classify(imageTensor);
+    const model = await nsfwjs.load();
+    const predictions = await model.classify(imageTensor);
 
-        const pornThreshold = 0.65;
-        const sexyThreshold = 0.75;
-        const hentaiThreshold = 0.75;
+    const pornThreshold = 0.75;
+    const sexyThreshold = 0.85;
+    const hentaiThreshold = 0.85;
 
-        const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
-        const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
-        const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability;
+    const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
+    const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
+    const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability;
 
-        if (pornProbability > pornThreshold || sexyProbability > sexyThreshold || hentaiProbability > hentaiThreshold) {
-            return res.status(400).
-            json({ error: "Inappropriate content",
-            message: "pornProability is " + pornProbability + " sexyProbability is " + sexyProbability + " hentaiProbability is " + hentaiProbability + " and the threshold is " + pornThreshold + " " + sexyThreshold + " " + hentaiThreshold + " respectively."
-            });
-        }
+    if (pornProbability > pornThreshold || sexyProbability > sexyThreshold || hentaiProbability > hentaiThreshold) {
+        throw new Error("Inappropriate content");
+    }
 
-        const bucket = storage.bucket(bucketName);
-        const fileName = `thumbnail/${videoId}/${Date.now()}.${fileType.ext}`;
-        const file = bucket.file(fileName);
+    const bucket = storage.bucket(bucketName);
+    const fileName = `thumbnail/${Date.now()}.${fileType.ext}`;
+    const file = bucket.file(fileName);
 
+    stream.on("error", (error) => { 
+        console.log("error: ", error);
+        reject(error);
+    });
+
+    return new Promise((resolve, reject) => {
         const stream = file.createWriteStream({ 
             metadata: {
                 contentType: `image/${fileType.ext}`
             }
         });
 
+        stream.on("finish", async () => { 
+            resolve(fileName);
+        });
         stream.on("error", (error) => { 
             console.log("error: ", error);
-            res.status(500).json({ error: error.message });
+            reject(error);
         });
-
-        stream.on("finish", async () => { 
-            video.thumbnailFileName = fileName;
-
-            try {
-                await video.save();
-                res.status(200).
-                json({ 
-                    message1: "Thumbnail added successfully", 
-                    message2: "pornProability is " + pornProbability + " sexyProbability is " + sexyProbability + " hentaiProbability is " + hentaiProbability + " and the threshold is " + pornThreshold + " " + sexyThreshold + " " + hentaiThreshold + " respectively.",
-                });
-            } catch (error) {
-                console.log("Failed to update Video, deleting image from cloud storage...");
-                file.delete().then(() => {
-                    console.log("Image deleted from cloud storage");
-                }).catch(err => {
-                    console.log("Failed to delete image from cloud storage", err);
-                });
-                res.status(500).json({ error: "Failed to update Video" });
-            }
-        });
-
+        
         stream.end(buffer);
-
-    } catch (error) {
-        console.log("error", error);
-        res.status(500).json({ error: error.message });
-    }
+    })
 }
 
+const getBuffer = (stream) => {
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+      stream.on('data', chunk => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', reject);
+    });
+};
 
-const readFile = util.promisify(fs.readFile);
-const unlink = util.promisify(fs.unlink);
 
 const uploadVideo = async (req, res) => {
+    let responseSent = false;
     try {
+
+
+        console.log("UploadVideo function called");
         const { userId } = req.user;
 
-        const videoPath = req.files["video"][0].path;
-        const imagePath = req.files["thumbnail"][0].path;
+        const videoFile = req.files.video[0];
+        const imageFile = req.files.image[0];
 
-        if (!videoPath || !imagePath) {
-            return res.status(400).json({ message: "Please upload a video and a thumbnail" });
+        if (!videoFile || !imageFile) {
+            throw new Error("Please upload a video and a thumbnail");
         }
 
-        const videoBuffer = await readFile(videoPath);
-        const imageBuffer = await readFile(imagePath);
+        const videoBuffer = req.files.video[0].buffer;
+        const imageBuffer = req.files.image[0].buffer;
 
-        if (!videoBuffer || !imageBuffer) {
-            await unlink(videoPath);
-            await unlink(imagePath);
-            return res.status(500).json({ message: "Failed to read video or image" });
+        if (!videoBuffer || !imageBuffer || (!req.files.video[0].buffer instanceof Buffer) || (!req.files.image[0].buffer instanceof Buffer)) {
+            throw new Error("Failed to read video or image");
+        }
+
+        const maxSize = 60 * 1024 * 1024; // 60MB
+        if (videoBuffer.length > maxSize) {
+            throw new Error("File size too large. Please upload a video less than 60MB.");
+        }
+
+        const validMimeTypes = ["video/mp4"];
+        const { fileTypeFromBuffer } = await import('file-type');
+        const fileType = await fileTypeFromBuffer(videoBuffer);
+        if (!fileType || !validMimeTypes.includes(fileType.mime)) {
+            throw new Error("Invalid file type. Please upload a video file.");
         }
 
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
-            await unlink(videoPath);
-            await unlink(imagePath);
-            return res.status(404).json({ message: "User not found" });
+            throw new Error("User not found");
         }
 
-        const maxSize = 10 * 1024 * 1024;
-        if (videoBuffer.length > maxSize) {
-            await unlink(videoPath);
-            await unlink(imagePath);
-            return res.status(400).json({ message: "File size too large. Please upload a video less than 10MB." });
-        }
+        const bitrate = await getVideoBitrate(videoBuffer);
+        console.log('Bitrate:', bitrate);
 
-        const validMimeTypes = ["video/mp4", "video/quicktime", "video/mpeg"];
-        const { fileTypeFromBuffer } = await import('file-type');
-        const fileType = await fileTypeFromBuffer(videoBuffer);
-        if (!fileType || !validMimeTypes.includes(fileType.mime)) {
-            await unlink(videoPath);
-            await unlink(imagePath);
-            return res.status(400).json({ message: "Invalid file type. Please upload a video file." });
-        }
+        console.log("Before checking video content");
 
-        await checkVideoContent(videoBuffer);
-
+        try {
+            //await checkVideoContent(videoBuffer, res);
+        } catch (error) {
+            console.log("Error in checkVideoContent: ", error);
+            throw error;
+        }      
         
+        console.log("After checking video content");
+        console.log("Before compressing video, videoSize: ", videoBuffer.length, " bitrate: ", bitrate);
+
+        const compressedVideoStream = await compressVideo(req, videoBuffer, bitrate);
+
+        console.log("ComressedVideoStream: ", compressedVideoStream);
+
+        const compressedVideoBuffer = await getBuffer(compressedVideoStream);
+
+        console.log("After compressing video, videoSize: ", compressedVideoBuffer.length);
         
         const bucket = storage.bucket(bucketName);
-        const fileName = `videos/${userId}/${Date.now()}.${fileType.ext}`;
+        const fileName = `videos/${userId}/${Date.now()}.mkv`;
         const file = bucket.file(fileName);
 
         const stream = file.createWriteStream({ 
             metadata: {
-                contentType: `video/${fileType.ext}`
+                contentType: `video/x-matroska`
             }
         });
 
         stream.on("error", (error) => { 
             console.log("error: ", error);
-            res.status(500).json({ error: error.message });
+            throw error;
         });
 
+        let thumbnailFile = null;
+
+        console.log("before stream finish");
         stream.on("finish", async () => { 
             try {
+                const thumbnail = imageBuffer;
+                console.log("Before checking and uploading thumbnail");
+                const thumbnailFileName = await checkAndUploadThumbnail(thumbnail);
+                console.log("After checking and uploading thumbnail");
+                thumbnailFile = bucket.file(thumbnailFileName);
+
                 const video = await Video.create({
                     creatorId: userId,
                     fileName: fileName,
+                    thumbnailFileName: thumbnailFileName,
                     videoSize: videoBuffer.length,
                     videoName: req.files["video"][0].originalname,
                     description: req.body.description,
                     category: req.body.category,
                 });
 
-                const thumbnail = imageBuffer;
-                await checkAndUploadThumbnail(thumbnail, video.id);
-
-                await unlink(videoPath);
-                await unlink(imagePath);
-
-            } catch (error) {
-                console.log("Failed to create Video, deleting video from cloud storage...");
+                if (!responseSent) {
+                    responseSent = true;
+                    return res.status(200).json({message: "Video uploaded successfully", videoId: video.id});
+                }
+            } catch (error) {   
+                console.log("Failed to create Video, deleting video and thumbnail from cloud storage...");
                 file.delete().then(() => {
                     console.log("Video deleted from cloud storage");
                 }).catch(err => {
                     console.log("Failed to delete video from cloud storage", err);
                 });
-                await unlink(videoPath);
-                await unlink(imagePath);
-                return res.status(500).json({ error: error.message });
+                if (thumbnailFile) {
+                    thumbnailFile.delete().then(() => {
+                        console.log("Thumbnail deleted from cloud storage");
+                    }).catch(err => {
+                        console.log("Failed to delete thumbnail from cloud storage", err);
+                    });
+                }
+                if (!responseSent) {
+                    responseSent = true;
+                    console.log("Error in upload video: ", error);
+                    console.log("Error.message: ", error.message);
+                    return res.status(500).json({error : error.message});
+                }
             }
-
-            res.status(200).json({ message: "Video uploaded successfully", videoId: video.id });
         });
 
+        stream.end(compressedVideoBuffer);
+
     } catch (error) {
-        await unlink(videoPath);
-        await unlink(imagePath);
-        return res.status(500).json({error : error.message});
+        if (!responseSent) {
+            responseSent = true;
+            console.log("Error in upload video: ", error);
+            console.log("Error.message: ", error.message);
+            return res.status(500).json({error : error.message});
+        }  
     }
 }
 
+async function getSignedUrl(fileName) {
+    const options = {
+        version: 'v4',
+        action: 'read',
+        expires: Date.now() + 15 * 60 * 1000,
+    };
+
+    const [url] = await storage.bucket(bucketName).file(fileName).getSignedUrl(options);
+
+    return url;
+}
+
+
+const getVideoThumbnail = async (req, res) => {
+    try {
+        const { userId } = req.user;
+
+        //Think that I will remove the unnecessary checking
+        //for the user, cause he passed the jwt token
+        //so the checking is just making sure that
+        //the user is not deleted or something like that
+        //but maybe to check if the user is banned or not
+        //I will add this checking later
+        //But since that will be for all of them
+        //I think I will just make a middleware for that
+
+        const videoId = req.params.videoId;
+        const video = await Video.findOne({ where: { id: videoId } });
+        if (!video) {
+            return res.status(404).json({ message: "Video not found" });
+        }
+
+        if (!video.thumbnailFileName) {
+            return res.status(404).json({ message: "Thumbnail not found cause filename is missing" });
+        }
+
+        const url = await getSignedUrl(video.thumbnailFileName);
+
+        return res.status(200).json({ thumbnailUrl: url });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const getVideo = async (req, res) => { 
+    try {
+        const { userId } = req.user;
+
+        const videoId = req.params.videoId;
+        const video = await Video.findOne({ where: { id: videoId } });
+        if (!video) {
+            return res.status(404).json({ message: "Video not found" });
+        }
+
+        if (!video.fileName) {
+            return res.status(404).json({ message: "Video not found cause fileName is missing" });
+        }
+
+        const url = await getSignedUrl(video.fileName);
+
+        return res.status(200).json({ videoUrl: url });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+
+async function getCommentsUsingPagination(videoId, limit = 5, offset = 0) { 
+    const comments = await Comment.findAll({ 
+        where: { videoId: videoId },
+        limit: limit,
+        offset: offset,
+        include: [{
+            model: User, as: 'user',
+            include: [{
+                model: Profile, as: 'profile'
+            }]
+        }]
+    });
+
+    const commentsData = await Promise.all(comments.map( async comment => {
+        let imageUrl = null;
+        if (comment.user.profile.imageFileName) 
+            imageUrl = await getSignedUrl(comment.user.profile.imageFileName);
+
+        return {
+            id: comment.id,
+            userId: comment.userId,
+            username: comment.user.username,
+            commentDetails: comment.commentDetails,
+            imageUrl: imageUrl,
+        }
+    
+    }));
+        return commentsData;
+}
+
+
 module.exports = {
     uploadVideo,
+    getVideoThumbnail,
+    getVideo,
+    getCommentsUsingPagination,
 }

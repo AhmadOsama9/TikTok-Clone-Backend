@@ -7,15 +7,16 @@ const Comment = require("../config/db").Comment;
 const nodemailer = require("nodemailer");
 const randomstring = require('randomstring');
 const bcrypt = require("bcrypt")
+const sharp = require("sharp");
+const { Op } = require('sequelize');
 
 const nsfwjs = require("nsfwjs");
-const fetch = require("node-fetch");
-const fs = require("fs");
 const tf = require("@tensorflow/tfjs-node");
 const mmmagic = require("mmmagic");
 const Magic = mmmagic.Magic;
 
 const storage = require("../config/cloudStorage");
+const { isNullOrUndefined } = require("util");
 
 const bucketName = "kn_story_app";
 
@@ -28,7 +29,6 @@ async function listFiles() {
     });
 }
 
-const { Op } = require('sequelize');
 
 async function deleteUnUsedFiles() {
     const [files] = await storage.bucket(bucketName).getFiles();
@@ -51,73 +51,118 @@ async function deleteUnUsedFiles() {
 
 // deleteUnUsedFiles().catch(console.error);
 
-listFiles();
+//listFiles();
+
+async function getSignedUrl(fileName) {
+    const options = {
+        version: 'v4',
+        action: 'read',
+        expires: Date.now() + 15 * 60 * 1000,
+    };
+
+    const [url] = await storage.bucket(bucketName).file(fileName).getSignedUrl(options);
+
+    return url;
+}
+
+async function getFollowersUsingPagination(userId, limit = 5, offset = 0) {
+    const followers = await Follow.findAll({ 
+        where: { followingId: userId },
+        limit: limit,
+        offset: offset,
+        include: [{
+            model: User, as: 'user',
+            include: [{
+                model: Profile, as: 'profile'
+            }]
+        }]
+    });
 
 
-/*
-10- Get Profile Data (me)
-        Description: This api is used to get the profile data of the user.
-        It will return:
-            - Profile followers count
-            - Profile following count
-            - Profile bio
-            - Videos thumbnails
-            - Videos count
-            - is popular
-            - Followers list(ids)
-            - Total likes count
-            - referral code
+    const followersData = await Promise.all(followers.map(async follower => { 
+        let imageUrl = null;
+        if (follower.user.profile.imageFileName) 
+            imageUrl = await getSignedUrl(follower.user.profile.imageFileName);
 
-        1-followersListIds (people that follow me):
-            -return username and the profilePhotoUrl
+        return {
+            id: follower.user.id,
+            username: follower.user.username,
+            imageUrl: imageUrl,
+        }
+    }));
+
+    return followersData;
+}
 
 
+async function getVideoData(userId, limit = 6, offset = 0) {
+    const videos = await Video.findAll({ 
+        where: { userId: userId },
+        limit: limit,
+        offset: offset
+    });
+    const videoIds = videos.map(video => video.id);
 
-*/
+    // Fetch all comments for the fetched videos in a single query
+    const comments = await Comment.findAll({ where: { videoId: { [Op.in]: videoIds } } });
+
+    // Group comments by videoId
+    const commentsByVideoId = comments.reduce((groupedComments, comment) => {
+        (groupedComments[comment.videoId] = groupedComments[comment.videoId] || []).push(comment);
+        return groupedComments;
+    }, {});
+
+    const videoData = await Promise.all(videos.map(async video => {
+    const commentsCount = await Comment.count({ where: { videoId: video.id } });
+
+    const thumbnailUrl = await getSignedUrl(video.thumbnailFileName);
+
+    return {
+        id: video.id,
+        thumbnailUrl: thumbnailUrl ? thumbnailUrl: null,
+        likes: video.likes,
+        commentsCount,
+        sharesCount: video.shareCount,
+        views: video.viewsCount,
+        rating: video.rating 
+    };
+}));
+
+    return videoData;
+}
+
 const getUserProfile = async (req, res) => {
     try {
         const { userId } = req.user;
 
-        const user = await User.findOne({ where: { id: userId } });
-        const profile = await Profile.findOne({ where: { userId: userId } });
+        const user = await User.findOne({ 
+            where: { id: userId },
+            include: [
+                { model: Profile, as: 'profile' },
+            ]
+        });
 
-        const followers = await Follow.findAll({ where: { followingId: userId } });
-        const following = await Follow.findAll({ where: { followerId: userId } });
+        let imageUrl = null;
+        if (user.profile.imageFileName) 
+            imageUrl = await getSignedUrl(user.profile.imageFileName);
 
-        const followersCount = followers.length;
-        const followingCount = following.length;
+        const followingsCount = await Follow.count({ where: { followerId: userId } });
+        const followersCount = await Follow.count({ where: { followingId: userId } });
 
-        const followersIds = followers.map(follower => follower.followerId);
-        const followingIds = following.map(follow => follow.followingId);
+        const videoData = await getVideoData(userId);
 
-        const videos = await Video.findAll({ where: { userId: userId } });
-        const videosCount = videos.length;
-
-        const videoData = await Promise.all(videos.map(async video => {
-            const likesOnTheVideo = await VideoLike.count({ where: { videoId: video.id } });
-            const commentsOnTheVideo = await Comment.count({ where: { videoId: video.id } });
-
-            return {
-                id: video.id,
-                thumbnailUrl: video.thumbnailUrl,
-                likesOnTheVideo,
-                commentsOnTheVideo,
-                sharesCountOfVideo: video.shareCount,
-                viewsOnTheVideo: video.viewsCount
-            };
-        }));
-
+        const totalLikes = videoData.reduce((sum, video) => sum + video.likes, 0);
+        
         const userProfile = {
-            bio: profile.bio,
+            bio: user.profile.bio,
             followersCount,
-            followingCount,
-            followersIds,
-            followingIds,
+            followingsCount,
             videos: videoData,
-            profilePicture: profile.imageUrl,
-            numberOfVideos: videosCount,
-            isPopular: user.isPopular,
-            balance: user.balance
+            photoUrl: imageUrl,
+            numberOfVideos: videoData.length,
+            isverified: user.isVerified,
+            referrals: user.referralCount || 0, 
+            totalLikes
         };
 
         res.status(200).json(userProfile);
@@ -126,66 +171,35 @@ const getUserProfile = async (req, res) => {
     }
 }
 
-/*
-9- Get Profile Data (another user)
-        Description: This api is used to get the profile data of the user.
-        It will return:
-            - Profile Name
-            - Profile Username
-            - Profile photo(URL)
-            - Profile followers count
-            - Profile following count
-            - Profile bio
-            - Videos thumbnails
-            - Videos count
-            - is popular
-            - Followers list
-            - Total likes count
-            - referral code
-*/
+
 const getOtherUserProfile = async (req, res) => {
     try {
-        const { profileId } = req.params;
+        const { otherUserId } = req.params;
 
-        const user = await User.findOne({ where: { id: profileId } });
-        const profile = await Profile.findOne({ where: { userId: profileId } });
+        const user = await User.findOne({
+            where: { id: otherUserId },
+            include: [
+                { model: Profile, as: 'profile' },
+            ]
+        });
 
-        const followers = await Follow.findAll({ where: { followingId: profileId } });
-        const following = await Follow.findAll({ where: { followerId: profileId } });
+        let imageUrl = null;
+        if (user.profile.imageFileName)
+            imageUrl = await getSignedUrl(user.profile.imageFileName);
 
-        const followersCount = followers.length;
-        const followingCount = following.length;
+        const followingsCount = await Follow.count({ where: { followerId: otherUserId } });
+        const followersCount = await Follow.count({ where: { followingId: otherUserId } });
 
-        const followersIds = followers.map(follower => follower.followerId);
-        const followingIds = following.map(follow => follow.followingId);
-
-        const videos = await Video.findAll({ where: { userId: profileId } });
-        const videosCount = videos.length;
-
-        const videoData = await Promise.all(videos.map(async video => {
-            const likesOnTheVideo = await VideoLike.count({ where: { videoId: video.id } });
-            const commentsOnTheVideo = await Comment.count({ where: { videoId: video.id } });
-
-            return {
-                id: video.id,
-                thumbnailUrl: video.thumbnailUrl,
-                likesOnTheVideo,
-                commentsOnTheVideo,
-                sharesCountOfVideo: video.shareCount,
-                viewsOnTheVideo: video.viewsCount
-            };
-        }));
-
+        const videoData = await getVideoData(otherUserId);
+        
         const userProfile = {
-            bio: profile.bio,
+            bio: user.profile.bio,
             followersCount,
-            followingCount,
-            followersIds,
-            followingIds,
+            followingsCount,
             videos: videoData,
-            profilePicture: profile.imageUrl,
-            numberOfVideos: videosCount,
-            isPopular: user.isPopular
+            photoUrl: imageUrl,
+            numberOfVideos: videoData.length,
+            isverified: user.isVerified
         };
 
         res.status(200).json(userProfile);
@@ -194,15 +208,6 @@ const getOtherUserProfile = async (req, res) => {
     }
 }
 
-
-/*    1- Change Profile Picture
-        Description: This api is used to change the profile picture of the user (no need to send the old picture or the password, He's already logged in).
-        Parameters:
-            - new photoUrl */
-//They said it's the best practice to not let other users
-//play with the profile picture of other users or the bucket in general
-
-//Seems like an error in the buffer
 const changeProfileImage = async (req, res) => { 
     try {
         const { userId } = req.user;
@@ -217,16 +222,9 @@ const changeProfileImage = async (req, res) => {
 
         const buffer = req.file.buffer;
 
-        const user = await User.findOne({ where: { id: userId } });
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
+        if (buffer.length > 0.2 * 1024 * 1024) {
+            return res.status(400).json({ error: "Image size should be less than 200KB" });
         }
-
-        const profile = await Profile.findOne({ where: { userId } });
-        if (!profile) {
-            return res.status(404).json({ error: "Profile not found" });
-        }
-
 
         const { fileTypeFromBuffer } = await import('file-type');
         const fileType = await fileTypeFromBuffer(buffer);
@@ -235,15 +233,26 @@ const changeProfileImage = async (req, res) => {
             return res.status(400).json({ error: "Invalid image format" });
         }
 
+        try {
+            await sharp(buffer).metadata();
+        } catch (error) {
+            return res.status(400).json("Invalid image file");
+        }
+
+        const profile = await Profile.findOne({ where: { userId } });
+        if (!profile) {
+            return res.status(404).json({ error: "Profile not found" });
+        }
+
         const imageTensor = tf.node.decodeImage(buffer);
 
 
         const model = await nsfwjs.load();
         const predictions = await model.classify(imageTensor);
 
-        const pornThreshold = 0.65;
-        const sexyThreshold = 0.75;
-        const hentaiThreshold = 0.75;
+        const pornThreshold = 0.75;
+        const sexyThreshold = 0.85;
+        const hentaiThreshold = 0.85;
 
         const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
         const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
@@ -254,10 +263,6 @@ const changeProfileImage = async (req, res) => {
             json({ error: "Inappropriate content",
             message: "pornProability is " + pornProbability + " sexyProbability is " + sexyProbability + " hentaiProbability is " + hentaiProbability + " and the threshold is " + pornThreshold + " " + sexyThreshold + " " + hentaiThreshold + " respectively."
             });
-        } else {
-            console.log("PornProbability: ", pornProbability);
-            console.log("SexyProbability: ", sexyProbability);
-            console.log("HentaiProbability: ", hentaiProbability);
         }
 
         const bucket = storage.bucket(bucketName);
@@ -315,37 +320,23 @@ const changeProfileImage = async (req, res) => {
     }
 }
 
-const getProfileImage = async (req, res) => {
+const getUserProfileImage = async (req, res) => {
     try {
 
-        const { userId } = req.user;
+        const { userId  } = req.user;
 
-        const user = await User.findOne({ where: { id: userId } });
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        const profile = await Profile.findOne({ where: { userId } });
-        if (!profile) {
+        const userProfile = await Profile.findOne({ where: { userId: userId } });
+        if (!userProfile) {
             return res.status(404).json({ error: "Profile not found" });
         }
 
-        if (!profile.imageFileName) {
+        if (!userProfile.imageFileName) { 
             return res.status(404).json({ error: "Profile Image not found" });
         }
 
-        const bucket = storage.bucket(bucketName);
-        const file = bucket.file(profile.imageFileName);
+        const imageUrl = await getSignedUrl(userProfile.imageFileName);
 
-        const options = {
-            version: "v4",
-            action: "read",
-            expires: Date.now() + 15 * 60 * 1000 // 15 minutes
-        };
-
-        const [url] = await file.getSignedUrl(options);
-
-        return res.status(200).json({ imageUrl: url });
+        return res.status(200).json({ userImageUrl: imageUrl });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -356,17 +347,7 @@ const getProfileImage = async (req, res) => {
 const getOtherUserProfileImage = async (req, res) => {
     try {
 
-        const { userId } = req.user;
         const { otherUserId  } = req.params;
-
-        if (!userId) {
-            return res.status(400).json({ error: "User not found" });
-        }
-
-        const otherUser =  await User.findOne({ where: { id: otherUserId } });
-        if (!otherUser) {
-            return res.status(404).json({ error: "User not found" });
-        }
 
         const otherUserProfile = await Profile.findOne({ where: { userId: otherUserId } });
         if (!otherUserProfile) {
@@ -376,19 +357,9 @@ const getOtherUserProfileImage = async (req, res) => {
         if (!otherUserProfile.imageFileName) { 
             return res.status(404).json({ error: "Profile Image not found" });
         }
+        const otherUserImageUrl = await getSignedUrl(otherUserProfile.imageFileName);
 
-        const bucket = storage.bucket(bucketName);
-        const file = bucket.file(otherUserProfile.imageFileName);
-
-        const options = {
-            version: "v4",
-            action: "read",
-            expires: Date.now() + 15 * 60 * 1000 // 15 minutes
-        };
-
-        const [url] = await file.getSignedUrl(options);
-
-        return res.status(200).json({ otherUserImageUrl: url });
+        return res.status(200).json({ otherUserImageUrl: otherUserImageUrl });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -473,12 +444,17 @@ const changeProfileName = async (req, res) => {
 const sendVerificationToNewEmail = async (req, res) => { 
     try {
         const { userId } = req.user;
-        let { newEmail } = req.body;
+        let { newEmail, password } = req.body;
         newEmail = newEmail.toLowerCase();
 
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) { 
+            return res.status(400).json({ error: "Invalid password" });
         }
 
         const emailExists = await User.findOne({ where: { email: newEmail } });
@@ -665,6 +641,7 @@ const changeProfileBio = async (req, res) => {
 
 
 
+
 module.exports = {
     getUserProfile,
     getOtherUserProfile,
@@ -676,6 +653,8 @@ module.exports = {
     changeProfilePhone,
     changeProfileUsername,
     changeProfileBio,
-    getProfileImage,
+    getUserProfileImage,
     getOtherUserProfileImage,
+    getVideoData,
+    getFollowersUsingPagination
 }

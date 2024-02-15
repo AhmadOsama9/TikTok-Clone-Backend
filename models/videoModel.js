@@ -12,6 +12,7 @@ module.exports = (sequelize, DataTypes) => {
       viewsCount: DataTypes.INTEGER,
       category: DataTypes.STRING,
       shareCount: DataTypes.INTEGER,
+      likes: DataTypes.INTEGER,
       description: DataTypes.STRING,
       rating: DataTypes.DOUBLE,
       isTrending: DataTypes.BOOLEAN,

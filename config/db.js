@@ -3,9 +3,9 @@ const userModel = require('../models/userModel');
 const profileModel = require('../models/profileModel');
 const videoModel = require('../models/videoModel');
 const commentModel = require('../models/commentModel');
-const videoLikeModel = require('../models/videoLikeModel');
 const followModel = require('../models/followModel');
 const transactionModel = require('../models/transactionModel');
+const savedVideoModel = require('../models/savedVideoModel');
 
 // config = {
 //     host    : "127.0.0.1",
@@ -26,9 +26,9 @@ const User = userModel(sequelize, DataTypes);
 const Profile = profileModel(sequelize, DataTypes);
 const Video = videoModel(sequelize, DataTypes);
 const Comment = commentModel(sequelize, DataTypes);
-const VideoLike = videoLikeModel(sequelize, DataTypes);
 const Follow = followModel(sequelize, DataTypes);
 const Transaction = transactionModel(sequelize, DataTypes);
+const SavedVideo = savedVideoModel(sequelize, DataTypes);
 
 //Relations between tables
 
@@ -56,21 +56,9 @@ User.hasMany(Comment, {
     as: 'comments',
 });
   
-// User and VideoLike
-User.hasMany(VideoLike, {
-    foreignKey: 'userId',
-    as: 'likes',
-});
-  
-// Video and VideoLike
-Video.hasMany(VideoLike, {
-    foreignKey: 'videoId',
-    as: 'likes',
-});
-  
 // User and Follow (following and followers)
 User.hasMany(Follow, {
-    foreignKey: 'userId',
+    foreignKey: 'followerId',
     as: 'following',
 });
   
@@ -79,21 +67,29 @@ User.hasMany(Follow, {
     as: 'followers',
 });
 
+User.belongsToMany(Video, 
+    { through: SavedVideo, as: 'savedVideos' 
+});
+
+Video.belongsToMany(User, 
+    { through: SavedVideo, as: 'savedByUsers' 
+});
+
 async function syncModels() {
     await User.sync({alter: true});
     await Video.sync({alter: true});
     await Profile.sync({alter: true});
     await Comment.sync({alter: true});
-    await VideoLike.sync({alter: true});
     await Follow.sync({alter: true});
     await Transaction.sync({alter: true});
+    await SavedVideo.sync({alter: true});
 }
 
 async function dropModels() {
     await Comment.drop();
-    await VideoLike.drop();
     await Follow.drop();
     await Profile.drop();
+    await SavedVideo.drop();
     await Video.drop();
     await Transaction.drop();
     await User.drop();
@@ -107,9 +103,9 @@ module.exports = {
     Profile,
     Video,
     Comment,
-    VideoLike,
     Follow,
     Transaction,
+    SavedVideo,
     sequelize
 }
 

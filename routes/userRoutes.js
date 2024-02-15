@@ -8,6 +8,7 @@ const {
     sendOtp,
     verifyOtpAndSetNewPassword,
     sendVerificationCode,
+    checkBanStatus,
 } = require("../controllers/userController");
 
 /**
@@ -62,14 +63,7 @@ router.post("/signup", signup);
  * /api/user/verify-email-code:
  *   post:
  *     summary: Verify the email code for a user
- *     description: Verify the email code for a user and mark the user's email as verified. Returns a JWT token, user data and profile data. Requires API key in the X-API-KEY header.
- *     parameters:
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
+ *     description: Verify the email code for a user and mark the user's email as verified. Returns a JWT token and user data. Requires email and code in the request body.
  *     requestBody:
  *       required: true
  *       content:
@@ -89,51 +83,35 @@ router.post("/signup", signup);
  *             schema:
  *               type: object
  *               properties:
- *                 token:
- *                   type: string
  *                 uid:
  *                   type: string
  *                 name:
  *                   type: string
  *                 email:
  *                   type: string
- *                 photoUrl:
+ *                 token:
  *                   type: string
  *                 phone:
  *                   type: string
- *                 isBanned:
- *                   type: boolean
- *                 followers:
- *                   type: integer
- *                 following:
- *                   type: integer
  *                 isverified:
  *                   type: boolean
  *                 referralCode:
  *                   type: string
- *                 referrals:
- *                   type: integer
- *                 totalLikes:
- *                   type: integer
  *                 userName:
  *                   type: string
  *       400:
  *         description: Verification failed
- *       403:
- *         description: Invalid API key
  *       500:
  *         description: Server error
  */
 router.post("/verify-email-code", verifyEmailCode);
-
-
 
 /**
  * @swagger
  * /api/user/login:
  *   post:
  *     summary: Log in a user
- *     description: Log in a user and return a JWT token, user data and profile data. If the user is banned or email is not verified, a status of 403 or 400 is returned respectively. Requires API key in the X-API-KEY header.
+ *     description: Log in a user and return a JWT token and user data. If the user is banned or email is not verified, a status of 403 or 400 is returned respectively. Requires email and password in the request body.
  *     parameters:
  *       - in: header
  *         name: X-API-KEY
@@ -160,38 +138,26 @@ router.post("/verify-email-code", verifyEmailCode);
  *             schema:
  *               type: object
  *               properties:
- *                 token:
- *                   type: string
  *                 uid:
  *                   type: string
  *                 name:
  *                   type: string
  *                 email:
  *                   type: string
- *                 photoUrl:
+ *                 token:
  *                   type: string
  *                 phone:
  *                   type: string
- *                 isBanned:
- *                   type: boolean
- *                 followers:
- *                   type: integer
- *                 following:
- *                   type: integer
  *                 isverified:
  *                   type: boolean
  *                 referralCode:
  *                   type: string
- *                 referrals:
- *                   type: integer
- *                 totalLikes:
- *                   type: integer
  *                 userName:
  *                   type: string
  *       400:
  *         description: Login failed or Email not verified
  *       403:
- *         description: User is banned or Invalid API key
+ *         description: User is banned
  *       500:
  *         description: Server error
  */
@@ -308,5 +274,32 @@ router.post("/forgot-password/verify-otp-and-set-new-password", verifyOtpAndSetN
  *         description: Internal Server Error
  */
 router.post("/send-verification-code", sendVerificationCode);
+
+/**
+ * @swagger
+ * /api/user/check-ban-status:
+ *   get:
+ *     security:
+ *       - bearerAuth: []
+ *     summary: Check if a user is banned
+ *     description: Check if the authenticated user is banned. Requires a Bearer token in the Authorization header.
+ *     responses:
+ *       200:
+ *         description: User is not banned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: User with this id does not exist
+ *       403:
+ *         description: User is banned
+ *       500:
+ *         description: Server error
+ */
+router.get("/check-ban-status", checkBanStatus);
 
 module.exports = router;
