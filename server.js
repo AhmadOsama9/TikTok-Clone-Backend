@@ -42,7 +42,10 @@ app.use((req, res, next) => {
     if (pathToExclude.includes(req.path) || req.path.startsWith("/api-docs")) {
         next();
     } else {
-        authenticateJWT(req, res, next);
+        authenticateJWT(req, res, () => {
+            // console.log(req.user); // log req.user
+            next();
+        });
     }
 });
 

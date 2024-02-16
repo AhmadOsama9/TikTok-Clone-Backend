@@ -2,11 +2,10 @@ const User = require("../config/db").User;
 const Profile = require("../config/db").Profile;
 const Follow = require("../config/db").Follow;
 const Video = require("../config/db").Video;
-const VideoLike = require("../config/db").VideoLike;
 const Comment = require("../config/db").Comment;
 const nodemailer = require("nodemailer");
 const randomstring = require('randomstring');
-const bcrypt = require("bcrypt")
+const bcrypt = require("bcrypt");
 const sharp = require("sharp");
 const { Op } = require('sequelize');
 
@@ -17,8 +16,9 @@ const Magic = mmmagic.Magic;
 
 const storage = require("../config/cloudStorage");
 const { isNullOrUndefined } = require("util");
+const { get } = require("http");
 
-const bucketName = "kn_story_app";
+const bucketName = process.env.IMAGE_BUCKET_NAME || "kn_story_app";
 
 async function listFiles() {
     const [files] = await storage.bucket(bucketName).getFiles();
@@ -49,6 +49,20 @@ async function deleteUnUsedFiles() {
     }
 }
 
+async function deleteAllFiles() {
+    const [files] = await storage.bucket(bucketName).getFiles();
+
+    console.log('Deleting all files...');
+    for (const file of files) {
+        console.log(`Deleting file ${file.name}...`);
+        await file.delete();
+        console.log(`File ${file.name} deleted.`);
+    }
+    console.log('All files deleted.');
+}
+
+//deleteAllFiles();
+
 // deleteUnUsedFiles().catch(console.error);
 
 //listFiles();
@@ -65,28 +79,28 @@ async function getSignedUrl(fileName) {
     return url;
 }
 
-async function getFollowersUsingPagination(userId, limit = 5, offset = 0) {
+
+async function getFollowersUsingPagination(userId, offset = 0) {
     const followers = await Follow.findAll({ 
         where: { followingId: userId },
-        limit: limit,
+        limit: 5,
         offset: offset,
         include: [{
-            model: User, as: 'user',
+            model: User, as: 'followers',
             include: [{
                 model: Profile, as: 'profile'
             }]
         }]
     });
 
-
     const followersData = await Promise.all(followers.map(async follower => { 
         let imageUrl = null;
-        if (follower.user.profile.imageFileName) 
-            imageUrl = await getSignedUrl(follower.user.profile.imageFileName);
+        if (follower.followers.profile.imageFileName) 
+            imageUrl = await getSignedUrl(follower.followers.profile.imageFileName);
 
         return {
-            id: follower.user.id,
-            username: follower.user.username,
+            id: follower.followers.id,
+            username: follower.followers.username,
             imageUrl: imageUrl,
         }
     }));
@@ -95,12 +109,15 @@ async function getFollowersUsingPagination(userId, limit = 5, offset = 0) {
 }
 
 
-async function getVideoData(userId, limit = 6, offset = 0) {
+async function getVideosUsingPagination(userId, offset = 0) {
+    console.log("userId: ", userId);
     const videos = await Video.findAll({ 
-        where: { userId: userId },
-        limit: limit,
-        offset: offset
+        where: { creatorId: userId },
+        limit: 5,
+        offset: offset,
     });
+
+    console.log("videos", videos);
     const videoIds = videos.map(video => video.id);
 
     // Fetch all comments for the fetched videos in a single query
@@ -115,11 +132,22 @@ async function getVideoData(userId, limit = 6, offset = 0) {
     const videoData = await Promise.all(videos.map(async video => {
     const commentsCount = await Comment.count({ where: { videoId: video.id } });
 
-    const thumbnailUrl = await getSignedUrl(video.thumbnailFileName);
+    if (!video.thumbnailFileName)
+        console.log("Video thumbnail file not found");
+
+    if (!video.fileName)
+        console.log("Video file not found")
+
+    let thumbnailUrl = null, videoUrl = null;
+    if (video.thumbnailFileName) 
+        thumbnailUrl = await getSignedUrl(video.thumbnailFileName);
+    if (video.fileName)
+        videoUrl = await getSignedUrl(video.fileName);
 
     return {
         id: video.id,
-        thumbnailUrl: thumbnailUrl ? thumbnailUrl: null,
+        videoUrl: videoUrl,
+        thumbnailUrl: thumbnailUrl,
         likes: video.likes,
         commentsCount,
         sharesCount: video.shareCount,
@@ -149,7 +177,7 @@ const getUserProfile = async (req, res) => {
         const followingsCount = await Follow.count({ where: { followerId: userId } });
         const followersCount = await Follow.count({ where: { followingId: userId } });
 
-        const videoData = await getVideoData(userId);
+        const videoData = await getVideosUsingPagination(userId);
 
         const totalLikes = videoData.reduce((sum, video) => sum + video.likes, 0);
         
@@ -190,7 +218,7 @@ const getOtherUserProfile = async (req, res) => {
         const followingsCount = await Follow.count({ where: { followerId: otherUserId } });
         const followersCount = await Follow.count({ where: { followingId: otherUserId } });
 
-        const videoData = await getVideoData(otherUserId);
+        const videoData = await getVideosUsingPagination(otherUserId);
         
         const userProfile = {
             bio: user.profile.bio,
@@ -208,117 +236,7 @@ const getOtherUserProfile = async (req, res) => {
     }
 }
 
-const changeProfileImage = async (req, res) => { 
-    try {
-        const { userId } = req.user;
 
-        if (!req.file) {
-            return res.status(400).json({ error: "Please provide an image" });
-        }
-
-        if (!req.file.buffer || !(req.file.buffer instanceof Buffer)) {
-            return res.status(400).json({ error: "Invalid file upload" });
-        }
-
-        const buffer = req.file.buffer;
-
-        if (buffer.length > 0.2 * 1024 * 1024) {
-            return res.status(400).json({ error: "Image size should be less than 200KB" });
-        }
-
-        const { fileTypeFromBuffer } = await import('file-type');
-        const fileType = await fileTypeFromBuffer(buffer);
-
-        if (!fileType || (fileType.ext !== "png" && fileType.ext !== "jpg" && fileType.ext !== "jpeg")) {
-            return res.status(400).json({ error: "Invalid image format" });
-        }
-
-        try {
-            await sharp(buffer).metadata();
-        } catch (error) {
-            return res.status(400).json("Invalid image file");
-        }
-
-        const profile = await Profile.findOne({ where: { userId } });
-        if (!profile) {
-            return res.status(404).json({ error: "Profile not found" });
-        }
-
-        const imageTensor = tf.node.decodeImage(buffer);
-
-
-        const model = await nsfwjs.load();
-        const predictions = await model.classify(imageTensor);
-
-        const pornThreshold = 0.75;
-        const sexyThreshold = 0.85;
-        const hentaiThreshold = 0.85;
-
-        const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
-        const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
-        const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability;
-
-        if (pornProbability > pornThreshold || sexyProbability > sexyThreshold || hentaiProbability > hentaiThreshold) {
-            return res.status(400).
-            json({ error: "Inappropriate content",
-            message: "pornProability is " + pornProbability + " sexyProbability is " + sexyProbability + " hentaiProbability is " + hentaiProbability + " and the threshold is " + pornThreshold + " " + sexyThreshold + " " + hentaiThreshold + " respectively."
-            });
-        }
-
-        const bucket = storage.bucket(bucketName);
-        const fileName = `profileImages/${userId}/${Date.now()}.${fileType.ext}`;
-        const file = bucket.file(fileName);
-
-        const stream = file.createWriteStream({ 
-            metadata: {
-                contentType: `image/${fileType.ext}`
-            }
-        });
-
-        stream.on("error", (error) => { 
-            console.log("error: ", error);
-            res.status(500).json({ error: error.message });
-        });
-
-        stream.on("finish", async () => { 
-            console.log("imageFileName: ", fileName);
-            
-            if (profile.imageFileName) { 
-
-                const oldFile = bucket.file(profile.imageFileName);
-                oldFile.delete().then(() => { 
-                    console.log("Old image deleted from cloud storage");
-                }).catch(err => {
-                    console.log("Failed to delete old image from cloud storage", err);
-                });
-            }
-        
-            profile.imageFileName = fileName;
-            try {
-                await profile.save();
-                res.status(200).
-                json({ 
-                    message1: "Profile picture changed successfully", 
-                    message2: "pornProability is " + pornProbability + " sexyProbability is " + sexyProbability + " hentaiProbability is " + hentaiProbability + " and the threshold is " + pornThreshold + " " + sexyThreshold + " " + hentaiThreshold + " respectively.",
-                });
-            } catch (error) {
-                console.log("Failed to update profile, deleting image from cloud storage...");
-                file.delete().then(() => {
-                    console.log("Image deleted from cloud storage");
-                }).catch(err => {
-                    console.log("Failed to delete image from cloud storage", err);
-                });
-                res.status(500).json({ error: "Failed to update profile picture" });
-            }
-        });
-
-        stream.end(buffer);
-
-    } catch (error) {
-        console.log("error", error);
-        res.status(500).json({ error: error.message });
-    }
-}
 
 const getUserProfileImage = async (req, res) => {
     try {
@@ -366,7 +284,122 @@ const getOtherUserProfileImage = async (req, res) => {
     }
 }
 
+const validateAndCompressImage = async (buffer) => {
+    if (buffer.length > 0.2 * 1024 * 1024) {
+        throw new Error("Image size should be less than 200KB");
+    }
 
+    const fileType = await fileTypeFromBuffer(buffer);
+
+    if (!fileType || (fileType.ext !== "png" && fileType.ext !== "jpg" && fileType.ext !== "jpeg")) {
+        throw new Error("Invalid image format");
+    }
+
+    let compressedBuffer;
+    try {
+        compressedBuffer = await sharp(buffer)
+            .jpeg({ quality: parseInt(process.env.JPEG_QUALITY || '70', 10) })
+            .toBuffer();
+    } catch (error) {
+        throw new Error("Invalid image file");
+    }
+
+    return { fileType, compressedBuffer };
+};
+
+const classifyImage = async (buffer) => {
+    const imageTensor = tf.node.decodeImage(buffer);
+    const model = await nsfwjs.load();
+    const predictions = await model.classify(imageTensor);
+
+    const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
+    const sexyThreshold = process.env.SEXY_THRESHOLD || 0.85;
+    const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
+
+    const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
+    const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
+    const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability;
+
+    if (pornProbability > pornThreshold || sexyProbability > sexyThreshold || hentaiProbability > hentaiThreshold) {
+        throw new Error("Inappropriate content");
+    }
+
+};
+
+const uploadImageToCloudStorage = async (buffer, fileType, userId, profile) => {
+    const bucket = storage.bucket(bucketName);
+    const fileName = `profileImages/${userId}/${Date.now()}.${fileType.ext}`;
+    const file = bucket.file(fileName);
+
+    const stream = file.createWriteStream({ 
+        metadata: {
+            contentType: `image/${fileType.ext}`
+        }
+    });
+
+    return new Promise((resolve, reject) => {
+        stream.on("error", (error) => { 
+            reject(error);
+        });
+
+        stream.on("finish", async () => { 
+            if (profile.imageFileName) { 
+                const oldFile = bucket.file(profile.imageFileName);
+                oldFile.delete().catch(err => {
+                    console.log("Failed to delete old image from cloud storage", err);
+                });
+            }
+        
+            profile.imageFileName = fileName;
+            try {
+                await profile.save();
+                resolve(fileName);
+            } catch (error) {
+                file.delete().catch(err => {
+                    console.log("Failed to delete image from cloud storage", err);
+                });
+                reject(new Error("Failed to update profile picture"));
+            }
+        });
+
+        stream.end(buffer);
+    });
+};
+
+const changeProfileImage = async (req, res) => { 
+    try {
+        const { userId } = req.user;
+
+        if (!req.file) {
+            return res.status(400).json({ error: "Please provide an image" });
+        }
+
+        if (!req.file.buffer || !(req.file.buffer instanceof Buffer)) {
+            return res.status(400).json({ error: "Invalid file upload" });
+        }
+
+        const buffer = req.file.buffer;
+
+        const { fileType, compressedBuffer } = await validateAndCompressImage(buffer);
+        await classifyImage(compressedBuffer);
+
+        const profile = await Profile.findOne({ where: { userId } });
+        if (!profile) {
+            return res.status(404).json({ error: "Profile not found" });
+        }
+
+        const fileName = await uploadImageToCloudStorage(compressedBuffer, fileType, userId, profile);
+
+        res.status(200).json({ 
+            message1: "Profile picture changed successfully", 
+            message2: "Image classified successfully",
+            fileName
+        });
+    } catch (error) {
+        console.log("error", error);
+        res.status(500).json({ error: error.message });
+    }
+};
 
 /*
 2- Change Profile Password
@@ -655,6 +688,6 @@ module.exports = {
     changeProfileBio,
     getUserProfileImage,
     getOtherUserProfileImage,
-    getVideoData,
+    getVideosUsingPagination,
     getFollowersUsingPagination
 }

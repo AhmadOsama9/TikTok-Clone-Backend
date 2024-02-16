@@ -1,22 +1,30 @@
 const express = require("express");
 const router = express.Router();
 
-const multer = require("multer");
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 50 * 1024 * 1024, // no larger than 10mb
-    }
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/')
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname))
+  }
 })
 
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // no larger than 50mb
+  }
+});
 const {
     uploadVideo,
     getVideoThumbnail,
     getVideo, 
     getCommentsUsingPagination,
 } = require("../controllers/videoController");
-
-router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
 
 /**
  * @swagger
@@ -44,10 +52,10 @@ router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { na
  *                 type: string
  *                 format: binary
  *                 description: The video file
- *               thumbnail:
+ *               image:
  *                 type: string
  *                 format: binary
- *                 description: The thumbnail image file
+ *                 description: The image file
  *               description:
  *                 type: string
  *                 description: The video description
@@ -58,12 +66,13 @@ router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { na
  *       200:
  *         description: Video uploaded successfully
  *       400:
- *         description: Please upload a video and a thumbnail, File size too large. Please upload a video less than 10MB, or Invalid file type. Please upload a video file
+ *         description: Please upload a video and an image, File size too large. Please upload a video less than 10MB, or Invalid file type. Please upload a video file
  *       404:
  *         description: User not found
  *       500:
  *         description: Failed to read video or image, Internal Server Error
  */
+router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
 
 /**
  * @swagger
@@ -191,7 +200,7 @@ router.get("/:videoId", getVideo);
 router.get("/:videoId/comments", async (req, res) => { 
     try {
         const { videoId } = req.params;
-        const { limit , offset } = req.query;
+        const { offset } = req.query;
 
         const comments = await getCommentsUsingPagination(videoId, limit, offset);
 

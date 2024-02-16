@@ -21,7 +21,7 @@ const {
     changeProfileBio,
     getUserProfileImage,
     getOtherUserProfileImage,
-    getVideoData,
+    getVideosUsingPagination,
     getFollowersUsingPagination,
     
 } = require("../controllers/profileController");
@@ -53,16 +53,8 @@ const {
  *                   type: string
  *                 followersCount:
  *                   type: integer
- *                 followingCount:
+ *                 followingsCount:
  *                   type: integer
- *                 followersIds:
- *                   type: array
- *                   items:
- *                     type: integer
- *                 followingIds:
- *                   type: array
- *                   items:
- *                     type: integer
  *                 videos:
  *                   type: array
  *                   items:
@@ -80,13 +72,15 @@ const {
  *                         type: integer
  *                       viewsOnTheVideo:
  *                         type: integer
- *                 profilePicture:
+ *                 photoUrl:
  *                   type: string
  *                 numberOfVideos:
  *                   type: integer
- *                 isPopular:
+ *                 isVerified:
  *                   type: boolean
- *                 balance:
+ *                 referrals:
+ *                   type: integer
+ *                 totalLikes:
  *                   type: integer
  *       401:
  *         description: Unauthorized
@@ -97,7 +91,7 @@ router.get("/user", getUserProfile);
 
 /**
  * @swagger
- * /api/otheruser/{userId}:
+ * /api/otheruser/{otherUserId}:
  *   get:
  *     summary: Retrieve another user's profile
  *     description: Retrieve another user's profile. Only authenticated users can access this route.
@@ -128,16 +122,8 @@ router.get("/user", getUserProfile);
  *                   type: string
  *                 followersCount:
  *                   type: integer
- *                 followingCount:
+ *                 followingsCount:
  *                   type: integer
- *                 followersIds:
- *                   type: array
- *                   items:
- *                     type: integer
- *                 followingIds:
- *                   type: array
- *                   items:
- *                     type: integer
  *                 videos:
  *                   type: array
  *                   items:
@@ -155,11 +141,11 @@ router.get("/user", getUserProfile);
  *                         type: integer
  *                       viewsOnTheVideo:
  *                         type: integer
- *                 profilePicture:
+ *                 photoUrl:
  *                   type: string
  *                 numberOfVideos:
  *                   type: integer
- *                 isPopular:
+ *                 isVerified:
  *                   type: boolean
  *       401:
  *         description: Unauthorized
@@ -168,14 +154,14 @@ router.get("/user", getUserProfile);
  *       500:
  *         description: Internal Server Error
  */
-router.get("/otheruser/:userId", getOtherUserProfile);
+router.get("/otheruser/:otherUserId", getOtherUserProfile);
 
 /**
  * @swagger
  * /api/profile/change-image:
  *   post:
- *     summary: Change profile image
- *     description: This API is used to change the profile image of the user. It requires a valid JWT token in the Authorization header and an X-API-KEY in the X-API-KEY header. The user must send an image as multipart/form-data. The image will be analyzed for inappropriate content before updating the profile picture.
+ *     summary: Change and compress profile image
+ *     description: This API is used to change and compress the profile image of the user. It requires a valid JWT token in the Authorization header and an X-API-KEY in the X-API-KEY header. The user must send an image as multipart/form-data. The image will be analyzed for inappropriate content and compressed before updating the profile picture.
  *     security:
  *      - bearerAuth: []
  *     consumes:
@@ -195,7 +181,7 @@ router.get("/otheruser/:userId", getOtherUserProfile);
  *          type: file
  *     responses:
  *       200:
- *         description: Profile picture changed successfully
+ *         description: Profile picture changed and compressed successfully
  *         content:
  *           application/json:
  *             schema:
@@ -579,37 +565,25 @@ router.put("/change-email/verify-and-set-new-email", verificationAndSetNewEmail)
 
 /**
  * @swagger
- * /api/profile/videos/{otherUserId}:
+ * /api/profile/userVideos?offset=0:
  *   get:
- *     summary: Fetch videos for a specific user
- *     description: This API is used to fetch videos for a specific user, with optional limit and offset parameters for pagination. It requires a valid JWT token in the Authorization header.
+ *     summary: Fetch videos for the authenticated user
+ *     description: This API is used to fetch videos for the authenticated user, with optional limit and offset parameters for pagination. It requires a valid JWT token in the Authorization header and an x-api-key.
  *     security:
  *      - bearerAuth: []
  *     parameters:
- *      - in: path
- *        name: userId
+ *      - in: header
+ *        name: x-api-key
  *        required: true
  *        schema:
  *          type: string
- *        description: The ID of the user for whom to fetch videos.
- *      - in: query
- *        name: limit
- *        required: false
- *        schema:
- *          type: integer
- *        description: The maximum number of videos to return.
+ *        description: The API key.
  *      - in: query
  *        name: offset
  *        required: false
  *        schema:
  *          type: integer
  *        description: The number of videos to skip before starting to fetch.
- *      - in: header
- *        name: X-API-KEY
- *        required: true
- *        schema:
- *          type: string
- *        description: API key
  *     responses:
  *       200:
  *         description: A list of videos.
@@ -626,17 +600,13 @@ router.put("/change-email/verify-and-set-new-email", verificationAndSetNewEmail)
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/videos/:otherUserId", async (req, res) => {
+router.get("/userVideos", async (req, res) => {
   try {
-    const { otherUserId } = req.params;
-    const { limit, offset } = req.query;
+    const { userId } = req.user;
+    let { offset } = req.query;
+    offset = offset !== undefined ? parseInt(offset, 10) : 0;
 
-    let userId = req.user;
-
-    if (otherUserId)
-      userId = otherUserId;
-
-    const videos = await getVideoData(userId, limit, offset);
+    const videos = await getVideosUsingPagination(userId, offset);
 
     res.status(200).json(videos);
   } catch (error) {
@@ -646,37 +616,82 @@ router.get("/videos/:otherUserId", async (req, res) => {
 
 /**
  * @swagger
- * /api/profile/followers/{otherUserId}:
+ * /api/profile/otherUserVideos/{otherUserId}?offset=0:
  *   get:
- *     summary: Fetch followers for a specific user
- *     description: This API is used to fetch followers for a specific user, with optional limit and offset parameters for pagination. It requires a valid JWT token in the Authorization header.
+ *     summary: Fetch videos for a specific user
+ *     description: This API is used to fetch videos for a specific user, with optional limit and offset parameters for pagination. It requires a valid JWT token in the Authorization header and an x-api-key.
  *     security:
  *      - bearerAuth: []
  *     parameters:
- *      - in: path
- *        name: userId
+ *      - in: header
+ *        name: x-api-key
  *        required: true
  *        schema:
  *          type: string
- *        description: The ID of the user for whom to fetch followers.
+ *        description: The API key.
+ *      - in: path
+ *        name: otherUserId
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The ID of the user for whom to fetch videos.
  *      - in: query
- *        name: limit
+ *        name: offset
  *        required: false
  *        schema:
  *          type: integer
- *        description: The maximum number of followers to return.
+ *        description: The number of videos to skip before starting to fetch.
+ *     responses:
+ *       200:
+ *         description: A list of videos.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/definitions/Video'
+ *       500:
+ *         description: An error occurred.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/definitions/Error'
+ */
+router.get("/otherUserVideos/:otherUserId", async (req, res) => {
+  try {
+    const { otherUserId } = req.params;
+    let { offset } = req.query;
+    offset = offset !== undefined ? parseInt(offset, 10) : 0;
+
+    const videos = await getVideosUsingPagination(otherUserId, offset);
+
+    res.status(200).json(videos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/profile/followers:
+ *   get:
+ *     summary: Fetch followers for the authenticated user
+ *     description: This API is used to fetch followers for the authenticated user, with optional limit and offset parameters for pagination. It requires a valid JWT token in the Authorization header.
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: x-api-key
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
  *      - in: query
  *        name: offset
  *        required: false
  *        schema:
  *          type: integer
  *        description: The number of followers to skip before starting to fetch.
- *      - in: header
- *        name: X-API-KEY
- *        required: true
- *        schema:
- *          type: string
- *        description: API key
  *     responses:
  *       200:
  *         description: A list of followers.
@@ -693,17 +708,69 @@ router.get("/videos/:otherUserId", async (req, res) => {
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/followers/:otherUserserId", async (req, res) => { 
+router.get("/followers", async (req, res) => { 
   try {
-    const { otherUserId } = req.params;
     const { limit, offset } = req.query;
-
-    let userId = req.user;
-
-    if (otherUserId)
-      userId = otherUserId;
+    const { userId }= req.user;
       
     const followers = await getFollowersUsingPagination(userId, limit, offset);
+
+    res.status(200).json(followers);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+/**
+ * @swagger
+ * /api/profile/followers/{userId}:
+ *   get:
+ *     summary: Fetch followers for a specific user
+ *     description: This API is used to fetch followers for a specific user, with optional limit and offset parameters for pagination. It requires a valid JWT token in the Authorization header.
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: x-api-key
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *      - in: path
+ *        name: userId
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The ID of the user for whom to fetch followers.
+ *      - in: query
+ *        name: offset
+ *        required: false
+ *        schema:
+ *          type: integer
+ *        description: The number of followers to skip before starting to fetch.
+ *     responses:
+ *       200:
+ *         description: A list of followers.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/definitions/Follower'
+ *       500:
+ *         description: An error occurred.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/definitions/Error'
+ */
+router.get("/followers/:otherUserId", async (req, res) => { 
+  try {
+    const { otherUserId } = req.params;
+    const { offset } = req.query;
+      
+    const followers = await getFollowersUsingPagination(otherUserId, offset);
 
     res.status(200).json(followers);
   } catch (error) {

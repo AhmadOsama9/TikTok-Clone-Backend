@@ -67,6 +67,11 @@ User.hasMany(Follow, {
     as: 'followers',
 });
 
+Follow.belongsTo(User, {
+    foreignKey: 'followingId',
+    as: 'followers',
+});
+
 User.belongsToMany(Video, 
     { through: SavedVideo, as: 'savedVideos' 
 });
