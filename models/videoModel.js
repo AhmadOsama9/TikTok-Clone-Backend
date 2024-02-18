@@ -14,7 +14,18 @@ module.exports = (sequelize, DataTypes) => {
       shareCount: DataTypes.INTEGER,
       likes: DataTypes.INTEGER,
       description: DataTypes.STRING,
-      rating: DataTypes.DOUBLE,
+      totalRating: {
+        type: DataTypes.DOUBLE,
+        defaultValue: 0,
+      },
+      totalRatings: {
+          type: DataTypes.INTEGER,
+          defaultValue: 0,
+      },
+      averageRating: {
+          type: DataTypes.DOUBLE,
+          defaultValue: 0,
+      },
       isTrending: DataTypes.BOOLEAN,
       videoSize: DataTypes.INTEGER,
       videoName: DataTypes.STRING,

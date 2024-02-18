@@ -2,7 +2,13 @@ module.exports = (sequelize, DataTypes) => {
     return sequelize.define('Transaction', {
       amount: {
         type: DataTypes.DOUBLE,
-        allowNull: false
+        allowNull: false,
+        validate: {
+          isPositive(value) {
+            if (value < 0)
+              throw new Error("Transaction amount must be a positive number");
+          }
+        }
       },
       senderId: {
         type: DataTypes.INTEGER,

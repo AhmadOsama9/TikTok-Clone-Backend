@@ -24,7 +24,10 @@ const profileRoutes = require("./routes/profileRoutes");
 const facebookRoutes = require("./routes/facebookRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const videoRoutes = require("./routes/videoRoutes");
-
+const reportRoutes = require("./routes/reportRoutes");
+const commentRoutes = require("./routes/commentRoutes");
+const followRoutes = require("./routes/followRoutes");
+const rateRoutes = require("./routes/rateRoutes");
 
 //Middlewares
 
@@ -92,7 +95,10 @@ app.use("/api/profile/", profileRoutes);
 app.use("/api/auth/", facebookRoutes);
 app.use("/api/transaction/", transactionRoutes);
 app.use("/api/video/", videoRoutes);
-
+app.use("/api/report/", reportRoutes);
+app.use("/api/comment/", commentRoutes);
+app.use("/api/follow/", followRoutes);
+app.use("/api/rate/", rateRoutes);
 
 //starting the server
 app.listen(port, () => {

@@ -15,6 +15,8 @@ const {
  * @swagger
  * /api/user/signup:
  *   post:
+ *     tags:
+ *      - Users
  *     summary: Create a new user and a profile
  *     description: Create a new user and a profile, and send a verification code to the user's email. Requires API key in the X-API-KEY header.
  *     parameters:
@@ -62,6 +64,8 @@ router.post("/signup", signup);
  * @swagger
  * /api/user/verify-email-code:
  *   post:
+ *     tags:
+ *      - Users
  *     summary: Verify the email code for a user
  *     description: Verify the email code for a user and mark the user's email as verified. Returns a JWT token and user data. Requires email and code in the request body.
  *     requestBody:
@@ -110,6 +114,8 @@ router.post("/verify-email-code", verifyEmailCode);
  * @swagger
  * /api/user/login:
  *   post:
+ *     tags:
+ *      - Users
  *     summary: Log in a user
  *     description: Log in a user and return a JWT token and user data. If the user is banned or email is not verified, a status of 403 or 400 is returned respectively. Requires email and password in the request body.
  *     parameters:
@@ -167,6 +173,8 @@ router.post("/login", login);
  * @swagger
  * /api/user/forgot-password/send-otp:
  *   post:
+ *     tags:
+ *      - Users
  *     summary: Send OTP
  *     description: This API is used to send a One-Time Password (OTP) to the user's email. It requires the user's email in the request body.
  *     parameters:
@@ -207,6 +215,8 @@ router.post("/forgot-password/send-otp", sendOtp);
  * @swagger
  * /api/user/forgot-password/verify-otp-and-set-new-password:
  *   post:
+ *     tags:
+ *      - Users
  *     summary: Verify OTP and set new password
  *     description: This API is used to verify the OTP and set a new password for the user. It requires the user's email, OTP, and new password in the request body.
  *     parameters:
@@ -246,6 +256,8 @@ router.post("/forgot-password/verify-otp-and-set-new-password", verifyOtpAndSetN
  * @swagger
  * /api/user/send-verification-code:
  *   post:
+ *     tags:
+ *      - Users
  *     summary: Send Verification Code
  *     description: This API is used to send a verification code to the user's email. It requires the user's email in the request body.
  *     parameters:
@@ -279,6 +291,8 @@ router.post("/send-verification-code", sendVerificationCode);
  * @swagger
  * /api/user/check-ban-status:
  *   get:
+ *     tags:
+ *      - Users
  *     security:
  *       - bearerAuth: []
  *     summary: Check if a user is banned

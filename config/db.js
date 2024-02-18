@@ -6,6 +6,10 @@ const commentModel = require('../models/commentModel');
 const followModel = require('../models/followModel');
 const transactionModel = require('../models/transactionModel');
 const savedVideoModel = require('../models/savedVideoModel');
+const reportModel = require("../models/reportModel");
+const chatModel = require("../models/chatModel");
+const messageModel = require("../models/messageModel");
+const rateModel = require("../models/rateModel");
 
 // config = {
 //     host    : "127.0.0.1",
@@ -29,6 +33,10 @@ const Comment = commentModel(sequelize, DataTypes);
 const Follow = followModel(sequelize, DataTypes);
 const Transaction = transactionModel(sequelize, DataTypes);
 const SavedVideo = savedVideoModel(sequelize, DataTypes);
+const Report = reportModel(sequelize, DataTypes);
+const Chat = chatModel(sequelize, DataTypes);
+const Message = messageModel(sequelize, DataTypes);
+const Rate = rateModel(sequelize, DataTypes);
 
 //Relations between tables
 
@@ -80,6 +88,81 @@ Video.belongsToMany(User,
     { through: SavedVideo, as: 'savedByUsers' 
 });
 
+User.hasMany(Report, {
+    foreignKey: 'userId',
+    as: 'reports',
+});
+
+Report.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user',
+});
+
+Comment.belongsTo(Comment, {
+    foreignKey: 'parentId',
+    as: 'parent',
+});
+
+Comment.hasMany(Comment, {
+    foreignKey: 'parentId',
+    as: 'replies',
+});
+
+User.belongsToMany(Chat, {
+    through: 'UserChat',
+    foreignKey: 'userId',
+    otherKey: 'chatId',
+    as: 'chats',
+});
+  
+Chat.belongsToMany(User, {
+    through: 'UserChat',
+    foreignKey: 'chatId',
+    otherKey: 'userId',
+    as: 'users',
+});
+
+Chat.hasMany(Message, {
+    foreignKey: 'chatId',
+    as: 'messages',
+});
+  
+Message.belongsTo(Chat, {
+    foreignKey: 'chatId',
+    as: 'chat',
+});
+
+User.hasMany(Message, {
+    foreignKey: 'senderId',
+    as: 'messages',
+});
+  
+Message.belongsTo(User, {
+    foreignKey: 'senderId',
+    as: 'sender',
+});
+
+
+User.hasMany(Rate, {
+    foreignKey: 'userId',
+    as: 'ratings',
+});
+
+Rate.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user',
+});
+
+Video.hasMany(Rate, {
+    foreignKey: 'videoId',
+    as: 'ratings',
+});
+
+Rate.belongsTo(Video, {
+    foreignKey: 'videoId',
+    as: 'video',
+});
+
 async function syncModels() {
     await User.sync({alter: true});
     await Video.sync({alter: true});
@@ -88,9 +171,17 @@ async function syncModels() {
     await Follow.sync({alter: true});
     await Transaction.sync({alter: true});
     await SavedVideo.sync({alter: true});
+    await Report.sync({alter: true});
+    await Chat.sync({alter: true});
+    await Message.sync({alter: true});
+    await Rate.sync({alter: true});
 }
 
 async function dropModels() {
+    await Rate.drop();
+    await Message.drop();
+    await Chat.drop();
+    await Report.drop();
     await Comment.drop();
     await Follow.drop();
     await Profile.drop();
@@ -99,6 +190,8 @@ async function dropModels() {
     await Transaction.drop();
     await User.drop();
 }
+
+
 
 //dropModels().catch(console.error);
 //syncModels().catch(console.error);
@@ -111,6 +204,10 @@ module.exports = {
     Follow,
     Transaction,
     SavedVideo,
+    Report,
+    Chat,
+    Message,
+    Rate,
     sequelize
 }
 

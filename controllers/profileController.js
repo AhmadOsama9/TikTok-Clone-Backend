@@ -3,6 +3,8 @@ const Profile = require("../config/db").Profile;
 const Follow = require("../config/db").Follow;
 const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
+const SavedVideo = require("../config/db").SavedVideo;
+
 const nodemailer = require("nodemailer");
 const randomstring = require('randomstring');
 const bcrypt = require("bcrypt");
@@ -83,12 +85,13 @@ async function getSignedUrl(fileName) {
 async function getFollowersUsingPagination(userId, offset = 0) {
     const followers = await Follow.findAll({ 
         where: { followingId: userId },
-        limit: 5,
+        limit: 7,
         offset: offset,
         include: [{
             model: User, as: 'followers',
             include: [{
-                model: Profile, as: 'profile'
+                model: Profile, as: 'profile',
+                attributes: ['imageFileName'],
             }]
         }]
     });
@@ -106,6 +109,45 @@ async function getFollowersUsingPagination(userId, offset = 0) {
     }));
 
     return followersData;
+}
+
+const getFollowingsUsingPagination = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        let { offset } = req.query;
+
+        offset = offset || 0; // If offset is not provided, set it to 0
+
+        const followings = await Follow.findAll({
+            where: { followerId: userId },
+            limit: 7,
+            offset: offset,
+            include: [{
+                model: User, as: 'following',
+                include: [{
+                    model: Profile, as: 'profile',
+                    attributes: ['imageFileName'],
+                }]
+            }]
+        });
+
+        const followingsData = await Promise.all(followings.map(async following => {
+            let imageUrl = null;
+            if (following.following.profile.imageFileName)
+                imageUrl = await getSignedUrl(following.following.profile.imageFileName);
+
+            return {
+                id: following.following.id,
+                username: following.following.username,
+                imageUrl: imageUrl,
+            }
+        }));
+
+        return res.status(200).json(followingsData);
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
 }
 
 
@@ -672,6 +714,101 @@ const changeProfileBio = async (req, res) => {
 }
 
 
+const saveVideo = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { videoId } = req.params;
+
+        if (!videoId)
+            return res.status(400).json({ error: "Please provide a videoId" });
+
+        const video = await Video.findOne({ where: { id: videoId } });
+        if (!video) {
+            return res.status(404).json({ error: "Video not found" });
+        }
+
+        const savedVideo = await SavedVideo.findOne({ where: { userId, videoId } });
+        if (savedVideo) {
+            return res.status(400).json({ error: "Video already saved" });
+        }
+
+        const newSavedVideo = await SavedVideo.create({ userId, videoId });
+        res.status(200).json({ message: "Video saved successfully" });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const unsaveVideo = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { videoId } = req.params;
+
+        if (!videoId)
+            return res.status(400).json({ error: "Please provide a videoId" });
+
+        const savedVideo = await SavedVideo.findOne({ where: { userId, videoId } });
+        if (!savedVideo) {
+            return res.status(404).json({ error: "Video not saved" });
+        }
+
+        await savedVideo.destroy();
+        res.status(200).json({ message: "Video unsaved successfully" });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const getSavedVideosUsingPagination = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const limit = 5;
+        const offset = req.query.offset ? parseInt(req.query.offset, 10) : 0;
+
+        const savedVideos = await SavedVideo.findAll({ 
+            where: { userId },
+            include: [{
+                model: Video, as: 'video',
+            }],
+            limit,
+            offset
+        });
+
+        const videoData = await Promise.all(savedVideos.map(async savedVideo => {
+            const video = savedVideo.video;
+            const commentsCount = await Comment.count({ where: { videoId: video.id } });
+
+            if (!video.thumbnailFileName)
+                console.log("Video thumbnail file not found");
+
+            if (!video.fileName)
+                console.log("Video file not found")
+
+            let thumbnailUrl = null, videoUrl = null;
+            if (video.thumbnailFileName) 
+                thumbnailUrl = await getSignedUrl(video.thumbnailFileName);
+            if (video.fileName)
+                videoUrl = await getSignedUrl(video.fileName);
+
+            return {
+                id: video.id,
+                videoUrl: videoUrl,
+                thumbnailUrl: thumbnailUrl,
+                likes: video.likes,
+                commentsCount,
+                sharesCount: video.shareCount,
+                views: video.viewsCount,
+                rating: video.rating 
+            };
+        }));
+
+        res.status(200).json(videoData);
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
 
 
 
@@ -689,5 +826,9 @@ module.exports = {
     getUserProfileImage,
     getOtherUserProfileImage,
     getVideosUsingPagination,
-    getFollowersUsingPagination
+    getFollowersUsingPagination,
+    getFollowingsUsingPagination,
+    saveVideo,
+    unsaveVideo,
+    getSavedVideosUsingPagination,
 }

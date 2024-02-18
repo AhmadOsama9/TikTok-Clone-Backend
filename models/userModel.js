@@ -30,7 +30,13 @@ module.exports = (sequelize, DataTypes) => {
       balance: {
         type: DataTypes.DOUBLE,
         allowNull: false,
-        defaultValue: 0
+        defaultValue: 0,
+        validate: {
+          isPositive(value) {
+            if (value < 0)
+              throw new Error("Balance must be a positive number");
+          }
+        }
       },
       referralCode: DataTypes.STRING,
       referrals: DataTypes.INTEGER,

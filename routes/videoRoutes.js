@@ -24,12 +24,15 @@ const {
     getVideoThumbnail,
     getVideo, 
     getCommentsUsingPagination,
+    updateVideoDescription,
 } = require("../controllers/videoController");
 
 /**
  * @swagger
  * /api/video/upload:
  *   post:
+ *     tags:
+ *      - Videos
  *     summary: Upload Video
  *     description: This API is used to upload a video and its thumbnail. It requires a valid JWT token in the Authorization header and the video and thumbnail files in the request body.
  *     security:
@@ -78,6 +81,8 @@ router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { na
  * @swagger
  * /api/video/thumbnail/{videoId}:
  *   get:
+ *     tags:
+ *      - Videos
  *     summary: Fetch thumbnail for a specific video
  *     description: This API is used to fetch the thumbnail for a specific video. It requires a valid JWT token in the Authorization header and an API key in the X-API-KEY header.
  *     security:
@@ -115,6 +120,8 @@ router.get("/thumbnail/:videoId", getVideoThumbnail);
  * @swagger
  * /api/video/{videoId}:
  *   get:
+ *     tags:
+ *      - Videos
  *     summary: Fetch a specific video
  *     description: This API is used to fetch a specific video. It requires a valid JWT token in the Authorization header and an API key in the X-API-KEY header.
  *     security:
@@ -150,10 +157,12 @@ router.get("/:videoId", getVideo);
 
 /**
  * @swagger
- * /api/video/{videoId}/comments:
+ * /api/video/{id}/comments?offset=0:
  *   get:
+ *     tags:
+ *      - Videos
  *     summary: Fetch comments for a specific video
- *     description: This API is used to fetch comments for a specific video, with optional limit and offset parameters for pagination. It requires a valid JWT token in the Authorization header and an API key in the X-API-KEY header.
+ *     description: This API is used to fetch comments for a specific video, with optional limit and offset parameters for pagination. It requires a valid JWT token in the Authorization header and an API key in the X-API-KEY header. The response now includes replies to comments and user profile image URLs.
  *     security:
  *      - bearerAuth: []
  *     parameters:
@@ -183,13 +192,16 @@ router.get("/:videoId", getVideo);
  *        description: API key
  *     responses:
  *       200:
- *         description: A list of comments.
+ *         description: A list of comments, each with its replies and user profile image URL.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/definitions/Comment'
+ *               type: object
+ *               properties:
+ *                 comments:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/definitions/Comment'
  *       500:
  *         description: An error occurred.
  *         content:
@@ -197,17 +209,62 @@ router.get("/:videoId", getVideo);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/:videoId/comments", async (req, res) => { 
-    try {
-        const { videoId } = req.params;
-        const { offset } = req.query;
+router.get("/:id/comments", async (req, res) => { 
+  try {
+      const videoId = req.params.id;
+      const { offset } = req.query;
 
-        const comments = await getCommentsUsingPagination(videoId, limit, offset);
+      const comments = await getCommentsUsingPagination(videoId, offset);
 
-        res.status(200).json(comments);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+      res.status(200).json(comments);
+  } catch (error) {
+      res.status(500).json({ error: error.message });
+  }
 });
+
+/**
+ * @swagger
+ * /api/video/{id}/update-description:
+ *   put:
+ *     tags:
+ *       - Videos
+ *     summary: Update the description of a specific video
+ *     operationId: updateVideoDescription
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: videoId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The ID of the video.
+ *       - in: header
+ *         name: Authorization
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The JWT token of the user.
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               description:
+ *                 type: string
+ *     responses:
+ *       '200':
+ *         description: Video description updated successfully
+ *       '400':
+ *         description: Bad request
+ *       '403':
+ *         description: You are not authorized to update this video
+ *       '404':
+ *         description: Video not found
+ *       '500':
+ *         description: Internal server error
+ */
+router.put("/:id/update-description", updateVideoDescription);
 
 module.exports = router;

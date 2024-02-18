@@ -11,6 +11,8 @@ const {
  * @swagger
  * /api/transaction/get-balance-and-transactions:
  *   get:
+ *     tags:
+ *      - Transactions
  *     summary: Get user balance and transactions
  *     description: |
  *       This API is used to get the balance and transaction list of the user. It requires a valid JWT token in the Authorization header
@@ -82,6 +84,8 @@ router.get("/get-balance-and-transactions", getBalanceAndTransactions);
  * @swagger
  * /api/transaction/add-balance:
  *   post:
+ *     tags:
+ *      - Transactions
  *     summary: Add balance to the user
  *     description: |
  *       This API is used to add balance to the user. It requires a valid JWT token in the Authorization header
@@ -136,6 +140,8 @@ router.post("/add-balance", addBalance);
  * @swagger
  * /api/transaction/send-gift:
  *   post:
+ *     tags:
+ *      - Transactions
  *     summary: Send a gift to another user
  *     description: |
  *       This API is used to send a gift to another user. It requires a valid JWT token in the Authorization header

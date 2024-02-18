@@ -39,6 +39,8 @@ async function handleFacebookCallback(req, res) {
  * @swagger
  * /api/auth/facebook:
  *   get:
+ *     tags:
+ *      - auth
  *     summary: Start facebook OAuth flow
  *     parameters:
  *       - in: header
@@ -62,6 +64,8 @@ router.get(
  * @swagger
  * /api/auth/facebook/callback:
  *   get:
+ *     tags:
+ *      - auth
  *     summary: Handle callback from facebook OAuth
  *     parameters:
  *       - in: header
