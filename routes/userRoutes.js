@@ -68,6 +68,13 @@ router.post("/signup", signup);
  *      - Users
  *     summary: Verify the email code for a user
  *     description: Verify the email code for a user and mark the user's email as verified. Returns a JWT token and user data. Requires email and code in the request body.
+ *     parameters:
+ *     - in: header
+ *       name: X-API-KEY
+ *       required: true
+ *       schema:
+ *        type: string
+ *        description: API key
  *     requestBody:
  *       required: true
  *       content:

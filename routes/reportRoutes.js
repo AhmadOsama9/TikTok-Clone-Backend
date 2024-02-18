@@ -50,8 +50,8 @@ const {
  *                 type: integer
  *                 description: The reference ID related to the report.
  *               referenceType:
- *                 type: string
- *                 description: The type of the reference related to the report.
+ *                 type: string(user, comment or video)
+ *                 description: The type of the reference related to the report
  *     responses:
  *       201:
  *         description: The created report

@@ -39,23 +39,41 @@ const sendMessageUsingReceiverId = async (req, res) => {
     const transaction = await sequelize.transaction();
   
     try {
-      const chat = await Chat.create({
-        user1Id: userId,
-        user2Id: receiverId,
-      }, { transaction });
+    //I think I should also handle the case were the user
+    //sends a meeesage through the profile page of the other user
+    //or whatever the way that they use it
+    //I think I can simply handle that by checking if the chat is already there
+    //if the chat is already there then we will add the message to it
+    //if the chat is not there then we will create a new chat and add the message to it
+
+        let chat = await Chat.findOne({
+            where: {
+                [Op.or]: [
+                    { user1Id: userId, user2Id: receiverId },
+                    { user1Id: receiverId, user2Id: userId }
+                ],
+            },
+        });
+
+        if (!chat) {
+            chat = await Chat.create({
+                user1Id: userId,
+                user2Id: receiverId,
+            }, { transaction });
+        }
   
-      await Message.create({
-        chatId: chat.id,
-        senderId: userId,
-        message,
-      }, { transaction });
+        await Message.create({
+            chatId: chat.id,
+            senderId: userId,
+            message,
+        }, { transaction });
+    
+        await transaction.commit();
   
-      await transaction.commit();
-  
-      return res.status(200).json({ message: "Message sent successfully" });
+        return res.status(200).json({ message: "Message sent successfully" });
     } catch (error) {
-      await transaction.rollback();
-      return res.status(500).json({ error: error.message });
+        await transaction.rollback();
+        return res.status(500).json({ error: error.message });
     }
 }
 

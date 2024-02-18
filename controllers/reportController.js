@@ -6,6 +6,13 @@ const createReport = async (req, res) => {
         const { title, description, referenceId, referenceType } = req.body;
         const { userId } = req.user;
 
+        if (referenceType !== "user" && referenceType !== "video" && !referenceType !== "comment")
+            return res.status(500).json({Error: "Invalid referenceType"});
+
+        //I think here I need to check for that referenceId if it's there, 
+        //I mean if it was a comment for example then I should make sure that 
+        //there's a comment with that id.
+
         const report = await Report.create({
             title,
             description,

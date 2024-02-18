@@ -194,7 +194,7 @@ async function getVideosUsingPagination(userId, offset = 0) {
         commentsCount,
         sharesCount: video.shareCount,
         views: video.viewsCount,
-        rating: video.rating 
+        rating: video.averageRating 
     };
 }));
 
@@ -800,7 +800,7 @@ const getSavedVideosUsingPagination = async (req, res) => {
                 commentsCount,
                 sharesCount: video.shareCount,
                 views: video.viewsCount,
-                rating: video.rating 
+                rating: video.averageRating 
             };
         }));
 
