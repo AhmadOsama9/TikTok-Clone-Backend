@@ -331,6 +331,7 @@ const validateAndCompressImage = async (buffer) => {
         throw new Error("Image size should be less than 200KB");
     }
 
+    const { fileTypeFromBuffer } = await import ("file-type");
     const fileType = await fileTypeFromBuffer(buffer);
 
     if (!fileType || (fileType.ext !== "png" && fileType.ext !== "jpg" && fileType.ext !== "jpeg")) {
@@ -435,7 +436,6 @@ const changeProfileImage = async (req, res) => {
         res.status(200).json({ 
             message1: "Profile picture changed successfully", 
             message2: "Image classified successfully",
-            fileName
         });
     } catch (error) {
         console.log("error", error);
@@ -578,6 +578,8 @@ const sendVerificationToNewEmail = async (req, res) => {
         user.verificationCodeExpiry = Date.now() + 600000;
         await user.save();
 
+        return res.status(200).json({ message: "Verification code sent successfully" });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -647,6 +649,8 @@ const changeProfilePhone = async (req, res) => {
         user.phone = newPhone;
         await user.save();
 
+        return res.status(200).json({ message: "Phone changed successfully" });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -663,7 +667,7 @@ const changeProfilePhone = async (req, res) => {
 const changeProfileUsername = async (req, res) => { 
     try {
         const { userId } = req.user;
-        const { newUsername } = req.body;
+        let { newUsername } = req.body;
 
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
@@ -679,6 +683,8 @@ const changeProfileUsername = async (req, res) => {
 
         user.username = newUsername;
         await user.save();
+
+        return res.status(200).json({ message: "Username changed successfully" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });

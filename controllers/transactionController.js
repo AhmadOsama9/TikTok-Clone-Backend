@@ -1,6 +1,7 @@
 const User = require("../config/db").User;
 const Transaction = require("../config/db").Transaction;
 const { Op } = require('sequelize');
+const sequelize = require("../config/db").sequelize;
 
 
 
@@ -57,7 +58,10 @@ const addBalance = async (req, res) => {
         const { userId } = req.user;
         const { balance } = req.body;
 
-        if (typeof balance !== 'number' || balance <= 0) {
+        if (!balance)
+            return res.status(400).send({ message: "Balance is required" });
+
+        if (balance <= 0) {
             return res.status(400).send({ message: "Invalid balance" });
         }
 
@@ -65,15 +69,18 @@ const addBalance = async (req, res) => {
         if (!user) {
             return res.status(404).send({ message: "User not found" });
         }
+        console.log("username: ", user.username);
 
         user.balance += balance;
         await user.save({ transaction });
 
+        console.log("balance is: ", balance);
+
         await Transaction.create({
             amount: balance,
-            senderId: null,
+            senderId: userId,
             receiverId: userId,
-            senderUsername: null,
+            senderUsername: user.username,
             receiverUsername: user.username,
         }, { transaction });
 
@@ -95,14 +102,17 @@ const addBalance = async (req, res) => {
                 - receiver id
                 - gift value
             Note: A transaction will be added to the sender and the receiver.
-*/const sendGift = async (req, res) => { 
+*/
+const sendGift = async (req, res) => { 
     const t = await sequelize.transaction();
-
     try {
         const { userId } = req.user;
         const { receiverId, amount } = req.body;
 
-        if (typeof amount !== 'number' || amount <= 0) {
+        console.log("receiverId", receiverId);
+        console.log("ammonut ", amount);
+
+        if (amount <= 0) {
             return res.status(400).send({ message: "Invalid balance" });
         }
 

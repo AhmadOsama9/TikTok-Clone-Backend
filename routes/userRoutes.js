@@ -304,6 +304,13 @@ router.post("/send-verification-code", sendVerificationCode);
  *       - bearerAuth: []
  *     summary: Check if a user is banned
  *     description: Check if the authenticated user is banned. Requires a Bearer token in the Authorization header.
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
  *     responses:
  *       200:
  *         description: User is not banned

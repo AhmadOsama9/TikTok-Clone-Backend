@@ -352,6 +352,9 @@ const checkBanStatus = async (req, res) => {
     try {
         const { userId } = req.user;
 
+        if (!userId) 
+            return res.status(400).json({ error: 'User id is required' });
+
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.status(400).json({ error: 'User with this id does not exist' });

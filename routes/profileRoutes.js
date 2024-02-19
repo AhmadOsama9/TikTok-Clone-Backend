@@ -4,7 +4,7 @@ const multer = require('multer');
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 1024 * 1024 * 0.2 // 0.2MB
+    fileSize: 1024 * 1024 * 0.5 // 0.5MB
   }
 });
 
@@ -96,7 +96,7 @@ router.get("/user", getUserProfile);
 
 /**
  * @swagger
- * /api/otheruser/{otherUserId}:
+ * /api/profile/otheruser/{otherUserId}:
  *   get:
  *     tags:
  *      - profile
@@ -106,7 +106,7 @@ router.get("/user", getUserProfile);
  *      - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: otherUserId
  *         required: true
  *         description: Numeric ID of the user to retrieve
  *         schema:
@@ -209,7 +209,7 @@ router.get("/otheruser/:otherUserId", getOtherUserProfile);
  *       500:
  *         description: Internal Server Error
  */
-router.put("/change-image", upload.single("image"), changeProfileImage);
+router.post("/change-image", upload.single("image"), changeProfileImage);
 
 /**
  * @swagger
@@ -285,7 +285,7 @@ router.get("/get-image", getUserProfileImage);
  *       500:
  *         description: Internal Server Error
  */
-router.get("/get-other-user-profile-image/{otherUserId}", getOtherUserProfileImage);
+router.get("/get-other-user-profile-image/:otherUserId", getOtherUserProfileImage);
 
 /**
  * @swagger

@@ -13,6 +13,8 @@ const {
  *   get:
  *     tags:
  *      - Transactions
+ *     security:
+ *      - bearerAuth: []
  *     summary: Get user balance and transactions
  *     description: |
  *       This API is used to get the balance and transaction list of the user. It requires a valid JWT token in the Authorization header
@@ -20,20 +22,11 @@ const {
  *       including both sent and received transactions. The amount is positive for received transactions and negative for sent transactions.
  *     parameters:
  *       - in: header
- *         name: Authorization
- *         required: true
- *         description: JWT token
- *         schema:
- *           type: string
- *           format: Bearer <token>
- *       - in: header
  *         name: X-API-KEY
  *         required: true
  *         schema:
  *           type: string
  *         description: API key
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Successful response
@@ -86,37 +79,32 @@ router.get("/get-balance-and-transactions", getBalanceAndTransactions);
  *   post:
  *     tags:
  *      - Transactions
+ *     security:
+ *      - bearerAuth: []
  *     summary: Add balance to the user
  *     description: |
  *       This API is used to add balance to the user. It requires a valid JWT token in the Authorization header
  *       and an API key in the X-API-KEY header. The user must send the code of the card along with the balance to add.
  *     parameters:
  *       - in: header
- *         name: Authorization
- *         required: true
- *         description: JWT token
- *         schema:
- *           type: string
- *           format: Bearer <token>
- *       - in: header
  *         name: X-API-KEY
  *         required: true
  *         schema:
  *           type: string
  *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             cardCode:
- *               type: string
- *               description: Code of the card we didn't include that yet
- *             balance:
- *               type: number
- *               description: Amount of balance to add
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               balance:
+ *                 type: integer
+ *                 description: ID of the receiver user
+ *               cardCode:
+ *                  type: string
+ *                  description: Card code
  *     responses:
  *       200:
  *         description: Balance added successfully
@@ -142,6 +130,8 @@ router.post("/add-balance", addBalance);
  *   post:
  *     tags:
  *      - Transactions
+ *     security:
+ *      - bearerAuth: []
  *     summary: Send a gift to another user
  *     description: |
  *       This API is used to send a gift to another user. It requires a valid JWT token in the Authorization header
@@ -149,32 +139,25 @@ router.post("/add-balance", addBalance);
  *       The receiver will receive the money in their balance, and the sender will lose the money from their balance.
  *       A transaction will be added to both the sender and the receiver.
  *     parameters:
- *       - in: header
- *         name: Authorization
- *         required: true
- *         description: JWT token
- *         schema:
- *           type: string
- *           format: Bearer <token>
- *       - in: header
- *         name: X-API-KEY
- *         required: true
- *         schema:
- *           type: string
- *         description: API key
- *       - in: body
- *         name: body
- *         required: true
- *         description: Request body
- *         schema:
- *           type: object
- *           properties:
- *             receiverId:
- *               type: integer
- *               description: ID of the receiver user
- *             amount:
- *               type: number
- *               description: Gift amount
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               receiverId:
+ *                 type: integer
+ *                 description: ID of the receiver user
+ *               amount:
+ *                 type: number
+ *                 description: Gift amount
  *     responses:
  *       200:
  *         description: Gift sent successfully

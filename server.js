@@ -45,8 +45,13 @@ app.use((req, res, next) => {
     if (pathToExclude.includes(req.path) || req.path.startsWith("/api-docs")) {
         next();
     } else {
-        authenticateJWT(req, res, () => {
-            // console.log(req.user); // log req.user
+        authenticateJWT(req, res, (err) => {
+            if (err) {
+                // If an error occurred in express-jwt, send a response with the error
+                return res.status(401).json({ error: err.message });
+            }
+
+            console.log(req.user); // log req.user
             next();
         });
     }
