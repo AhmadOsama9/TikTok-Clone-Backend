@@ -246,6 +246,9 @@ const getOtherUserProfile = async (req, res) => {
     try {
         const { otherUserId } = req.params;
 
+        console.log("otherUserId: ", otherUserId);
+        console.log("It enters here so yeah that's it");
+
         const user = await User.findOne({
             where: { id: otherUserId },
             include: [

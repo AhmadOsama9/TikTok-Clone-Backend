@@ -18,12 +18,6 @@ const {
  *      - bearerAuth: []
  *     parameters:
  *       - in: header
- *         name: Authorization
- *         schema:
- *           type: string
- *         required: true
- *         description: The JWT token of the user.
- *       - in: header
  *         name: X-API-KEY
  *         schema:
  *           type: string

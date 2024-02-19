@@ -1,10 +1,15 @@
 const Follow = require("../config/db").Follow;
 const User = require("../config/db").User;
 
+const { Op } = require("sequelize");
+
 const followUser = async (req, res) => {
     try {
         const { userId } = req.user;
         const { followId } = req.body;
+
+        if (userId === followId)
+            return res.status(400).json({ message: "You can't follow yourself" });
 
         if (!followId) {
             return res.status(400).json({ message: "followId is required" });
@@ -14,11 +19,18 @@ const followUser = async (req, res) => {
         if (!user)
             return res.status(404).json({ message: "User not found" });
 
-        const follow = await Follow.findOne({ where: { userId, followId } });
+        const follow = await Follow.findOne({ 
+            where: { 
+                [Op.or]: [
+                    { followerId: userId, followingId: followId },
+                    { followerId: followId, followingId: userId }
+                ]
+            } 
+        });
         if (follow)
             return res.status(400).json({ message: "You already follow this user" });
 
-        await Follow.create({ userId, followId });
+            await Follow.create({ followerId: userId, followingId: followId });
 
         return res.status(200).json({ message: "User followed successfully" });
 
@@ -40,7 +52,12 @@ const unFollowUser = async (req, res) => {
         if (!user)
             return res.status(404).json({ message: "User not found" });
 
-        const follow = await Follow.findOne({ where: { userId, followId } });
+        const follow = await Follow.findOne({ 
+            where: { 
+                followerId: userId, 
+                followingId: followId 
+            } 
+        });
         if (!follow)
             return res.status(400).json({ message: "You don't follow this user" });
 

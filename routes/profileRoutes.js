@@ -742,10 +742,10 @@ router.get("/otherUserVideos/:otherUserId", async (req, res) => {
  */
 router.get("/followers", async (req, res) => { 
   try {
-    const { limit, offset } = req.query;
+    const { offset } = req.query;
     const { userId }= req.user;
       
-    const followers = await getFollowersUsingPagination(userId, limit, offset);
+    const followers = await getFollowersUsingPagination(userId, offset);
 
     res.status(200).json(followers);
   } catch (error) {
@@ -772,7 +772,7 @@ router.get("/followers", async (req, res) => {
  *          type: string
  *        description: The API key.
  *      - in: path
- *        name: userId
+ *        name: otherUserId
  *        required: true
  *        schema:
  *          type: string
@@ -823,7 +823,13 @@ router.get("/followers/:otherUserId", async (req, res) => {
  *     security:
  *      - bearerAuth: []
  *     parameters:
- *       - in: query
+ *      - in: header
+ *        name: x-api-key
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *      - in: query
  *         name: offset
  *         schema:
  *           type: integer
@@ -868,7 +874,13 @@ router.get("/get-followings", getFollowingsUsingPagination);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
+ *      - in: header
+ *        name: x-api-key
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *      - in: path
  *         name: videoId
  *         required: true
  *         schema:
@@ -896,7 +908,13 @@ router.post('/videos/:videoId/save', saveVideo);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
+ *      - in: header
+ *        name: x-api-key
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *      - in: path
  *         name: videoId
  *         required: true
  *         schema:
@@ -924,7 +942,13 @@ router.delete('/videos/:videoId/unsave', unsaveVideo);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
+ *      - in: header
+ *        name: x-api-key
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *      - in: query
  *         name: offset
  *         schema:
  *           type: integer
