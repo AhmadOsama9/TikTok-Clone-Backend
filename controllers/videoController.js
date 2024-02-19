@@ -222,7 +222,7 @@ const validateAndCompressThumbnail = async (imagePath) => {
         image.quality(quality);
         await image.writeAsync(tempPath);
 
-        await fs.rename(tempPath, imagePath);
+        await fs.promises.rename(tempPath, imagePath);
     } catch (error) {
         throw new Error(error);
     }
