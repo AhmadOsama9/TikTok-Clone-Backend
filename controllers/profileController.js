@@ -8,7 +8,7 @@ const SavedVideo = require("../config/db").SavedVideo;
 const nodemailer = require("nodemailer");
 const randomstring = require('randomstring');
 const bcrypt = require("bcrypt");
-const sharp = require("sharp");
+const Jimp = require("jimp");
 const { Op } = require('sequelize');
 
 const nsfwjs = require("nsfwjs");
@@ -63,7 +63,7 @@ async function deleteAllFiles() {
     console.log('All files deleted.');
 }
 
-//deleteAllFiles();
+deleteAllFiles();
 
 // deleteUnUsedFiles().catch(console.error);
 
@@ -340,9 +340,9 @@ const validateAndCompressImage = async (buffer) => {
 
     let compressedBuffer;
     try {
-        compressedBuffer = await sharp(buffer)
-            .jpeg({ quality: parseInt(process.env.JPEG_QUALITY || '70', 10) })
-            .toBuffer();
+        const image = await Jimp.read(buffer);
+        image.quality(parseInt(process.env.JPEG_QUALITY || '70')); // set JPEG quality to 70
+        compressedBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
     } catch (error) {
         throw new Error("Invalid image file");
     }

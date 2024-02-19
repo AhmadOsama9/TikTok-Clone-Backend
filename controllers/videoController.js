@@ -3,7 +3,7 @@ const Video = require("../config/db").Video;
 
 const nsfwjs = require("nsfwjs");
 const tf = require("@tensorflow/tfjs-node");
-const sharp = require("sharp");
+const Jimp = require("jimp");
 const ffmpeg = require("fluent-ffmpeg");
 const stream = require("stream");
 const { Readable, PassThrough } = require('stream');
@@ -218,11 +218,11 @@ const validateAndCompressThumbnail = async (imagePath) => {
     const quality = parseInt(process.env.JPEG_QUALITY || '70', 10);
 
     try {
-        await sharp(imagePath)
-            .jpeg({ quality }) // Compress the image and convert it to JPEG format
-            .toFile(tempPath); // Write to a temporary file
+        const image = await Jimp.read(imagePath);
+        image.quality(quality);
+        await image.writeAsync(tempPath);
 
-        await fs.promises.rename(tempPath, imagePath); // Replace the original file
+        await fs.rename(tempPath, imagePath);
     } catch (error) {
         throw new Error(error);
     }
