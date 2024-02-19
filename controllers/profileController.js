@@ -63,7 +63,7 @@ async function deleteAllFiles() {
     console.log('All files deleted.');
 }
 
-deleteAllFiles();
+//deleteAllFiles();
 
 // deleteUnUsedFiles().catch(console.error);
 
