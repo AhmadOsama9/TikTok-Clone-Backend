@@ -1,4 +1,5 @@
 const Report = require("../config/db").Report;
+const User = require("../config/db").User;
 
 
 const createReport = async (req, res) => {
@@ -6,12 +7,31 @@ const createReport = async (req, res) => {
         const { title, description, referenceId, referenceType } = req.body;
         const { userId } = req.user;
 
-        if (referenceType !== "user" && referenceType !== "video" && !referenceType !== "comment")
-            return res.status(500).json({Error: "Invalid referenceType"});
+        if (!title || !description || !referenceId || !referenceType)
+            return res.status(400).json({ message: "All fields are required" });
 
-        //I think here I need to check for that referenceId if it's there, 
-        //I mean if it was a comment for example then I should make sure that 
-        //there's a comment with that id.
+        if (![1, 2, 3].includes(referenceType)) {
+            return res.status(400).json({ message: "Invalid referenceType" });
+        }
+
+        let referencedItem;
+        switch (referenceType) {
+            case 1:
+                referencedItem = await User.findByPk(referenceId);
+                break;
+            case 2:
+                referencedItem = await Comment.findByPk(referenceId);
+                break;
+            case 3:
+                referencedItem = await Video.findByPk(referenceId);
+                break;
+            default:
+                break;
+        }
+
+        if (!referencedItem) {
+            return res.status(400).json({ message: "Referenced item not found" });
+        }
 
         const report = await Report.create({
             title,
@@ -21,11 +41,12 @@ const createReport = async (req, res) => {
             userId
         });
 
-        res.status(201).json(report);
+        res.status(200).json(report);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 };
+
 
 
 const getReportById = async (req, res) => {
@@ -55,6 +76,8 @@ const getAllReports = async (req, res) => {
 const updateReport = async (req, res) => {
     try {
         const { title, description } = req.body;
+        if (!title && !description)
+            return res.status(400).json({ message: "At least one field is required" });
 
         const report = await Report.findByPk(req.params.id);
         if (report) {
@@ -71,6 +94,12 @@ const updateReport = async (req, res) => {
 
 const deleteReport = async (req, res) => {
     try {
+        const user  = await User.findByPk(req.user.userId);
+        if (!user)
+            return res.status(400).json({ message: "Unauthorized" });
+        if (!user.isAdmin)
+            return res.status(400).json({ message: "Unauthorized" });
+
         const report = await Report.findByPk(req.params.id);
         if (report) {
             await report.destroy();

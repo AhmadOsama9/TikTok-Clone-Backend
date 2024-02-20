@@ -9,6 +9,9 @@ const {
     verifyOtpAndSetNewPassword,
     sendVerificationCode,
     checkBanStatus,
+    referredUser,
+    searchUsersUsingPagination,
+    autocompleteUsers,
 } = require("../controllers/userController");
 
 /**
@@ -40,6 +43,8 @@ const {
  *               email:
  *                 type: string
  *               password:
+ *                 type: string
+ *               username:
  *                 type: string
  *     responses:
  *       200:
@@ -329,5 +334,145 @@ router.post("/send-verification-code", sendVerificationCode);
  *         description: Server error
  */
 router.get("/check-ban-status", checkBanStatus);
+
+/**
+ * @swagger
+ * /api/user/refer-user:
+ *   post:
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     summary: Refer a user
+ *     description: Refer a user using their referral code. Requires a Bearer token in the Authorization header.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               referralCode:
+ *                 type: string
+ *             required:
+ *               - referralCode
+ *     responses:
+ *       200:
+ *         description: User referred successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "You have been referred successfully"
+ *       400:
+ *         description: Bad request, e.g., missing referral code or referring oneself
+ *       500:
+ *         description: Server error
+ */
+router.post("/refer-user", referredUser);
+
+/**
+ * @swagger
+ * /api/user/search?username=ahmed&offset=10:
+ *   get:
+ *     tags:
+ *      - Users
+ *     security:
+ *       - bearerAuth: []
+ *     summary: Search users with pagination
+ *     description: Search for users whose username contains the specified term. Returns the top 5 matches from the specified page. Requires a Bearer token in the Authorization header.
+ *     parameters:
+ *      - in: query
+ *        name: username
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The search term
+ *      - in: query
+ *        name: offset
+ *        schema:
+ *          type: integer
+ *        description: The number of users to skip before starting to return the matches
+ *     responses:
+ *       200:
+ *         description: The search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       username:
+ *                         type: string
+ *                       Profile:
+ *                         type: object
+ *                         properties:
+ *                           imageFileName:
+ *                             type: string
+ *                           imageURL:
+ *                             type: string
+ *       400:
+ *         description: Username is required
+ *       500:
+ *         description: Server error
+ */
+router.get("/search", searchUsersUsingPagination);
+
+/**
+ * @swagger
+ * /api/user/autocomplete?username=ahmed:
+ *   get:
+ *     tags:
+ *      - Users
+ *     security:
+ *       - bearerAuth: []
+ *     summary: Autocomplete user search
+ *     description: Search for users whose username starts with the specified term. Returns the top 5 matches. Requires a Bearer token in the Authorization header.
+ *     parameters:
+ *      - in: query
+ *        name: username
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The search term
+ *     responses:
+ *       200:
+ *         description: The search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       username:
+ *                         type: string
+ *                       Profile:
+ *                         type: object
+ *                         properties:
+ *                           imageFileName:
+ *                             type: string
+ *                           imageURL:
+ *                             type: string
+ *       400:
+ *         description: Username is required
+ *       500:
+ *         description: Server error
+ */
+router.get("/autocomplete", autocompleteUsers);
 
 module.exports = router;

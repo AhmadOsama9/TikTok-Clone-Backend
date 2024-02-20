@@ -56,7 +56,15 @@ const addBalance = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { userId } = req.user;
-        const { balance } = req.body;
+        const { cardCode, balance } = req.body;
+
+        //here we should handle the cardCode case
+        //were I will be talking with the firebase database
+        //for those cards and check if the card is valid or not
+        //and if it is valid I will get the balance from the card
+        //and add it to the user balance
+        //for now I will just take the balance that I want to add
+        
 
         if (!balance)
             return res.status(400).send({ message: "Balance is required" });
@@ -78,9 +86,7 @@ const addBalance = async (req, res) => {
 
         await Transaction.create({
             amount: balance,
-            senderId: userId,
             receiverId: userId,
-            senderUsername: user.username,
             receiverUsername: user.username,
         }, { transaction });
 

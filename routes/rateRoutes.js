@@ -65,5 +65,10 @@ const {
  */
 router.post("/add", addRate);
 
+//get the people who made the rate on that video, username, imageUrl, rate
+//also using pagination 10
+//videoId is required, also offset of course
+
+
 
 module.exports = router;

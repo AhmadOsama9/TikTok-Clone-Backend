@@ -171,10 +171,63 @@ const getUserChats = async (req, res) => {
     }
 }
 
+const addReactionToMessage = async (req, res) => {
+    try {
+        const { messageId, reaction } = req.body;
+        const { userId } = req.user;
+
+        if (!messageId || !reaction)
+            return res.status(400).json({ message: "Invalid request" });
+
+        const message = await Message.findByPk(messageId);
+        if (!message)
+            return res.status(404).json({ message: "Message not found" });
+
+        if (message.senderId === userId)
+            return res.status(403).json({ message: "You can't react to your own message" });
+
+        if (reaction < 0 || reaction > 3)
+            return res.status(400).json({ message: "Invalid reaction" });
+
+        message.reaction = reaction;
+        await message.save();
+
+        return res.status(200).json({ message: "Reaction added successfully" });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const deleteMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const { userId } = req.user;
+
+        const message = await Message.findByPk(messageId);
+        if (!message)
+            return res.status(404).json({ message: "Message not found" });
+
+        if (message.senderId !== userId)
+            return res.status(403).json({ message: "You are not authorized to delete this message" });
+
+        await message.destroy();
+
+        return res.status(200).json({ message: "Message deleted successfully" });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+
+
 module.exports = {
     sendMessageUsingChatId,
     sendMessageUsingReceiverId,
     getMessagesUsingPagination,
     getMessagesBetweenUsers, 
     getUserChats,
+    addReactionToMessage,
+    deleteMessage
 }

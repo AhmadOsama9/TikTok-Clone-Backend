@@ -18,21 +18,11 @@ module.exports = (sequelize, DataTypes) => {
       parentId: {
         type: DataTypes.INTEGER,
         references: {
-          model: 'Comments', // self-reference
+          model: 'Comments',
           key: 'id',
         }
       },
-      giftType: {
-        type: DataTypes.STRING,
-        validate: {
-          canHaveGift(value) {
-            if (this.parentId && value) {
-              throw new Error('Replies cannot have gifts');
-            }
-          }
-        }
-      },
-      giftPrice: {
+      giftTYPE: {
         type: DataTypes.INTEGER,
         validate: {
           canHaveGift(value) {
@@ -41,8 +31,8 @@ module.exports = (sequelize, DataTypes) => {
             }
           },
           isPositive(value) {
-            if (value < 0)
-              throw new Error("Gift price must be a positive number");
+            if (value < 1 || value > 5)
+              throw new Error("Gift type must be a positive number between 1 and 5");
           }
         }
       },

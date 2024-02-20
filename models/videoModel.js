@@ -13,7 +13,15 @@ module.exports = (sequelize, DataTypes) => {
       category: DataTypes.STRING,
       shareCount: DataTypes.INTEGER,
       likes: DataTypes.INTEGER,
-      description: DataTypes.STRING,
+      description: {
+        type: DataTypes.STRING,
+        validate: {
+            len: {
+                args: [20],
+                msg: "Description must be at least 20 characters long"
+            }
+        }
+    },
       totalRating: {
         type: DataTypes.DOUBLE,
         defaultValue: 0,
@@ -25,6 +33,10 @@ module.exports = (sequelize, DataTypes) => {
       averageRating: {
           type: DataTypes.DOUBLE,
           defaultValue: 0,
+      },
+      videoPopularityScore: {
+        type: DataTypes.DOUBLE,
+        defaultValue: 0,
       },
       isTrending: DataTypes.BOOLEAN,
       videoSize: DataTypes.INTEGER,

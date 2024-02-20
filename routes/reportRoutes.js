@@ -50,10 +50,10 @@ const {
  *                 type: integer
  *                 description: The reference ID related to the report.
  *               referenceType:
- *                 type: string(user, comment or video)
+ *                 type: integer(1 for user, 2 for comment or 3 for video)
  *                 description: The type of the reference related to the report
  *     responses:
- *       201:
+ *       200:
  *         description: The created report
  *         content:
  *           application/json:
@@ -275,7 +275,7 @@ router.get("/get-all", getAllReports);
  *   delete:
  *     tags:
  *       - Reports
- *     summary: Delete a report by ID
+ *     summary: Delete a report by ID after making sure that the user is an admin
  *     operationId: deleteReport
  *     security:
  *      - bearerAuth: []

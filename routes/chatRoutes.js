@@ -7,6 +7,8 @@ const {
     getMessagesUsingPagination,
     getMessagesBetweenUsers,
     getUserChats,
+    addReactionToMessage,
+    deleteMessage
 } = require("../controllers/chatController");
 
 /**
@@ -371,5 +373,89 @@ router.get("/:user2Id/get-messages-between-users", getMessagesBetweenUsers);
  *                   type: string
  */
 router.get("/get", getUserChats);
+
+/**
+ * @swagger
+ * /api/chat/add-reaction:
+ *   post:
+ *     tags:
+ *       - Chat
+ *     security:
+ *       - bearerAuth: []
+ *     summary: Add reaction to a message
+ *     description: Add a reaction to a message. Requires a Bearer token in the Authorization header.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               messageId:
+ *                 type: string
+ *               reaction:
+ *                 type: integer
+ *             required:
+ *               - messageId
+ *               - reaction
+ *     responses:
+ *       200:
+ *         description: Reaction added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Reaction added successfully"
+ *       400:
+ *         description: Bad request, e.g., missing messageId or invalid reaction
+ *       403:
+ *         description: Forbidden, user can't react to own message
+ *       404:
+ *         description: Message not found
+ *       500:
+ *         description: Server error
+ */
+router.post("/add-reaction", addReactionToMessage);
+
+/**
+ * @swagger
+ * /api/chat/delete-message/{messageId}:
+ *   delete:
+ *     tags:
+ *       - Chat
+ *     security:
+ *       - bearerAuth: []
+ *     summary: Delete a message
+ *     description: Delete a message. Requires a Bearer token in the Authorization header.
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the message to delete
+ *     responses:
+ *       200:
+ *         description: Message deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Message deleted successfully"
+ *       403:
+ *         description: Forbidden, user is not authorized to delete this message
+ *       404:
+ *         description: Message not found
+ *       500:
+ *         description: Server error
+ */
+router.delete("/delete-message/:messageId", deleteMessage);
+
 
 module.exports = router;

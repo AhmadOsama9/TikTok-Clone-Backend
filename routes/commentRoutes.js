@@ -203,7 +203,7 @@ router.post("/reply/:id", replyToComment);
  *   post:
  *     tags:
  *       - Comments
- *     summary: Add a gift comment to a video
+ *     summary: Add a gift comment to a video, take balance from user to receiver, create comment with gift type and create a transaction
  *     operationId: addGiftComment
  *     security:
  *      - bearerAuth: []
@@ -229,11 +229,8 @@ router.post("/reply/:id", replyToComment);
  *                 type: string
  *                 description: The content of the comment.
  *               giftType:
- *                 type: string
- *                 description: The type of the gift.
- *               giftPrice:
  *                 type: number
- *                 description: The price of the gift.
+ *                 description: The type of the gift.
  *     responses:
  *       200:
  *         description: The added gift comment

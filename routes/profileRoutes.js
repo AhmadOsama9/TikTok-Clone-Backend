@@ -189,7 +189,7 @@ router.get("/otheruser/:otherUserId", getOtherUserProfile);
  *        schema:
  *          type: file
  *     responses:
- *       200:
+ *      200:
  *         description: Profile picture changed and compressed successfully
  *         content:
  *           application/json:
@@ -198,15 +198,15 @@ router.get("/otheruser/:otherUserId", getOtherUserProfile);
  *               properties:
  *                 message:
  *                   type: string
- *       400:
+ *      400:
  *         description: Invalid image format, image dimensions too small, or inappropriate content
- *       401:
+ *      401:
  *         description: Invalid token
- *       403:
+ *      403:
  *         description: Invalid API key
- *       404:
+ *      404:
  *         description: User or Profile not found
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.post("/change-image", upload.single("image"), changeProfileImage);
@@ -229,7 +229,7 @@ router.post("/change-image", upload.single("image"), changeProfileImage);
  *          type: string
  *        description: API key
  *     responses:
- *       200:
+ *      200:
  *         description: Successfully retrieved image URL
  *         content:
  *           application/json:
@@ -238,9 +238,9 @@ router.post("/change-image", upload.single("image"), changeProfileImage);
  *               properties:
  *                 imageUrl:
  *                   type: string
- *       404:
+ *      404:
  *         description: User, Profile or Profile Image not found
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.get("/get-image", getUserProfileImage);
@@ -269,7 +269,7 @@ router.get("/get-image", getUserProfileImage);
  *          type: string
  *        description: The ID of the other user
  *     responses:
- *       200:
+ *      200:
  *         description: Successfully retrieved image URL
  *         content:
  *           application/json:
@@ -278,11 +278,11 @@ router.get("/get-image", getUserProfileImage);
  *               properties:
  *                 otherUserImageUrl:
  *                   type: string
- *       400:
+ *      400:
  *         description: User not found
- *       404:
+ *      404:
  *         description: Profile or Profile Image not found
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.get("/get-other-user-profile-image/:otherUserId", getOtherUserProfileImage);
@@ -318,7 +318,7 @@ router.get("/get-other-user-profile-image/:otherUserId", getOtherUserProfileImag
  *                 type: string
  *                 description: The new password
  *     responses:
- *       200:
+ *      200:
  *         description: Password changed successfully
  *         content:
  *           application/json:
@@ -327,9 +327,9 @@ router.get("/get-other-user-profile-image/:otherUserId", getOtherUserProfileImag
  *               properties:
  *                 message:
  *                   type: string
- *       400:
+ *      400:
  *         description: User not found or Invalid password
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.put("/change-password", changeProfilePassword);
@@ -362,7 +362,7 @@ router.put("/change-password", changeProfilePassword);
  *                 type: string
  *                 description: The new name
  *     responses:
- *       200:
+ *      200:
  *         description: Name changed successfully
  *         content:
  *           application/json:
@@ -371,9 +371,9 @@ router.put("/change-password", changeProfilePassword);
  *               properties:
  *                 message:
  *                   type: string
- *       400:
+ *      400:
  *         description: User not found
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.put("/change-name", changeProfileName);
@@ -406,7 +406,7 @@ router.put("/change-name", changeProfileName);
  *                 type: string
  *                 description: The new phone
  *     responses:
- *       200:
+ *      200:
  *         description: Phone changed successfully
  *         content:
  *           application/json:
@@ -415,9 +415,9 @@ router.put("/change-name", changeProfileName);
  *               properties:
  *                 message:
  *                   type: string
- *       400:
+ *      400:
  *         description: User not found or Phone already exists
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.put("/change-phone", changeProfilePhone);
@@ -450,13 +450,13 @@ router.put("/change-phone", changeProfilePhone);
  *                 type: string
  *                 description: The new username
  *     responses:
- *       200:
+ *      200:
  *         description: Username changed successfully
- *       400:
+ *      400:
  *         description: Username already exists
- *       404:
+ *      404:
  *         description: User not found
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.put("/change-username", changeProfileUsername);
@@ -489,7 +489,7 @@ router.put("/change-username", changeProfileUsername);
  *                 type: string
  *                 description: The new bio
  *     responses:
- *       200:
+ *      200:
  *         description: Bio changed successfully
  *         content:
  *           application/json:
@@ -498,9 +498,9 @@ router.put("/change-username", changeProfileUsername);
  *               properties:
  *                 message:
  *                   type: string
- *       400:
+ *      400:
  *         description: Profile not found
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.put("/change-bio", changeProfileBio);
@@ -536,13 +536,13 @@ router.put("/change-bio", changeProfileBio);
  *                 type: string
  *                 description: The user's password
  *     responses:
- *       200:
+ *      200:
  *         description: Verification code sent successfully
- *       400:
+ *      400:
  *         description: Email already exists, Invalid email format or Invalid password
- *       404:
+ *      404:
  *         description: User not found
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.post("/change-email/send-verification-to-new-email", sendVerificationToNewEmail);
@@ -578,13 +578,13 @@ router.post("/change-email/send-verification-to-new-email", sendVerificationToNe
  *                 type: string
  *                 description: The verification code
  *     responses:
- *       200:
+ *      200:
  *         description: Email changed successfully
- *       400:
+ *      400:
  *         description: Invalid verification code or Verification code expired
- *       404:
+ *      404:
  *         description: User not found
- *       500:
+ *      500:
  *         description: Internal Server Error
  */
 router.put("/change-email/verify-and-set-new-email", verificationAndSetNewEmail);
@@ -613,7 +613,7 @@ router.put("/change-email/verify-and-set-new-email", verificationAndSetNewEmail)
  *          type: integer
  *        description: The number of videos to skip before starting to fetch.
  *     responses:
- *       200:
+ *      200:
  *         description: A list of videos.
  *         content:
  *           application/json:
@@ -621,7 +621,7 @@ router.put("/change-email/verify-and-set-new-email", verificationAndSetNewEmail)
  *               type: array
  *               items:
  *                 $ref: '#/definitions/Video'
- *       500:
+ *      500:
  *         description: An error occurred.
  *         content:
  *           application/json:
@@ -672,7 +672,7 @@ router.get("/userVideos", async (req, res) => {
  *          type: integer
  *        description: The number of videos to skip before starting to fetch.
  *     responses:
- *       200:
+ *      200:
  *         description: A list of videos.
  *         content:
  *           application/json:
@@ -680,7 +680,7 @@ router.get("/userVideos", async (req, res) => {
  *               type: array
  *               items:
  *                 $ref: '#/definitions/Video'
- *       500:
+ *      500:
  *         description: An error occurred.
  *         content:
  *           application/json:
@@ -725,7 +725,7 @@ router.get("/otherUserVideos/:otherUserId", async (req, res) => {
  *          type: integer
  *        description: The number of followers to skip before starting to fetch.
  *     responses:
- *       200:
+ *      200:
  *         description: A list of followers.
  *         content:
  *           application/json:
@@ -733,7 +733,7 @@ router.get("/otherUserVideos/:otherUserId", async (req, res) => {
  *               type: array
  *               items:
  *                 $ref: '#/definitions/Follower'
- *       500:
+ *      500:
  *         description: An error occurred.
  *         content:
  *           application/json:
@@ -784,7 +784,7 @@ router.get("/followers", async (req, res) => {
  *          type: integer
  *        description: The number of followers to skip before starting to fetch.
  *     responses:
- *       200:
+ *      200:
  *         description: A list of followers.
  *         content:
  *           application/json:
@@ -792,7 +792,7 @@ router.get("/followers", async (req, res) => {
  *               type: array
  *               items:
  *                 $ref: '#/definitions/Follower'
- *       500:
+ *      500:
  *         description: An error occurred.
  *         content:
  *           application/json:
@@ -817,7 +817,7 @@ router.get("/followers/:otherUserId", async (req, res) => {
  * /api/profile/get-followings?offset=0:
  *   get:
  *     tags:
- *       - profile
+ *      - profile
  *     summary: Get all users that a specific user is following, with pagination
  *     operationId: getFollowingsUsingPagination
  *     security:
@@ -836,7 +836,7 @@ router.get("/followers/:otherUserId", async (req, res) => {
  *         required: false
  *         description: The number of users to skip before starting to fetch.
  *     responses:
- *       '200':
+ *      '200':
  *         description: Followings retrieved successfully
  *         content:
  *           application/json:
@@ -851,7 +851,7 @@ router.get("/followers/:otherUserId", async (req, res) => {
  *                     type: string
  *                   imageUrl:
  *                     type: string
- *       '500':
+ *      '500':
  *         description: Internal server error
  *         content:
  *           application/json:
@@ -868,11 +868,11 @@ router.get("/get-followings", getFollowingsUsingPagination);
  * /api/profile/videos/{videoId}/save:
  *   post:
  *     tags:
- *       - profile
+ *      - profile
  *     summary: Save a video
  *     operationId: saveVideo
  *     security:
- *       - bearerAuth: []
+ *      - bearerAuth: []
  *     parameters:
  *      - in: header
  *        name: x-api-key
@@ -886,13 +886,13 @@ router.get("/get-followings", getFollowingsUsingPagination);
  *         schema:
  *           type: string
  *     responses:
- *       '200':
+ *      '200':
  *         description: Video saved successfully
- *       '400':
+ *      '400':
  *         description: Bad request
- *       '404':
+ *      '404':
  *         description: Video not found
- *       '500':
+ *      '500':
  *         description: Internal server error
  */
 router.post('/videos/:videoId/save', saveVideo);
@@ -902,11 +902,11 @@ router.post('/videos/:videoId/save', saveVideo);
  * /api/profile/videos/{videoId}/unsave:
  *   delete:
  *     tags:
- *       - profile
+ *      - profile
  *     summary: Unsave a video
  *     operationId: unsaveVideo
  *     security:
- *       - bearerAuth: []
+ *      - bearerAuth: []
  *     parameters:
  *      - in: header
  *        name: x-api-key
@@ -920,13 +920,13 @@ router.post('/videos/:videoId/save', saveVideo);
  *         schema:
  *           type: string
  *     responses:
- *       '200':
+ *      '200':
  *         description: Video unsaved successfully
- *       '400':
+ *      '400':
  *         description: Bad request
- *       '404':
+ *      '404':
  *         description: Video not saved
- *       '500':
+ *      '500':
  *         description: Internal server error
  */
 router.delete('/videos/:videoId/unsave', unsaveVideo);
@@ -936,11 +936,11 @@ router.delete('/videos/:videoId/unsave', unsaveVideo);
  * /api/profile/videos/saved?offset=0:
  *   get:
  *     tags:
- *       - profile
+ *      - profile
  *     summary: Get saved videos with pagination
  *     operationId: getSavedVideosUsingPagination
  *     security:
- *       - bearerAuth: []
+ *      - bearerAuth: []
  *     parameters:
  *      - in: header
  *        name: x-api-key
@@ -955,9 +955,9 @@ router.delete('/videos/:videoId/unsave', unsaveVideo);
  *         required: false
  *         description: The number of videos to skip before starting to fetch.
  *     responses:
- *       '200':
+ *      '200':
  *         description: List of saved videos
- *       '500':
+ *      '500':
  *         description: Internal server error
  */
 router.get('/videos/saved', getSavedVideosUsingPagination);

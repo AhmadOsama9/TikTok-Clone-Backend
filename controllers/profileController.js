@@ -840,4 +840,5 @@ module.exports = {
     saveVideo,
     unsaveVideo,
     getSavedVideosUsingPagination,
+    getSignedUrl,
 }

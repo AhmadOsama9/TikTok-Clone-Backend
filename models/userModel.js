@@ -40,6 +40,8 @@ module.exports = (sequelize, DataTypes) => {
       },
       referralCode: DataTypes.STRING,
       referrals: DataTypes.INTEGER,
+      referred: DataTypes.BOOLEAN,
       isVerified: DataTypes.BOOLEAN,
+      isAdmin: DataTypes.BOOLEAN,
     });
 };

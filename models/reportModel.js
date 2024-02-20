@@ -3,7 +3,15 @@ module.exports = (sequelize, DataTypes) => {
       title: DataTypes.STRING,
       description: DataTypes.STRING,
       referenceId: DataTypes.INTEGER,
-      referenceType: DataTypes.STRING,
+      referenceType: { 
+        type: DataTypes.INTEGER,
+        validate: {
+          isIn: {
+            args: [[1, 2, 3]],
+            msg: "Reference type must be 1, 2 or 3"
+          }
+        }
+      },
       userId: {
         type: DataTypes.INTEGER,
         references: {

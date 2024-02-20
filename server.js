@@ -8,6 +8,9 @@ port = process.env.PORT || 3000;
 //I need to check the cors later on
 //even so it's not like a sercurity measure but whatever
 
+//scheduling
+require("./scheduling/userPopularityUpdate");
+
 //configs
 const swaggerOptions = require("./config/swaggerConfig");
 require("dotenv").config();

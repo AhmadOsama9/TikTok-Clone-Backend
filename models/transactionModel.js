@@ -16,7 +16,6 @@ module.exports = (sequelize, DataTypes) => {
           model: 'Users',
           key: 'id'
         },
-        allowNull: false
       },
       receiverId: {
         type: DataTypes.INTEGER,
@@ -28,7 +27,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       senderUsername: {
         type: DataTypes.STRING,
-        allowNull: false
       },
       receiverUsername: {
         type: DataTypes.STRING,

@@ -10,6 +10,8 @@ const reportModel = require("../models/reportModel");
 const chatModel = require("../models/chatModel");
 const messageModel = require("../models/messageModel");
 const rateModel = require("../models/rateModel");
+const userPopularityModel = require("../models/userPopularityModel");
+const userPersonalizationModel = require("../models/userPersonalizationModel");
 
 // config = {
 //     host    : "127.0.0.1",
@@ -37,6 +39,8 @@ const Report = reportModel(sequelize, DataTypes);
 const Chat = chatModel(sequelize, DataTypes);
 const Message = messageModel(sequelize, DataTypes);
 const Rate = rateModel(sequelize, DataTypes);
+const UserPopularity = userPopularityModel(sequelize, DataTypes);
+const UserPersonalization = userPersonalizationModel(sequelize, DataTypes);
 
 //Relations between tables
 
@@ -163,9 +167,39 @@ Rate.belongsTo(Video, {
     as: 'video',
 });
 
+User.hasOne(UserPopularity, {
+    foreignKey: 'userId',
+    as: 'popularity',
+});
+
+UserPopularity.belongsTo(User, {
+    foreignKey: 'userId',
+});
+
+User.hasMany(UserPersonalization, {
+    foreignKey: 'userId',
+    as: 'personalizations',
+});
+
+UserPersonalization.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user',
+});
+
+Video.hasMany(UserPersonalization, {
+    foreignKey: 'videoId',
+    as: 'personalizations',
+});
+
+UserPersonalization.belongsTo(Video, {
+    foreignKey: 'videoId',
+    as: 'video',
+});
+
 async function syncModels() {
     await User.sync({alter: true});
     await Video.sync({alter: true});
+    await UserPersonalization.sync({alter: true});
     await Profile.sync({alter: true});
     await Comment.sync({alter: true});
     await Follow.sync({alter: true});
@@ -175,9 +209,12 @@ async function syncModels() {
     await Chat.sync({alter: true});
     await Message.sync({alter: true});
     await Rate.sync({alter: true});
+    await UserPopularity.sync({alter: true});
 }
 
 async function dropModels() {
+    await UserPersonalization.drop();
+    await UserPopularity.drop();
     await Rate.drop();
     await Message.drop();
     await Chat.drop();
@@ -208,6 +245,8 @@ module.exports = {
     Chat,
     Message,
     Rate,
+    UserPopularity,
+    UserPersonalization,
     sequelize
 }
 

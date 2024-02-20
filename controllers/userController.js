@@ -10,15 +10,20 @@ const nodemailer = require("nodemailer");
 const sequelize = require("../config/db").sequelize;
 const randomstring = require('randomstring');
 const validator = require('validator');
+const { Op } = require("sequelize");
+
+
+
+const { getSignedUrl } = require("./profileController");
 
 
 
 const signup = async (req, res) => {
     let transaction;
     try {
-        let { name, phone, email, password } = req.body;
+        let { name, phone, email, password, username } = req.body;
 
-        if (!name || !phone || !email || !password) {
+        if (!name || !phone || !email || !password || !username) {
             return res.status(400).json({ error: 'Please fill all fields' });
         }
 
@@ -38,11 +43,16 @@ const signup = async (req, res) => {
             return res.status(400).json({ error: 'User with this phone number already exists' });
         }
 
+        const existingUsernameUser = await User.findOne({ where: { username } });
+        if (existingUsernameUser) {
+            return res.status(400).json({ error: 'User with this username already exists' });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         transaction = await sequelize.transaction();
 
-        const user = await User.create({ name, phone, email, password: hashedPassword }, { transaction });
+        const user = await User.create({ name, phone, email, password: hashedPassword, username }, { transaction });
 
         await Profile.create({ userId: user.id }, { transaction });
 
@@ -371,6 +381,116 @@ const checkBanStatus = async (req, res) => {
     }
 }
 
+const referredUser = async (req, res) => {
+    let transaction;
+    try {
+        const { userId } = req.user;
+        const { referralCode } = req.body;
+
+        if (!referralCode)
+            return res.status(400).json({ error: 'Referral code is required' });
+
+        const referredUser = await User.findByPk(userId);
+        if (!referredUser)
+            return res.status(400).json({ error: 'User with this id does not exist' });
+
+        const referralUser = await User.findOne({ where: { referralCode } });
+        if (!referralUser)
+            return res.status(400).json({ error: 'User with this referral code does not exist' });
+
+        if (referralUser.id === userId)
+            return res.status(400).json({ error: 'You cannot refer yourself' });
+
+        if (referredUser.referred)
+            return res.status(400).json({ error: 'You have already been referred' });
+
+        transaction = await sequelize.transaction();
+
+        referredUser.referred = true;
+        await referredUser.save({ transaction });
+
+        referralUser.referrals += 1;
+        await referralUser.save({ transaction });
+
+        await transaction.commit();
+
+        return res.status(200).json({ message: "You have been referred successfully" });
+
+    } catch (error) {
+        if (transaction) await transaction.rollback();
+        return res.status(500).json({ error: error.message });
+    }
+};
+ 
+
+const searchUsersUsingPagination = async (req, res) => {
+    try {
+        const { username, offset = 0 } = req.query;
+        
+        if (!username)
+            return res.status(400).json({ error: 'Username is required' });
+
+        const result = await User.findAndCountAll({
+            where: {
+                username: {
+                    [Op.like]: '%' + username + '%'
+                }
+            },
+            attributes: ['id', 'username'],
+            offset: offset,
+            limit: 5,
+            include: [{
+                model: Profile,
+                attributes: ['imageFileName'],
+            }]
+        });
+
+        for (let user of result.rows) {
+            if (user.Profile && user.Profile.imageFileName) {
+                user.Profile.imageURL = await getSignedUrl(user.Profile.imageFileName);
+            }
+        }
+
+        return res.status(200).json({ users: result.rows });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const autocompleteUsers = async (req, res) => {
+    try {
+        const { username } = req.query;
+        
+        if (!username)
+            return res.status(400).json({ error: 'Username is required' });
+
+        const result = await User.findAndCountAll({
+            where: {
+                username: {
+                    [Op.like]: username + '%'
+                }
+            },
+            attributes: ['id', 'username'],
+            limit: 5,
+            include: [{
+                model: Profile,
+                attributes: ['imageFileName'],
+            }]
+        });
+
+        for (let user of result.rows) {
+            if (user.Profile && user.Profile.imageFileName) {
+                user.Profile.imageURL = await getSignedUrl(user.Profile.imageFileName);
+            }
+        }
+
+        return res.status(200).json({ users: result.rows });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
 
 module.exports = {
     signup,
@@ -380,4 +500,7 @@ module.exports = {
     verifyOtpAndSetNewPassword,
     sendVerificationCode,
     checkBanStatus,
+    referredUser,
+    searchUsersUsingPagination,
+    autocompleteUsers,
 }

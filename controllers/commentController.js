@@ -1,3 +1,6 @@
+const transactionModel = require("../models/transactionModel");
+const { changeProfileUsername } = require("./profileController");
+
 const Comment = require("../config/db").Comment;
 const Video = require("../config/db").Video;
 const User = require("../config/db").User;
@@ -72,8 +75,11 @@ const replyToComment = async (req, res) => {
 
 const addGiftComment = async (req, res) => {
     try {
-        const { videoId, content, giftType, giftPrice } = req.body;
+        const { videoId, content, giftTye } = req.body;
         const { userId } = req.user;
+
+        if (!videoId || !giftType)
+            return res.status(500).json({ message: "Invalid data"});
 
         const video = await Video.findByPk(videoId);
         if (!video) {
@@ -85,11 +91,8 @@ const addGiftComment = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (giftPrice < 0)
-            return res.status(400).json({ message: 'Gift price must be a positive number' });
-
-        if (giftPrice > user.balance)
-            return res.status(400).json({ message: 'Insufficient balance' });
+        if (giftType < 1 || giftType > 5)
+            return 
 
         user.balance -= giftPrice;
         await user.save();
