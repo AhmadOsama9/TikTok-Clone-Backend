@@ -10,7 +10,16 @@ module.exports = (sequelize, DataTypes) => {
       fileName: DataTypes.STRING,
       thumbnailFileName: DataTypes.STRING,
       viewsCount: DataTypes.INTEGER,
-      category: DataTypes.STRING,
+      category: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        validate: {
+            isIn: {
+                args: [['category1', 'category2', 'category3']],  // Replace with your actual categories
+                msg: "Invalid category"
+            }
+        }
+      },
       shareCount: DataTypes.INTEGER,
       likes: DataTypes.INTEGER,
       description: {
@@ -21,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
                 msg: "Description must be at least 20 characters long"
             }
         }
-    },
+      },
       totalRating: {
         type: DataTypes.DOUBLE,
         defaultValue: 0,

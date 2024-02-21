@@ -1,11 +1,18 @@
 const Chat = require("../config/db").Chat;
 const Message = require("../config/db").Message;
 const sequelize = require("../config/db").sequelize;
+const { Op } = require("sequelize");
 
 const sendMessageUsingChatId = async (req, res) => {
     try {
         const { chatId, message } = req.body;
         const { userId } = req.user;
+
+        if (!chatId || !message)
+        return res.status(400).json({ message: "Invalid request" });
+
+        if (!message || message.trim() === '')
+        return res.status(400).json({ message: 'Content is required' });
 
         const chat = await Chat.findOne({
             where: {
@@ -21,7 +28,7 @@ const sendMessageUsingChatId = async (req, res) => {
         await Message.create({
             chatId,
             senderId: userId,
-            message,
+            content: message,
         });
 
         return res.status(200).json({ message: "Message sent successfully" });
@@ -35,7 +42,13 @@ const sendMessageUsingChatId = async (req, res) => {
 const sendMessageUsingReceiverId = async (req, res) => {
     const { receiverId, message } = req.body;
     const { userId } = req.user;
-  
+
+    if (!receiverId || !message)
+        return res.status(400).json({ message: "Invalid request" });
+
+    if (!message || message.trim() === '')
+    return res.status(400).json({ message: 'Content is required' });
+
     const transaction = await sequelize.transaction();
   
     try {
@@ -65,12 +78,12 @@ const sendMessageUsingReceiverId = async (req, res) => {
         await Message.create({
             chatId: chat.id,
             senderId: userId,
-            message,
+            content: message,
         }, { transaction });
     
         await transaction.commit();
   
-        return res.status(200).json({ message: "Message sent successfully" });
+        return res.status(200).json({ message: "Message sent successfully", chatId: chat.id });
     } catch (error) {
         await transaction.rollback();
         return res.status(500).json({ error: error.message });
@@ -84,6 +97,8 @@ const getMessagesUsingPagination = async (req, res) => {
         const { userId } = req.user;
 
         offset = offset || 0;
+
+        console.log("ChatId is: ", chatId);
 
         if (!chatId)
             return res.status(400).json({ message: "Invalid request" });
@@ -173,15 +188,21 @@ const getUserChats = async (req, res) => {
 
 const addReactionToMessage = async (req, res) => {
     try {
-        const { messageId, reaction } = req.body;
+        const { messageId, reaction, chatId } = req.body;
         const { userId } = req.user;
 
-        if (!messageId || !reaction)
+        if (!messageId || !reaction) {
+            console.log("no messageId or no reaction being sent");
             return res.status(400).json({ message: "Invalid request" });
+        }
 
         const message = await Message.findByPk(messageId);
         if (!message)
             return res.status(404).json({ message: "Message not found" });
+
+        const chat = await Chat.findByPk(chatId);
+        if (!chat || (chat.user1Id !== userId && chat.user2Id !== userId))
+            return res.status(403).json({ message: "You are not a participant in this chat" });
 
         if (message.senderId === userId)
             return res.status(403).json({ message: "You can't react to your own message" });

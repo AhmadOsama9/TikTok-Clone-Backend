@@ -10,6 +10,9 @@ port = process.env.PORT || 3000;
 
 //scheduling
 require("./scheduling/userPopularityUpdate");
+require("./scheduling/videoPopularityScore");
+require("./scheduling/watchedVideoDelete");
+require("./scheduling/decayUserPersonalization");
 
 //configs
 const swaggerOptions = require("./config/swaggerConfig");
@@ -31,6 +34,7 @@ const reportRoutes = require("./routes/reportRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const followRoutes = require("./routes/followRoutes");
 const rateRoutes = require("./routes/rateRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 //Middlewares
 
@@ -107,11 +111,10 @@ app.use("/api/report/", reportRoutes);
 app.use("/api/comment/", commentRoutes);
 app.use("/api/follow/", followRoutes);
 app.use("/api/rate/", rateRoutes);
+app.use("/api/chat/", chatRoutes);
+
 
 //starting the server
 app.listen(port, () => {
     console.log("Listening on port 3000")
 });
-
-
-

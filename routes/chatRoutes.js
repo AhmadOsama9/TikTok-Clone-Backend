@@ -23,12 +23,6 @@ const {
  *      - bearerAuth: []
  *     parameters:
  *       - in: header
- *         name: Authorization
- *         schema:
- *           type: string
- *         required: true
- *         description: The JWT token of the user.
- *       - in: header
  *         name: X-API-KEY
  *         schema:
  *           type: string
@@ -93,12 +87,6 @@ router.post("/send-message-using-chatId", sendMessageUsingChatId);
  *      - bearerAuth: []
  *     parameters:
  *       - in: header
- *         name: Authorization
- *         schema:
- *           type: string
- *         required: true
- *         description: The JWT token of the user.
- *       - in: header
  *         name: X-API-KEY
  *         schema:
  *           type: string
@@ -162,14 +150,7 @@ router.post("/send-message-using-receiverId", sendMessageUsingReceiverId);
  *         name: offset
  *         schema:
  *           type: integer
- *         required: true
  *         description: The offset for pagination
- *       - in: header
- *         name: Authorization
- *         schema:
- *           type: string
- *         required: true
- *         description: The JWT token of the user.
  *       - in: header
  *         name: X-API-KEY
  *         schema:
@@ -228,7 +209,7 @@ router.post("/send-message-using-receiverId", sendMessageUsingReceiverId);
  *                 error:
  *                   type: string
  */
-router.get("/:id/get-messages", getMessagesUsingPagination);
+router.get("/:chatId/get-messages", getMessagesUsingPagination);
 
 /**
  * @swagger
@@ -241,7 +222,7 @@ router.get("/:id/get-messages", getMessagesUsingPagination);
  *     security:
  *      - bearerAuth: []
  *     parameters:
- *       - in: query
+ *       - in: path
  *         name: user2Id
  *         schema:
  *           type: integer
@@ -251,14 +232,7 @@ router.get("/:id/get-messages", getMessagesUsingPagination);
  *         name: offset
  *         schema:
  *           type: integer
- *         required: true
  *         description: The offset for pagination
- *       - in: header
- *         name: Authorization
- *         schema:
- *           type: string
- *         required: true
- *         description: The JWT token of the user.
  *       - in: header
  *         name: X-API-KEY
  *         schema:
@@ -331,12 +305,6 @@ router.get("/:user2Id/get-messages-between-users", getMessagesBetweenUsers);
  *      - bearerAuth: []
  *     parameters:
  *       - in: header
- *         name: Authorization
- *         schema:
- *           type: string
- *         required: true
- *         description: The JWT token of the user.
- *       - in: header
  *         name: X-API-KEY
  *         schema:
  *           type: string
@@ -384,6 +352,13 @@ router.get("/get", getUserChats);
  *       - bearerAuth: []
  *     summary: Add reaction to a message
  *     description: Add a reaction to a message. Requires a Bearer token in the Authorization header.
+ *     parameters:
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The API key.
  *     requestBody:
  *       required: true
  *       content:
@@ -392,12 +367,14 @@ router.get("/get", getUserChats);
  *             type: object
  *             properties:
  *               messageId:
- *                 type: string
+ *                 type: integer
+ *                 description: The ID of the message to react to
  *               reaction:
  *                 type: integer
- *             required:
- *               - messageId
- *               - reaction
+ *                 description: The reaction to add to the message
+ *               chatId:
+ *                 type: integer 
+ *                 description: The ID of the chat
  *     responses:
  *       200:
  *         description: Reaction added successfully
@@ -437,6 +414,12 @@ router.post("/add-reaction", addReactionToMessage);
  *         schema:
  *           type: string
  *         description: ID of the message to delete
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The API key.
  *     responses:
  *       200:
  *         description: Message deleted successfully

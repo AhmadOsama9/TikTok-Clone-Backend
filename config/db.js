@@ -12,6 +12,8 @@ const messageModel = require("../models/messageModel");
 const rateModel = require("../models/rateModel");
 const userPopularityModel = require("../models/userPopularityModel");
 const userPersonalizationModel = require("../models/userPersonalizationModel");
+const recentInteractionModel = require("../models/recentInteractionModel");
+const watchedVideoModel = require("../models/watchedVideoModel");
 
 // config = {
 //     host    : "127.0.0.1",
@@ -41,6 +43,8 @@ const Message = messageModel(sequelize, DataTypes);
 const Rate = rateModel(sequelize, DataTypes);
 const UserPopularity = userPopularityModel(sequelize, DataTypes);
 const UserPersonalization = userPersonalizationModel(sequelize, DataTypes);
+const RecentInteraction = recentInteractionModel(sequelize, DataTypes);
+const WatchedVideo = watchedVideoModel(sequelize, DataTypes);
 
 //Relations between tables
 
@@ -196,9 +200,50 @@ UserPersonalization.belongsTo(Video, {
     as: 'video',
 });
 
+User.hasMany(RecentInteraction, {
+    foreignKey: 'userId',
+    as: 'recentInteractions',
+});
+
+RecentInteraction.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user',
+});
+
+Video.hasMany(RecentInteraction, {
+    foreignKey: 'videoId',
+    as: 'recentInteractions',
+});
+
+RecentInteraction.belongsTo(Video, {
+    foreignKey: 'videoId',
+    as: 'video',
+});
+
+User.hasMany(WatchedVideo, {
+    foreignKey: 'userId',
+    as: 'watchedVideos',
+});
+
+WatchedVideo.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user',
+});
+
+Video.hasMany(WatchedVideo, {
+    foreignKey: 'videoId',
+    as: 'watchedInstances',
+});
+
+WatchedVideo.belongsTo(Video, {
+    foreignKey: 'videoId',
+    as: 'video',
+});
+
 async function syncModels() {
     await User.sync({alter: true});
     await Video.sync({alter: true});
+    await RecentInteraction.sync({alter: true});
     await UserPersonalization.sync({alter: true});
     await Profile.sync({alter: true});
     await Comment.sync({alter: true});
@@ -210,9 +255,12 @@ async function syncModels() {
     await Message.sync({alter: true});
     await Rate.sync({alter: true});
     await UserPopularity.sync({alter: true});
+    await WatchedVideo.sync({alter: true});
 }
 
 async function dropModels() {
+    await WatchedVideo.drop();
+    await RecentInteraction.drop();
     await UserPersonalization.drop();
     await UserPopularity.drop();
     await Rate.drop();
@@ -228,10 +276,16 @@ async function dropModels() {
     await User.drop();
 }
 
-
-
 //dropModels().catch(console.error);
 //syncModels().catch(console.error);
+
+async function drop() {
+    await messageModel(sequelize, DataTypes).drop();
+}
+
+sequelize.authenticate()
+    .then(() => console.log('Database connection has been established successfully.'))
+    .catch(error => console.error('Unable to connect to the database:', error));
 
 module.exports = {
     User,
@@ -247,6 +301,8 @@ module.exports = {
     Rate,
     UserPopularity,
     UserPersonalization,
+    RecentInteraction,
+    WatchedVideo,
     sequelize
 }
 

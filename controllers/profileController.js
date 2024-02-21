@@ -70,15 +70,20 @@ async function deleteAllFiles() {
 //listFiles();
 
 async function getSignedUrl(fileName) {
-    const options = {
-        version: 'v4',
-        action: 'read',
-        expires: Date.now() + 15 * 60 * 1000,
-    };
+    try {
+        const options = {
+            version: 'v4',
+            action: 'read',
+            expires: Date.now() + 15 * 60 * 1000,
+        };
 
-    const [url] = await storage.bucket(bucketName).file(fileName).getSignedUrl(options);
+        const [url] = await storage.bucket(bucketName).file(fileName).getSignedUrl(options);
 
-    return url;
+        return url;
+    } catch (error) {
+        console.error(`Failed to get signed URL for file ${fileName}: ${error.message}`);
+        throw new Error(`Failed to get signed URL for file ${fileName}`);
+    }
 }
 
 

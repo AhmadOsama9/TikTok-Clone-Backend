@@ -9,34 +9,40 @@ module.exports = (sequelize, DataTypes) => {
             },
             primaryKey: true,
         },
-        videoId: {
-            type: DataTypes.INTEGER,
+        category: {
+            type: DataTypes.STRING,
             allowNull: false,
-            references: {
-                model: 'Videos',
-                key: 'id',
-            },
-            primaryKey: true,
+            validate: {
+                isIn: {
+                    args: [['category1', 'category2', 'category3']],  // Replace with your actual categories
+                    msg: "Invalid category"
+                }
+            }
         },
-        views: {
-            type: DataTypes.INTEGER,
+        topVideoIds: {
+            type: DataTypes.ARRAY(DataTypes.INTEGER),
             allowNull: false,
-            defaultValue: 0,
+            defaultValue: [],
         },
-        liked: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: false,
-        },
-        comments: {
+        peakInterest: {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0,
         },
-        shares: {
+        currentInterest: {
             type: DataTypes.INTEGER,
             allowNull: false,
             defaultValue: 0,
+        },
+        totalInteractions: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+        },
+        lastUpdated: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW,
         },
     });
 };

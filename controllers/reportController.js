@@ -1,5 +1,7 @@
 const Report = require("../config/db").Report;
 const User = require("../config/db").User;
+const Video = require("../config/db").Video;
+const Comment = require("../config/db").Comment;
 
 
 const createReport = async (req, res) => {
