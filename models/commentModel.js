@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         }
       },
-      giftTYPE: {
+      giftType: {
         type: DataTypes.INTEGER,
         validate: {
           canHaveGift(value) {

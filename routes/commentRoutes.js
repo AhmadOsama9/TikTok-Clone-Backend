@@ -283,7 +283,7 @@ router.post("/add-gift-comment/", addGiftComment);
  *          type: integer
  *        description: The ID of the comment to update.
  *      - in: header
- *        name: X-API-KEY-KEY
+ *        name: X-API-KEY
  *        required: true
  *        schema:
  *          type: string

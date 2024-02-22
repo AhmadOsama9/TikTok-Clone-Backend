@@ -26,6 +26,8 @@ const {
     updateVideoDescription,
     getCommentsUsingPagination,
     getCreatorComments,
+    likeAndUnlikeVideo,
+    shareVideo,
 } = require("../controllers/videoController");
 
 /**
@@ -161,15 +163,16 @@ router.get("/:videoId", getVideo);
  * /api/video/{videoId}/comments:
  *   get:
  *     tags:
- *       - Comments
+ *      - Videos
  *     summary: Get comments for a video with pagination
  *     security:
- *       - bearerAuth: []
+ *      - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: videoId
  *         required: true
- *         type: string
+ *         schema:
+ *           type: string
  *         description: ID of the video to get creator comments for
  *       - in: header
  *         name: X-API-KEY
@@ -185,9 +188,11 @@ router.get("/:videoId", getVideo);
  *     responses:
  *       200:
  *         description: Successful response
- *         schema:
- *           type: object
- *           properties:
+ *         content:
+ *          application/json:
+ *           schema:
+ *            type: object
+ *            properties:
  *             comments:
  *               type: array
  *               items:
@@ -246,15 +251,16 @@ router.get("/:videoId/comments", getCommentsUsingPagination);
  * /api/video/{videoId}/creator-comments:
  *   get:
  *     tags:
- *       - Comments
+ *      - Videos
  *     summary: Get comments by the video's creator with pagination
  *     security:
- *       - bearerAuth: []
+ *      - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: videoId
+ *         schema:
+ *           type: string
  *         required: true
- *         type: string
  *         description: ID of the video to get creator comments for
  *       - in: header
  *         name: X-API-KEY
@@ -265,9 +271,11 @@ router.get("/:videoId/comments", getCommentsUsingPagination);
  *     responses:
  *       200:
  *         description: Successful response
- *         schema:
- *           type: object
- *           properties:
+ *         content:
+ *          application/json:
+ *           schema:
+ *            type: object
+ *            properties:
  *             comments:
  *               type: array
  *               items:
@@ -321,7 +329,6 @@ router.get("/:videoId/comments", getCommentsUsingPagination);
  */
 router.get("/:videoId/creator-comments", getCreatorComments);
 
-
 /**
  * @swagger
  * /api/video/{videoId}/update-description:
@@ -366,5 +373,83 @@ router.get("/:videoId/creator-comments", getCreatorComments);
  *         description: Internal server error
  */
 router.put("/:videoId/update-description", updateVideoDescription);
+
+/**
+ * @swagger
+ * /api/video/like-and-unlike:
+ *   post:
+ *     tags:
+ *       - Videos
+ *     summary: Like or unlike a specific video
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: x-api-key
+ *     requestBody:
+ *       description: Message data
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               videoId:
+ *                 type: integer
+ *                 description: The ID of the video
+ *     responses:
+ *       200:
+ *         description: Video liked or unliked successfully
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Video not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/like-and-unlike", likeAndUnlikeVideo);
+
+/**
+ * @swagger
+ * /api/video/share:
+ *   post:
+ *     tags:
+ *      - Videos
+ *     summary: Share a specific video
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        schema:
+ *          type: string
+ *        required: true
+ *        description: x-api-key
+ *     requestBody:
+ *       description: Message data
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               videoId:
+ *                 type: integer
+ *                 description: The ID of the video
+ *     responses:
+ *       200:
+ *         description: Video shared successfully
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Video not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/share", shareVideo);
 
 module.exports = router;

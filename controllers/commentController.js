@@ -1,16 +1,15 @@
-const transactionModel = require("../models/transactionModel");
-const { changeProfileUsername } = require("./profileController");
-
 const Comment = require("../config/db").Comment;
 const Video = require("../config/db").Video;
 const User = require("../config/db").User;
+const sequelize = require('../config/db').sequelize;
+const Transaction = require('../config/db').Transaction;
+
 
 const addComment = async (req, res) => {
     try {
         const { videoId, content } = req.body;
         const { userId } = req.user;
 
-        // Check if the videoId exists
         const video = await Video.findByPk(videoId);
         if (!video) {
             return res.status(404).json({ message: 'Video not found' });
@@ -33,16 +32,22 @@ const addComment = async (req, res) => {
 
 const deleteComment = async (req, res) => {
     try {
-        const comment = await Comment.findByPk(req.params.id);
-        if (!comment)
-            res.status(404).json({ message: 'Comment not found' });
-        if (comment.userId !== req.user.userId)
-            res.status(403).json({ message: 'You are not authorized to delete this comment' });
+        const { userId } = req.user;
+        const commentId = req.params.id;
+
+        const comment = await Comment.findByPk(commentId);
+        if (!comment) {
+            return res.status(404).json({ message: 'Comment not found' });
+        }
+
+        if (comment.userId !== userId) {
+            return res.status(403).json({ message: 'You are not authorized to delete this comment' });
+        }
 
         await comment.destroy();
-        res.json({ message: 'Comment deleted' });
+        return res.status(200).json({ message: 'Comment deleted' });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        return res.status(500).json({ message: err.message });
     }
 };
 
@@ -53,13 +58,16 @@ const replyToComment = async (req, res) => {
         const { userId } = req.user;
         let commentId = req.params.id;
 
+        if (!content || content.trim() === '')
+            return res.status(400).json({ message: 'Content is required' });
+
+        if (!commentId)
+            return res.status(400).json({ message: 'Comment id is required' });
+
         const comment = await Comment.findByPk(commentId);
         if (!comment)
             return res.status(500).json({ message: 'Comment not found' });
 
-        if (!content || content.trim() === '')
-            return res.status(400).json({ message: 'Content is required' });
-        
         const reply = await Comment.create({
             parentId: commentId,
             videoId: comment.videoId,
@@ -74,12 +82,13 @@ const replyToComment = async (req, res) => {
 };
 
 const addGiftComment = async (req, res) => {
+    let transaction;
     try {
-        const { videoId, content, giftTye } = req.body;
+        const { videoId, content, giftType } = req.body;
         const { userId } = req.user;
 
         if (!videoId || !giftType)
-            return res.status(500).json({ message: "Invalid data"});
+            return res.status(500).json({ message: "Invalid data" });
 
         const video = await Video.findByPk(videoId);
         if (!video) {
@@ -92,24 +101,56 @@ const addGiftComment = async (req, res) => {
         }
 
         if (giftType < 1 || giftType > 5)
-            return 
+            return res.status(400).json({ message: "Invalid gift type" });
+
+        const giftPrices = JSON.parse(process.env.GIFT_PRICES);
+        const giftPrice = giftPrices[giftType.toString()];
+        if (!giftPrice)
+            return res.status(400).json({ message: "Invalid gift type" });
+
+        if (giftPrice < 0)
+            return res.status(400).json({ message: "Invalid gift price" });
+
+        if (user.balance < giftPrice)
+            return res.status(400).json({ message: "Insufficient balance" });
+
+        transaction = await sequelize.transaction();
 
         user.balance -= giftPrice;
-        await user.save();
+        await user.save({ transaction });
 
         const comment = await Comment.create({
             videoId,
             content,
             userId,
             giftType,
-            giftPrice
-        });
+        }, { transaction });
+
+        const receiverId = video.creatorId;
+        const receiver = await User.findByPk(receiverId, { transaction });
+        if (!receiver)
+            return res.status(404).json({ message: "Receiver not found" });
+
+        receiver.balance += giftPrice;
+        await receiver.save({ transaction });
+
+        await Transaction.create({
+            amount: giftPrice,
+            senderId: userId,
+            receiverId,
+            senderUsername: user.username,
+            receiverUsername: receiver.username,
+        }, { transaction });
+
+        await transaction.commit();
 
         res.status(200).json(comment);
     } catch (err) {
+        if (transaction) await transaction.rollback();
         res.status(500).json({ message: err.message });
     }
 };
+
 
 const updateComment = async (req, res) => {
     try {
@@ -147,4 +188,3 @@ module.exports = {
     addGiftComment,
     updateComment
 }
-

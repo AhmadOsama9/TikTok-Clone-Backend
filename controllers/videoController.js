@@ -1,6 +1,10 @@
 const User = require("../config/db").User;
 const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
+const Profile = require("../config/db").Profile;
+const VideoLike = require("../config/db").VideoLike;
+const { Op } = require("sequelize");
+const Sequelize = require("sequelize");
 
 const nsfwjs = require("nsfwjs");
 const tf = require("@tensorflow/tfjs-node");
@@ -12,6 +16,7 @@ const fs = require("fs");
 const path = require("path");
 
 const storage = require("../config/cloudStorage");
+const { sequelize } = require("../config/db");
 
 const bucketName = process.env.VIDEO_BUCKET_NAME || "kn_story_app";
 
@@ -459,8 +464,8 @@ async function getReplies(commentId) {
 
     return await Promise.all(replies.map(async reply => {
         let imageUrl = null;
-        if (reply.User.profile.imageFileName)
-            imageUrl = await getSignedUrl(reply.User.profile.imageFileName);
+        if (reply.user.profile.imageFileName)
+            imageUrl = await getSignedUrl(reply.user.profile.imageFileName);
 
         return {
             id: reply.id,
@@ -472,7 +477,7 @@ async function getReplies(commentId) {
             replies: await getReplies(reply.id), // Recursive call
             createdAt: reply.createdAt,
             imageUrl: imageUrl,
-            username: reply.User.username
+            username: reply.user.username
         };
     }));
 }
@@ -504,40 +509,47 @@ const getCommentsUsingPagination = async (req, res) =>{
             offset: offset,
             include: [
                 {
-            model: User,
-            as: 'user',
-            attributes: ['username'], // Only fetch username from User
-            include: [{
-                model: Profile,
-                as: 'profile',
-                attributes: ['imageFileName'], // Only fetch imageFileName from Profile
-            }]
-        },
-                { model: Comment, as: 'replies' }
+                    model: User,
+                    as: 'user',
+                    attributes: ['username'], // Only fetch username from User
+                    include: [{
+                        model: Profile,
+                        as: 'profile',
+                        attributes: ['imageFileName'], // Only fetch imageFileName from Profile
+                    }]
+                },
+                { 
+                    model: Comment, 
+                    as: 'replies'
+                }
             ],
-            order: [['giftTYPE', 'DESC'], ['createdAt', 'DESC']] // Order by 'giftTYPE' and 'createdAt' in descending order
+            order: [
+                [sequelize.literal('"Comment"."giftType" IS NOT NULL'), 'DESC'],
+                ['giftType', 'DESC'],
+                ['createdAt', 'DESC']
+            ]
         });
 
         const commentsData = await Promise.all(comments.map(async comment => {
             let imageUrl = null;
-            if (comment.User.profile.imageFileName)
-                imageUrl = await getSignedUrl(comment.User.profile.imageFileName);
+            if (comment.user.profile.imageFileName)
+                imageUrl = await getSignedUrl(comment.user.profile.imageFileName);
 
             return {
                 id: comment.id,
                 videoId: comment.videoId,
                 userId: comment.userId,
                 content: comment.content,
-                gift: comment.gift,
+                giftType: comment.giftType,
                 repliesCount: comment.replies.length,
                 replies: await getReplies(comment.id),
                 createdAt: comment.createdAt,
                 imageUrl: imageUrl,
-                username: comment.User.username
+                username: comment.user.username
             };
         }));
 
-        return { comments: commentsData };
+        return res.status(200).json({ comments: commentsData });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
@@ -561,9 +573,7 @@ const getCreatorComments = async (req, res) => {
             where: {
                 videoId: videoId,
                 parentId: null,
-                userId: {
-                    [Op.ne]: videoCreatorId
-                }
+                userId: videoCreatorId
             },
             include: [
                 {
@@ -583,24 +593,26 @@ const getCreatorComments = async (req, res) => {
 
         const commentsData = await Promise.all(comments.map(async comment => {
             let imageUrl = null;
-            if (comment.User?.profile?.imageFileName)
-                imageUrl = await getSignedUrl(comment.User.profile.imageFileName);
+            console.log("user: ", comment.user);
+            console.log("user.profile", comment.user.profile);
+            if (comment.user && comment.user.profile && comment.user.profile.imageFileName)
+                imageUrl = await getSignedUrl(comment.user.profile.imageFileName);
 
             return {
                 id: comment.id,
                 videoId: comment.videoId,
                 userId: comment.userId,
                 content: comment.content,
-                gift: comment.gift,
+                giftType: comment.giftType,
                 repliesCount: comment.replies.length,
                 replies: await getReplies(comment.id),
                 createdAt: comment.createdAt,
                 imageUrl: imageUrl,
-                username: comment.User.username
+                username: comment.user.username
             };
         }));
 
-        return { comments: commentsData };
+        return res.status(200).json({ comments: commentsData });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -637,6 +649,57 @@ const updateVideoDescription = async (req, res) => {
 
 }
 
+const likeAndUnlikeVideo = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { videoId } = req.body;
+
+        if (!videoId) {
+            return res.status(400).json({ message: "Video ID is required" });
+        }
+        const video = await Video.findByPk(videoId);
+        if (!video)
+            return res.status(404).json({ message: "Video not found" });
+
+        const like = await VideoLike.findOne({ where: { userId: userId, videoId: videoId } });
+        if (like) {
+            await like.destroy();
+            video.likes -= 1;
+            await video.save();
+            return res.status(200).json({ message: "Video unliked successfully" });
+        } else {
+            await VideoLike.create({ userId: userId, videoId: videoId });
+            video.likes += 1;
+            await video.save();
+            return res.status(200).json({ message: "Video liked successfully" });
+        }
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const shareVideo = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { videoId } = req.body;
+
+        if (!videoId) {
+            return res.status(400).json({ message: "Video ID is required" });
+        }
+        const video = await Video.findOne({ where: { id: videoId } });
+        if (!video)
+            return res.status(404).json({ message: "Video not found" });
+
+        video.shareCount += 1;
+        video.save();
+        return res.status(200).json({ message: "Video shared successfully" });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
 
 module.exports = {
     uploadVideo,
@@ -646,4 +709,6 @@ module.exports = {
     updateVideoDescription,
     getCommentsUsingPagination,
     getCreatorComments,
+    likeAndUnlikeVideo,
+    shareVideo,
 }

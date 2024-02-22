@@ -21,7 +21,10 @@ module.exports = (sequelize, DataTypes) => {
         }
       },
       shareCount: DataTypes.INTEGER,
-      likes: DataTypes.INTEGER,
+      likes: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      },
       description: {
         type: DataTypes.STRING,
         validate: {

@@ -14,6 +14,7 @@ const userPopularityModel = require("../models/userPopularityModel");
 const userPersonalizationModel = require("../models/userPersonalizationModel");
 const recentInteractionModel = require("../models/recentInteractionModel");
 const watchedVideoModel = require("../models/watchedVideoModel");
+const videoLikeModel = require("../models/videoLikeModel");
 
 // config = {
 //     host    : "127.0.0.1",
@@ -45,6 +46,7 @@ const UserPopularity = userPopularityModel(sequelize, DataTypes);
 const UserPersonalization = userPersonalizationModel(sequelize, DataTypes);
 const RecentInteraction = recentInteractionModel(sequelize, DataTypes);
 const WatchedVideo = watchedVideoModel(sequelize, DataTypes);
+const VideoLike = videoLikeModel(sequelize, DataTypes);
 
 //Relations between tables
 
@@ -72,6 +74,11 @@ User.hasMany(Comment, {
     as: 'comments',
 });
   
+Comment.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user',
+});
+
 // User and Follow (following and followers)
 User.hasMany(Follow, {
     foreignKey: 'followerId',
@@ -237,10 +244,31 @@ Message.belongsTo(Message, {
     foreignKey: 'replyTo' 
 });
 
+User.hasMany(VideoLike, {
+    foreignKey: 'userId',
+    as: 'videoLikes',
+});
+
+VideoLike.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user',
+});
+
+Video.hasMany(VideoLike, {
+    foreignKey: 'videoId',
+    as: 'videoLikes',
+});
+
+VideoLike.belongsTo(Video, {
+    foreignKey: 'videoId',
+    as: 'video',
+});
+
 
 async function syncModels() {
     await User.sync({alter: true});
     await Video.sync({alter: true});
+    await VideoLike.sync({alter: true});
     await RecentInteraction.sync({alter: true});
     await UserPersonalization.sync({alter: true});
     await Profile.sync({alter: true});
@@ -257,6 +285,7 @@ async function syncModels() {
 }
 
 async function dropModels() {
+    await VideoLike.drop();
     await WatchedVideo.drop();
     await RecentInteraction.drop();
     await UserPersonalization.drop();
@@ -286,7 +315,7 @@ console.log(Object.keys(userInstance.constructor.associations));
 //syncModels().catch(console.error);
 
 async function drop() {
-    await messageModel(sequelize, DataTypes).drop();
+    await Transaction.drop();
 }
 
 sequelize.authenticate()
@@ -309,6 +338,7 @@ module.exports = {
     UserPersonalization,
     RecentInteraction,
     WatchedVideo,
+    VideoLike,
     sequelize
 }
 
