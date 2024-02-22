@@ -1,5 +1,6 @@
 const User = require("../config/db").User;
 const Video = require("../config/db").Video;
+const Comment = require("../config/db").Comment;
 
 const nsfwjs = require("nsfwjs");
 const tf = require("@tensorflow/tfjs-node");
@@ -441,15 +442,16 @@ async function getReplies(comment) {
     const replies = await Comment.findAll({
         where: { parentId: comment.id },
         include: [
-            { model: User, as: 'user' },
+            { model: User }, // Removed 'as: comments'
             { model: Comment, as: 'replies' } // Include replies
-        ]
+        ],
+        order: [['createdAt', 'DESC']] // Order by 'createdAt' in descending order
     });
 
     return await Promise.all(replies.map(async reply => {
         let imageUrl = null;
-        if (reply.user.profile.imageFileName) 
-            imageUrl = await getSignedUrl(reply.user.profile.imageFileName);
+        if (reply.User.profile.imageFileName) // Changed 'user' to 'User'
+            imageUrl = await getSignedUrl(reply.User.profile.imageFileName); // Changed 'user' to 'User'
 
         return {
             id: reply.id,
@@ -461,26 +463,33 @@ async function getReplies(comment) {
             replies: await getReplies(reply), // Recursive call
             createdAt: reply.createdAt,
             imageUrl: imageUrl,
-            username: reply.user.username
+            username: reply.User.username // Changed 'user' to 'User'
         };
     }));
 }
 
 async function getCommentsUsingPagination(videoId, offset = 0) { 
     const comments = await Comment.findAll({ 
-        where: { videoId: videoId, parentId: null },
-        limit: 5,
+        where: { 
+            videoId: videoId, 
+            parentId: null,
+            userId: {
+                [Op.ne]: videoCreatorId
+            }
+        },
+        limit: process.env.COMMENTS_LIMIT || 5,
         offset: offset,
         include: [
-            { model: User, as: 'user' },
-            { model: Comment, as: 'replies' } // Include replies
-        ]
+            { model: User },
+            { model: Comment, as: 'replies' }
+        ],
+        order: [['giftTYPE', 'DESC'], ['createdAt', 'DESC']] // Order by 'giftTYPE' and 'createdAt' in descending order
     });
 
     const commentsData = await Promise.all(comments.map(async comment => {
         let imageUrl = null;
-        if (comment.user.profile.imageFileName) 
-            imageUrl = await getSignedUrl(comment.user.profile.imageFileName);
+        if (comment.User.profile.imageFileName)
+            imageUrl = await getSignedUrl(comment.User.profile.imageFileName); // Changed 'user' to 'User'
 
         return {
             id: comment.id,
@@ -492,11 +501,65 @@ async function getCommentsUsingPagination(videoId, offset = 0) {
             replies: await getReplies(comment), // Fetch replies
             createdAt: comment.createdAt,
             imageUrl: imageUrl,
-            username: comment.user.username
+            username: comment.User.username // Changed 'user' to 'User'
         };
     }));
 
     return { comments: commentsData };
+}
+
+const getCreatorComments = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { videoId } = req.params;
+        const { offset } = req.query;
+
+        if (!videoId )
+            return res.status(400).json({ message: "Video ID is required" });
+
+        const video = await 
+
+        const comments = await Comment.findAll({ 
+            where: { 
+                videoId: videoId, 
+                parentId: null,
+                userId: {
+                    [Op.ne]: videoCreatorId // Exclude comments made by the video creator
+                }
+            },
+            limit: 5,
+            offset: offset,
+            include: [
+                { model: User },
+                { model: Comment, as: 'replies' }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        const commentsData = await Promise.all(comments.map(async comment => {
+            let imageUrl = null;
+            if (reply.User?.profile?.imageFileName)
+                imageUrl = await getSignedUrl(reply.User.profile.imageFileName);
+    
+            return {
+                id: comment.id,
+                videoId: comment.videoId,
+                userId: comment.userId,
+                content: comment.content,
+                gift: comment.gift,
+                repliesCount: comment.replies.length,
+                replies: await getReplies(comment), // Fetch replies
+                createdAt: comment.createdAt,
+                imageUrl: imageUrl,
+                username: comment.User.username // Changed 'user' to 'User'
+            };
+        }));
+    
+        return { comments: commentsData };
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
 }
 
 const updateVideoDescription = async (req, res) => {

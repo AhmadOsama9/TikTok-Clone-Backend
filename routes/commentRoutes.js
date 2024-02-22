@@ -21,11 +21,11 @@ const {
  *      - bearerAuth: []
  *     parameters:
  *      - in: header
- *        name: Authorization
+ *        name: X-API-KEY
  *        required: true
  *        schema:
  *          type: string
- *        description: The JWT token of the user.
+ *        description: x-api-key.
  *     requestBody:
  *       description: Comment data
  *       required: true
@@ -92,11 +92,11 @@ router.post("/add", addComment);
  *          type: integer
  *        description: The ID of the comment to delete.
  *      - in: header
- *        name: Authorization
+ *        name: X-API-KEY
  *        required: true
  *        schema:
  *          type: string
- *        description: The JWT token of the user.
+ *        description: x-api-key.
  *     responses:
  *       200:
  *         description: Comment deleted
@@ -147,11 +147,11 @@ router.delete("/delete/:id", deleteComment);
  *          type: integer
  *        description: The ID of the comment to reply to.
  *      - in: header
- *        name: Authorization
+ *        name: X-API-KEY
  *        required: true
  *        schema:
  *          type: string
- *        description: The JWT token of the user.
+ *        description: x-api-key.
  *     requestBody:
  *       description: Reply data
  *       required: true
@@ -209,11 +209,11 @@ router.post("/reply/:id", replyToComment);
  *      - bearerAuth: []
  *     parameters:
  *      - in: header
- *        name: Authorization
+ *        name: X-API-KEY
  *        required: true
  *        schema:
  *          type: string
- *        description: The JWT token of the user.
+ *        description: x-api-key.
  *     requestBody:
  *       description: Gift comment data
  *       required: true
@@ -283,11 +283,11 @@ router.post("/add-gift-comment/", addGiftComment);
  *          type: integer
  *        description: The ID of the comment to update.
  *      - in: header
- *        name: Authorization
+ *        name: X-API-KEY-KEY
  *        required: true
  *        schema:
  *          type: string
- *        description: The JWT token of the user.
+ *        description: x-api-key.
  *     requestBody:
  *       description: Updated comment data
  *       required: true

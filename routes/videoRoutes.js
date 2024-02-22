@@ -23,7 +23,6 @@ const {
     uploadVideo,
     getVideoThumbnail,
     getVideo, 
-    getCommentsUsingPagination,
     updateVideoDescription,
 } = require("../controllers/videoController");
 
@@ -155,76 +154,10 @@ router.get("/thumbnail/:videoId", getVideoThumbnail);
  */
 router.get("/:videoId", getVideo);
 
-/**
- * @swagger
- * /api/video/{id}/comments?offset=0:
- *   get:
- *     tags:
- *      - Videos
- *     summary: Fetch comments for a specific video
- *     description: This API is used to fetch comments for a specific video, with optional limit and offset parameters for pagination. It requires a valid JWT token in the Authorization header and an API key in the X-API-KEY header. The response now includes replies to comments and user profile image URLs.
- *     security:
- *      - bearerAuth: []
- *     parameters:
- *      - in: path
- *        name: videoId
- *        required: true
- *        schema:
- *          type: string
- *        description: The ID of the video for which to fetch comments.
- *      - in: query
- *        name: limit
- *        required: false
- *        schema:
- *          type: integer
- *        description: The maximum number of comments to return.
- *      - in: query
- *        name: offset
- *        required: false
- *        schema:
- *          type: integer
- *        description: The number of comments to skip before starting to fetch.
- *      - in: header
- *        name: X-API-KEY
- *        required: true
- *        schema:
- *          type: string
- *        description: API key
- *     responses:
- *       200:
- *         description: A list of comments, each with its replies and user profile image URL.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 comments:
- *                   type: array
- *                   items:
- *                     $ref: '#/definitions/Comment'
- *       500:
- *         description: An error occurred.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/definitions/Error'
- */
-router.get("/:id/comments", async (req, res) => { 
-  try {
-      const videoId = req.params.id;
-      const { offset } = req.query;
-
-      const comments = await getCommentsUsingPagination(videoId, offset);
-
-      res.status(200).json(comments);
-  } catch (error) {
-      res.status(500).json({ error: error.message });
-  }
-});
 
 /**
  * @swagger
- * /api/video/{id}/update-description:
+ * /api/video/{videoId}/update-description:
  *   put:
  *     tags:
  *       - Videos
@@ -265,6 +198,6 @@ router.get("/:id/comments", async (req, res) => {
  *       '500':
  *         description: Internal server error
  */
-router.put("/:id/update-description", updateVideoDescription);
+router.put("/:videoId/update-description", updateVideoDescription);
 
 module.exports = router;

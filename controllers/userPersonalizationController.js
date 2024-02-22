@@ -6,6 +6,8 @@ const sequelize = require("../config/db").sequelize;
 const { Op } = require("sequelize");
 const { getSignedUrl } = require("../controllers/profileController");
 
+//Should use rate for the recommendation
+
 const createUserPersonalization = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {

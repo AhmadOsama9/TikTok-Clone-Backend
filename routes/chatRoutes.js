@@ -5,10 +5,11 @@ const {
     sendMessageUsingChatId,
     sendMessageUsingReceiverId,
     getMessagesUsingPagination,
-    getMessagesBetweenUsers,
+    getMessagesBetweenUsersUsingPagination,
     getUserChats,
     addReactionToMessage,
-    deleteMessage
+    deleteMessage,
+    deleteReaction,
 } = require("../controllers/chatController");
 
 /**
@@ -42,6 +43,8 @@ const {
  *               message:
  *                 type: string
  *                 description: The content of the message
+ *               replyTo:
+ *                 type: integer(reply to message id)
  *     responses:
  *       '200':
  *         description: Message sent successfully
@@ -50,9 +53,8 @@ const {
  *             schema:
  *               type: object
  *               properties:
- *                 message:
- *                   type: string
- *                   example: Message sent successfully
+ *                 messageId:
+ *                   type: integer
  *       '404':
  *         description: Chat not found
  *         content:
@@ -105,7 +107,8 @@ router.post("/send-message-using-chatId", sendMessageUsingChatId);
  *                 description: The ID of the receiver
  *               message:
  *                 type: string
- *                 description: The content of the message
+ *               replyTo:
+ *                  type: integer(Id of message that he will reply to)
  *     responses:
  *       '200':
  *         description: Message sent successfully
@@ -167,17 +170,19 @@ router.post("/send-message-using-receiverId", sendMessageUsingReceiverId);
  *               items:
  *                 type: object
  *                 properties:
- *                   id:
+ *                   messageId:
  *                     type: integer
- *                   chatId:
- *                     type: integer
+ *                   content:
+ *                     type: string
  *                   senderId:
  *                     type: integer
- *                   message:
- *                     type: string
+ *                   isSeen:
+ *                     type: integer(0 seen or 1 only sent)
+ *                   reaction:
+ *                     type: integer(1 to 4)
+ *                   replyMessageContent:
+ *                      type: string
  *                   createdAt:
- *                     type: string
- *                   updatedAt:
  *                     type: string
  *       '400':
  *         description: Invalid request
@@ -218,7 +223,7 @@ router.get("/:chatId/get-messages", getMessagesUsingPagination);
  *     tags:
  *       - Chat
  *     summary: Get messages between two users using pagination
- *     operationId: getMessagesBetweenUsers
+ *     operationId: getMessagesBetweenUsersUsingPagination
  *     security:
  *      - bearerAuth: []
  *     parameters:
@@ -249,17 +254,19 @@ router.get("/:chatId/get-messages", getMessagesUsingPagination);
  *               items:
  *                 type: object
  *                 properties:
- *                   id:
+ *                   messageId:
  *                     type: integer
- *                   chatId:
- *                     type: integer
+ *                   content:
+ *                     type: string
  *                   senderId:
  *                     type: integer
- *                   message:
- *                     type: string
+ *                   isSeen:
+ *                     type: integer(0 seen or 1 only sent)
+ *                   reaction:
+ *                     type: integer(1 to 4)
+ *                   replyMessageContent:
+ *                      type: string
  *                   createdAt:
- *                     type: string
- *                   updatedAt:
  *                     type: string
  *       '400':
  *         description: Invalid request
@@ -291,11 +298,11 @@ router.get("/:chatId/get-messages", getMessagesUsingPagination);
  *                 error:
  *                   type: string
  */
-router.get("/:user2Id/get-messages-between-users", getMessagesBetweenUsers);
+router.get("/:user2Id/get-messages-between-users", getMessagesBetweenUsersUsingPagination);
 
 /**
  * @swagger
- * /api/chat/get:
+ * /api/chat/get?offset=0:
  *   get:
  *     tags:
  *       - Chat
@@ -310,6 +317,11 @@ router.get("/:user2Id/get-messages-between-users", getMessagesBetweenUsers);
  *           type: string
  *         required: true
  *         description: The API key.
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *         description: The offset for pagination
  *     responses:
  *       '200':
  *         description: Chats retrieved successfully
@@ -322,13 +334,23 @@ router.get("/:user2Id/get-messages-between-users", getMessagesBetweenUsers);
  *                 properties:
  *                   id:
  *                     type: integer
- *                   user1Id:
+ *                   lastMessageContent:
+ *                     type: string
+ *                   lastMessageSenderId:
  *                     type: integer
+ *                   repyTo: 
+ *                     type: integer
+ *                   lastMessageCreatedAt:
+ *                     type: string
+ *                   lastMessageState:
+ *                     type: integer(0 seen or 1 only sent)
  *                   user2Id:
  *                     type: integer
- *                   createdAt:
+ *                   otherUserUsername:
  *                     type: string
- *                   updatedAt:
+ *                   otherUserIsVerified:
+ *                     type: string
+ *                   otherUserImageUrl:
  *                     type: string
  *       '500':
  *         description: Internal server error
@@ -440,5 +462,45 @@ router.post("/add-reaction", addReactionToMessage);
  */
 router.delete("/delete-message/:messageId", deleteMessage);
 
+/**
+ * @swagger
+ * /api/chat/delete-reaction/{chatId}?messageId=1:
+ *   delete:
+ *     tags:
+ *       - Chat
+ *     security:
+ *       - bearerAuth: []
+ *     name: Delete reaction
+ *     summary: Delete a reaction to a message in a chat
+ *     consumes:
+ *       - application/json
+ *     parameters:
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The API key.
+ *       - name: chatId
+ *         in: path
+ *         type: integer
+ *         required: true
+ *       - name: messageId
+ *         in: query
+ *         type: integer
+ *         required: true
+ *     responses:
+ *       '200':
+ *         description: Reaction deleted successfully
+ *       '400':
+ *         description: Invalid request
+ *       '403':
+ *         description: Unauthorized action
+ *       '404':
+ *         description: Message or chat not found
+ *       '500':
+ *         description: Server error
+ */
+router.delete("/delete-reaction/:chatId", deleteReaction);
 
 module.exports = router;

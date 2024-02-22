@@ -28,5 +28,21 @@ module.exports = (sequelize, DataTypes) => {
         max: 4
       }
     },
+    state: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'sent',
+      validate: {
+        isIn: [['sent', 'seen']],
+      },
+    },
+    replyTo: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Messages',
+        key: 'id',
+      },
+    },
   });
 };

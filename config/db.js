@@ -116,19 +116,11 @@ Comment.hasMany(Comment, {
     as: 'replies',
 });
 
-User.belongsToMany(Chat, {
-    through: 'UserChat',
-    foreignKey: 'userId',
-    otherKey: 'chatId',
-    as: 'chats',
-});
-  
-Chat.belongsToMany(User, {
-    through: 'UserChat',
-    foreignKey: 'chatId',
-    otherKey: 'userId',
-    as: 'users',
-});
+User.hasMany(Chat, { foreignKey: 'user1Id', as: 'user1Chats' });
+User.hasMany(Chat, { foreignKey: 'user2Id', as: 'user2Chats' });
+
+Chat.belongsTo(User, { foreignKey: 'user1Id', as: 'user1' });
+Chat.belongsTo(User, { foreignKey: 'user2Id', as: 'user2' });
 
 Chat.hasMany(Message, {
     foreignKey: 'chatId',
@@ -240,6 +232,12 @@ WatchedVideo.belongsTo(Video, {
     as: 'video',
 });
 
+Message.belongsTo(Message, { 
+    as: 'replyToMessage', 
+    foreignKey: 'replyTo' 
+});
+
+
 async function syncModels() {
     await User.sync({alter: true});
     await Video.sync({alter: true});
@@ -275,6 +273,14 @@ async function dropModels() {
     await Transaction.drop();
     await User.drop();
 }
+
+function getAllUserAssociation() {
+    console.log("It enters in the, ", getAllUserAssociation);
+    const userInstance = User.build();
+console.log(Object.keys(userInstance.constructor.associations));
+}
+
+//getAllUserAssociation();
 
 //dropModels().catch(console.error);
 //syncModels().catch(console.error);
