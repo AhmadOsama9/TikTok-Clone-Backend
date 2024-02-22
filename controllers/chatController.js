@@ -251,7 +251,7 @@ const getUserChats = async (req, res) => {
                     as: 'messages',
                     limit: 1,
                     order: [['createdAt', 'DESC']],
-                    attributes: ['id', 'content', 'createdAt', 'state', 'senderId', 'replyTo'],
+                    attributes: ['id', 'content', 'createdAt', 'state', 'senderId'],
                 },
                 {
                     model: User,

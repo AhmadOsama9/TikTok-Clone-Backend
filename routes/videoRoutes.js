@@ -163,12 +163,20 @@ router.get("/:videoId", getVideo);
  *     tags:
  *       - Comments
  *     summary: Get comments for a video with pagination
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
- *       - name: videoId
- *         in: path
+ *       - in: path
+ *         name: videoId
  *         required: true
  *         type: string
- *         description: ID of the video to get comments for
+ *         description: ID of the video to get creator comments for
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: x-api-key
  *       - name: offset
  *         in: query
  *         type: integer
@@ -200,7 +208,26 @@ router.get("/:videoId", getVideo);
  *                   replies:
  *                     type: array
  *                     items:
- *                       $ref: '#/definitions/Comment'
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                         videoId:
+ *                           type: string
+ *                         userId:
+ *                           type: string
+ *                         content:
+ *                           type: string
+ *                         gift:
+ *                           type: string
+ *                         repliesCount:
+ *                           type: integer
+ *                         createdAt:
+ *                           type: string
+ *                         imageUrl:
+ *                           type: string
+ *                         username:
+ *                           type: string
  *                   createdAt:
  *                     type: string
  *                   imageUrl:
@@ -221,12 +248,20 @@ router.get("/:videoId/comments", getCommentsUsingPagination);
  *     tags:
  *       - Comments
  *     summary: Get comments by the video's creator with pagination
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
- *       - name: videoId
- *         in: path
+ *       - in: path
+ *         name: videoId
  *         required: true
  *         type: string
  *         description: ID of the video to get creator comments for
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: x-api-key
  *     responses:
  *       200:
  *         description: Successful response
@@ -253,7 +288,26 @@ router.get("/:videoId/comments", getCommentsUsingPagination);
  *                   replies:
  *                     type: array
  *                     items:
- *                       $ref: '#/definitions/Comment'
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                         videoId:
+ *                           type: string
+ *                         userId:
+ *                           type: string
+ *                         content:
+ *                           type: string
+ *                         gift:
+ *                           type: string
+ *                         repliesCount:
+ *                           type: integer
+ *                         createdAt:
+ *                           type: string
+ *                         imageUrl:
+ *                           type: string
+ *                         username:
+ *                           type: string
  *                   createdAt:
  *                     type: string
  *                   imageUrl:
@@ -286,11 +340,11 @@ router.get("/:videoId/creator-comments", getCreatorComments);
  *         required: true
  *         description: The ID of the video.
  *       - in: header
- *         name: Authorization
+ *         name: X-API-KEY
  *         schema:
  *           type: string
  *         required: true
- *         description: The JWT token of the user.
+ *         description: x-api-key
  *     requestBody:
  *       content:
  *         application/json:
