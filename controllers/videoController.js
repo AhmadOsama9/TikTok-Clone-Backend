@@ -438,20 +438,29 @@ const getVideo = async (req, res) => {
     }
 }
 
-async function getReplies(comment) {
+async function getReplies(commentId) {
     const replies = await Comment.findAll({
-        where: { parentId: comment.id },
+        where: { parentId: commentId },
         include: [
-            { model: User }, // Removed 'as: comments'
-            { model: Comment, as: 'replies' } // Include replies
+            {
+            model: User,
+            as: 'user',
+            attributes: ['username'], 
+            include: [{
+                model: Profile,
+                as: 'profile',
+                attributes: ['imageFileName'], 
+            }]
+        },
+            { model: Comment, as: 'replies' } 
         ],
-        order: [['createdAt', 'DESC']] // Order by 'createdAt' in descending order
+        order: [['createdAt', 'DESC']] 
     });
 
     return await Promise.all(replies.map(async reply => {
         let imageUrl = null;
-        if (reply.User.profile.imageFileName) // Changed 'user' to 'User'
-            imageUrl = await getSignedUrl(reply.User.profile.imageFileName); // Changed 'user' to 'User'
+        if (reply.User.profile.imageFileName)
+            imageUrl = await getSignedUrl(reply.User.profile.imageFileName);
 
         return {
             id: reply.id,
@@ -460,87 +469,60 @@ async function getReplies(comment) {
             content: reply.content,
             gift: reply.gift,
             repliesCount: reply.replies.length,
-            replies: await getReplies(reply), // Recursive call
+            replies: await getReplies(reply.id), // Recursive call
             createdAt: reply.createdAt,
             imageUrl: imageUrl,
-            username: reply.User.username // Changed 'user' to 'User'
+            username: reply.User.username
         };
     }));
 }
 
-async function getCommentsUsingPagination(videoId, offset = 0) { 
-    const comments = await Comment.findAll({ 
-        where: { 
-            videoId: videoId, 
-            parentId: null,
-            userId: {
-                [Op.ne]: videoCreatorId
-            }
-        },
-        limit: process.env.COMMENTS_LIMIT || 5,
-        offset: offset,
-        include: [
-            { model: User },
-            { model: Comment, as: 'replies' }
-        ],
-        order: [['giftTYPE', 'DESC'], ['createdAt', 'DESC']] // Order by 'giftTYPE' and 'createdAt' in descending order
-    });
-
-    const commentsData = await Promise.all(comments.map(async comment => {
-        let imageUrl = null;
-        if (comment.User.profile.imageFileName)
-            imageUrl = await getSignedUrl(comment.User.profile.imageFileName); // Changed 'user' to 'User'
-
-        return {
-            id: comment.id,
-            videoId: comment.videoId,
-            userId: comment.userId,
-            content: comment.content,
-            gift: comment.gift,
-            repliesCount: comment.replies.length,
-            replies: await getReplies(comment), // Fetch replies
-            createdAt: comment.createdAt,
-            imageUrl: imageUrl,
-            username: comment.User.username // Changed 'user' to 'User'
-        };
-    }));
-
-    return { comments: commentsData };
-}
-
-const getCreatorComments = async (req, res) => {
+const getCommentsUsingPagination = async (req, res) =>{ 
     try {
         const { userId } = req.user;
         const { videoId } = req.params;
-        const { offset } = req.query;
+        const { offset = 0} = req.query;
 
         if (!videoId )
             return res.status(400).json({ message: "Video ID is required" });
 
-        const video = await 
+        const video = await Video.findByPk(videoId);
+        if (!video) 
+            return res.status(404).json({ message: "Video not found" });
+
+        const videoCreatorId = video.creatorId;
 
         const comments = await Comment.findAll({ 
             where: { 
                 videoId: videoId, 
                 parentId: null,
                 userId: {
-                    [Op.ne]: videoCreatorId // Exclude comments made by the video creator
+                    [Op.ne]: videoCreatorId
                 }
             },
-            limit: 5,
+            limit: process.env.COMMENTS_LIMIT || 5,
             offset: offset,
             include: [
-                { model: User },
+                {
+            model: User,
+            as: 'user',
+            attributes: ['username'], // Only fetch username from User
+            include: [{
+                model: Profile,
+                as: 'profile',
+                attributes: ['imageFileName'], // Only fetch imageFileName from Profile
+            }]
+        },
                 { model: Comment, as: 'replies' }
             ],
-            order: [['createdAt', 'DESC']]
+            order: [['giftTYPE', 'DESC'], ['createdAt', 'DESC']] // Order by 'giftTYPE' and 'createdAt' in descending order
         });
 
         const commentsData = await Promise.all(comments.map(async comment => {
             let imageUrl = null;
-            if (reply.User?.profile?.imageFileName)
-                imageUrl = await getSignedUrl(reply.User.profile.imageFileName);
-    
+            if (comment.User.profile.imageFileName)
+                imageUrl = await getSignedUrl(comment.User.profile.imageFileName);
+
             return {
                 id: comment.id,
                 videoId: comment.videoId,
@@ -548,19 +530,83 @@ const getCreatorComments = async (req, res) => {
                 content: comment.content,
                 gift: comment.gift,
                 repliesCount: comment.replies.length,
-                replies: await getReplies(comment), // Fetch replies
+                replies: await getReplies(comment.id),
                 createdAt: comment.createdAt,
                 imageUrl: imageUrl,
-                username: comment.User.username // Changed 'user' to 'User'
+                username: comment.User.username
             };
         }));
-    
+
+        return { comments: commentsData };
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const getCreatorComments = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { videoId } = req.params;
+
+        if (!videoId)
+            return res.status(400).json({ message: "Video ID is required" });
+
+        const video = await Video.findByPk(videoId);
+        if (!video)
+            return res.status(404).json({ message: "Video not found" });
+
+        const videoCreatorId = video.creatorId;
+
+        const comments = await Comment.findAll({
+            where: {
+                videoId: videoId,
+                parentId: null,
+                userId: {
+                    [Op.ne]: videoCreatorId
+                }
+            },
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['username'],
+                    include: [{
+                        model: Profile,
+                        as: 'profile',
+                        attributes: ['imageFileName'],
+                    }]
+                },
+                { model: Comment, as: 'replies' }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        const commentsData = await Promise.all(comments.map(async comment => {
+            let imageUrl = null;
+            if (comment.User?.profile?.imageFileName)
+                imageUrl = await getSignedUrl(comment.User.profile.imageFileName);
+
+            return {
+                id: comment.id,
+                videoId: comment.videoId,
+                userId: comment.userId,
+                content: comment.content,
+                gift: comment.gift,
+                repliesCount: comment.replies.length,
+                replies: await getReplies(comment.id),
+                createdAt: comment.createdAt,
+                imageUrl: imageUrl,
+                username: comment.User.username
+            };
+        }));
+
         return { comments: commentsData };
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 }
+
 
 const updateVideoDescription = async (req, res) => {
     try {
@@ -598,4 +644,6 @@ module.exports = {
     getVideo,
     getCommentsUsingPagination,
     updateVideoDescription,
+    getCommentsUsingPagination,
+    getCreatorComments,
 }

@@ -24,6 +24,8 @@ const {
     getVideoThumbnail,
     getVideo, 
     updateVideoDescription,
+    getCommentsUsingPagination,
+    getCreatorComments,
 } = require("../controllers/videoController");
 
 /**
@@ -153,6 +155,117 @@ router.get("/thumbnail/:videoId", getVideoThumbnail);
  *               $ref: '#/definitions/Error'
  */
 router.get("/:videoId", getVideo);
+
+/**
+ * @swagger
+ * /api/video/{videoId}/comments:
+ *   get:
+ *     tags:
+ *       - Comments
+ *     summary: Get comments for a video with pagination
+ *     parameters:
+ *       - name: videoId
+ *         in: path
+ *         required: true
+ *         type: string
+ *         description: ID of the video to get comments for
+ *       - name: offset
+ *         in: query
+ *         type: integer
+ *         default: 0
+ *         description: Number of comments to skip
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *         schema:
+ *           type: object
+ *           properties:
+ *             comments:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   videoId:
+ *                     type: string
+ *                   userId:
+ *                     type: string
+ *                   content:
+ *                     type: string
+ *                   gift:
+ *                     type: string
+ *                   repliesCount:
+ *                     type: integer
+ *                   replies:
+ *                     type: array
+ *                     items:
+ *                       $ref: '#/definitions/Comment'
+ *                   createdAt:
+ *                     type: string
+ *                   imageUrl:
+ *                     type: string
+ *                   username:
+ *                     type: string
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Video not found
+ */
+router.get("/:videoId/comments", getCommentsUsingPagination);
+
+/**
+ * @swagger
+ * /api/video/{videoId}/creator-comments:
+ *   get:
+ *     tags:
+ *       - Comments
+ *     summary: Get comments by the video's creator with pagination
+ *     parameters:
+ *       - name: videoId
+ *         in: path
+ *         required: true
+ *         type: string
+ *         description: ID of the video to get creator comments for
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *         schema:
+ *           type: object
+ *           properties:
+ *             comments:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   videoId:
+ *                     type: string
+ *                   userId:
+ *                     type: string
+ *                   content:
+ *                     type: string
+ *                   gift:
+ *                     type: string
+ *                   repliesCount:
+ *                     type: integer
+ *                   replies:
+ *                     type: array
+ *                     items:
+ *                       $ref: '#/definitions/Comment'
+ *                   createdAt:
+ *                     type: string
+ *                   imageUrl:
+ *                     type: string
+ *                   username:
+ *                     type: string
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Video not found
+ */
+router.get("/:videoId/creator-comments", getCreatorComments);
 
 
 /**
