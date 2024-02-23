@@ -459,9 +459,11 @@ const searchUsersUsingPagination = async (req, res) => {
             order: [[{ model: UserPopularity, as: 'popularity' }, 'popularityScore', 'DESC']]
         });
 
+
         for (let user of users) {
-            if (user.Profile && user.Profile.imageFileName) {
-                user.Profile.imageURL = await getSignedUrl(user.Profile.imageFileName);
+            if (user.profile && user.profile.imageFileName) {
+                const imageURL = await getSignedUrl(user.profile.imageFileName);
+                user.setDataValue('profile', imageURL);
             }
         }
 
@@ -501,8 +503,9 @@ const autocompleteUsers = async (req, res) => {
         });
 
         for (let user of users) {
-            if (user.Profile && user.Profile.imageFileName) {
-                user.Profile.imageURL = await getSignedUrl(user.Profile.imageFileName);
+            if (user.profile && user.profile.imageFileName) {
+                const imageURL = await getSignedUrl(user.profile.imageFileName);
+                user.setDataValue('profile', imageURL);
             }
         }
 

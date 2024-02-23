@@ -725,8 +725,13 @@ const searchVideosUsingPagination = async (req, res) => {
         });
 
         for (let video of videos) {
-            if (video.creator && video.creator.Profile && video.creator.Profile.imageFileName) {
-                video.creator.Profile.imageURL = await getSignedUrl(video.creator.Profile.imageFileName);
+            if (video.creator && video.creator.profile && video.creator.profile.imageFileName) {
+                const imageURL = await getSignedUrl(video.creator.profile.imageFileName);
+                const creator = {
+                    username: video.creator.username,
+                    imageURL: imageURL
+                };
+                video.setDataValue('creator', creator);
             }
         }
 
@@ -767,8 +772,13 @@ const autocompleteVideos = async (req, res) => {
         });
 
         for (let video of videos) {
-            if (video.creator && video.creator.Profile && video.creator.Profile.imageFileName) {
-                video.creator.Profile.imageURL = await getSignedUrl(video.creator.Profile.imageFileName);
+            if (video.creator && video.creator.profile && video.creator.profile.imageFileName) {
+                const imageURL = await getSignedUrl(video.creator.profile.imageFileName);
+                const creator = {
+                    username: video.creator.username,
+                    imageURL: imageURL
+                };
+                video.setDataValue('creator', creator);
             }
         }
 
