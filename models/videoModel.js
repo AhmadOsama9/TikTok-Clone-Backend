@@ -9,7 +9,10 @@ module.exports = (sequelize, DataTypes) => {
       },
       fileName: DataTypes.STRING,
       thumbnailFileName: DataTypes.STRING,
-      viewsCount: DataTypes.INTEGER,
+      viewsCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      },
       category: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -46,7 +49,10 @@ module.exports = (sequelize, DataTypes) => {
             }
         }
       },
-      shareCount: DataTypes.INTEGER,
+      shareCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+      },
       likes: {
         type: DataTypes.INTEGER,
         defaultValue: 0,

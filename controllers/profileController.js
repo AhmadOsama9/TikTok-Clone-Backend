@@ -340,13 +340,6 @@ const validateAndCompressImage = async (buffer) => {
         throw new Error("Image size should be less than 200KB");
     }
 
-    const { fileTypeFromBuffer } = await import ("file-type");
-    const fileType = await fileTypeFromBuffer(buffer);
-
-    if (!fileType || (fileType.ext !== "png" && fileType.ext !== "jpg" && fileType.ext !== "jpeg")) {
-        throw new Error("Invalid image format");
-    }
-
     let compressedBuffer;
     try {
         const image = await Jimp.read(buffer);
@@ -356,7 +349,7 @@ const validateAndCompressImage = async (buffer) => {
         throw new Error("Invalid image file");
     }
 
-    return { fileType, compressedBuffer };
+    return { compressedBuffer };
 };
 
 const classifyImage = async (buffer) => {
@@ -380,12 +373,12 @@ const classifyImage = async (buffer) => {
 
 const uploadImageToCloudStorage = async (buffer, fileType, userId, profile) => {
     const bucket = storage.bucket(bucketName);
-    const fileName = `profileImages/${userId}/${Date.now()}.${fileType.ext}`;
+    const fileName = `profileImages/${userId}/${Date.now()}.jpeg`;
     const file = bucket.file(fileName);
 
     const stream = file.createWriteStream({ 
         metadata: {
-            contentType: `image/${fileType.ext}`
+            contentType: `image/jpeg`
         }
     });
 
@@ -785,47 +778,29 @@ const unsaveVideo = async (req, res) => {
 const getSavedVideosUsingPagination = async (req, res) => {
     try {
         const { userId } = req.user;
-        const limit = 5;
-        const offset = req.query.offset ? parseInt(req.query.offset, 10) : 0;
+        const { offset = 0} = req.query;
 
-        const savedVideos = await SavedVideo.findAll({ 
-            where: { userId },
+        const savedVideos = await SavedVideo.findAll({
+            where: { userId: userId },
             include: [{
-                model: Video, as: 'video',
+                model: Video,
+                as: 'Video',
+                attributes: ['id', 'thumbnailFileName', 'viewsCount']
             }],
-            limit,
-            offset
+            limit: process.env.SAVED_VIDEOS_LIMIT || 5,
+            offset: offset
         });
 
-        const videoData = await Promise.all(savedVideos.map(async savedVideo => {
-            const video = savedVideo.video;
-            const commentsCount = await Comment.count({ where: { videoId: video.id } });
-
-            if (!video.thumbnailFileName)
-                console.log("Video thumbnail file not found");
-
-            if (!video.fileName)
-                console.log("Video file not found")
-
-            let thumbnailUrl = null, videoUrl = null;
-            if (video.thumbnailFileName) 
-                thumbnailUrl = await getSignedUrl(video.thumbnailFileName);
-            if (video.fileName)
-                videoUrl = await getSignedUrl(video.fileName);
-
+        const formattedVideos = await Promise.all(savedVideos.map(async savedVideo => {
+            const signedUrl = await getSignedUrl(savedVideo.Video.thumbnailFileName);
             return {
-                id: video.id,
-                videoUrl: videoUrl,
-                thumbnailUrl: thumbnailUrl,
-                likes: video.likes,
-                commentsCount,
-                sharesCount: video.shareCount,
-                views: video.viewsCount,
-                rating: video.averageRating 
+                videoId: savedVideo.Video.id,
+                thumbnailUrl: signedUrl,
+                views: savedVideo.Video.viewsCount
             };
         }));
 
-        res.status(200).json(videoData);
+        res.status(200).json(formattedVideos);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
