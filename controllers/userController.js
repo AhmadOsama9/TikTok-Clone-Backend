@@ -3,6 +3,7 @@ const Profile = require("../config/db").Profile;
 const Video = require("../config/db").Video;
 const VideoLike = require("../config/db").VideoLike;
 const Follow = require("../config/db").Follow;
+const UserPopularity = require("../config/db").UserPopularity;
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
@@ -28,6 +29,8 @@ const signup = async (req, res) => {
         }
 
         email = email.toLowerCase();
+        username = username.toLowerCase();
+        name = name.toLowerCase();
 
         if (!validator.isEmail(email)) {
             return res.status(400).json({ error: 'Invalid email address' });
@@ -427,7 +430,12 @@ const referredUser = async (req, res) => {
 
 const searchUsersUsingPagination = async (req, res) => {
     try {
-        const { username, offset = 0 } = req.query;
+        let { username } = req.query;
+        const { offset = 0 } = req.query;
+
+        console.log("offset", offset)
+
+        username = username.toLowerCase();
         
         if (!username)
             return res.status(400).json({ error: 'Username is required' });
@@ -439,12 +447,18 @@ const searchUsersUsingPagination = async (req, res) => {
                 }
             },
             attributes: ['id', 'username'],
+            limit: process.env.SEARCH_USER_LIMIT || 5,
             offset: offset,
-            limit: 5,
             include: [{
                 model: Profile,
+                as: 'profile',
                 attributes: ['imageFileName'],
-            }]
+            }, {
+                model: UserPopularity,
+                as: 'popularity',
+                attributes: ['popularityScore'],
+            }],
+            order: [[{ model: UserPopularity, as: 'popularity' }, 'popularityScore', 'DESC']]
         });
 
         for (let user of result.rows) {
@@ -462,7 +476,8 @@ const searchUsersUsingPagination = async (req, res) => {
 
 const autocompleteUsers = async (req, res) => {
     try {
-        const { username } = req.query;
+        let { username } = req.query;
+        username = username.toLowerCase();
         
         if (!username)
             return res.status(400).json({ error: 'Username is required' });
@@ -474,11 +489,17 @@ const autocompleteUsers = async (req, res) => {
                 }
             },
             attributes: ['id', 'username'],
-            limit: 5,
+            limit: process.env.AUTO_COMPLETE_LIMIT || 5,
             include: [{
                 model: Profile,
+                as: 'profile',
                 attributes: ['imageFileName'],
-            }]
+            }, {
+                model: UserPopularity,
+                as: 'popularity',
+                attributes: ['popularityScore'],
+            }],
+            order: [[{ model: UserPopularity, as: 'popularity' }, 'popularityScore', 'DESC']]
         });
 
         for (let user of result.rows) {

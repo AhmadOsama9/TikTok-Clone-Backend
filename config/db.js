@@ -95,13 +95,21 @@ Follow.belongsTo(User, {
     as: 'followers',
 });
 
-User.belongsToMany(Video, 
-    { through: SavedVideo, as: 'savedVideos' 
+User.belongsToMany(Video, { 
+    through: SavedVideo,
+    foreignKey:'userId' , 
+    as: 'savedVideos' 
 });
 
-Video.belongsToMany(User, 
-    { through: SavedVideo, as: 'savedByUsers' 
+Video.belongsToMany(User, {
+    through: SavedVideo,
+    foreignKey: 'videoId' ,
+    as: 'savedByUsers' 
 });
+
+SavedVideo.belongsTo(User, { foreignKey: 'userId' });
+
+SavedVideo.belongsTo(Video, { foreignKey: 'videoId' });
 
 User.hasMany(Report, {
     foreignKey: 'userId',

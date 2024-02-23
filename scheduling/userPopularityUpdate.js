@@ -3,12 +3,18 @@ const User = require("../config/db").User;
 const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
 const Follow = require("../config/db").Follow;
+const UserPopularity = require("../config/db").UserPopularity;
+const { Op } = require("sequelize");
 
-cron.schedule("0 0 * * *", async () => { // run every day at midnight
+const updateUserPopularityScores = async () => { // run every day at midnight
     try {
         const users = await User.findAll({ attributes: ['id', 'isVerified'] });
         for (const user of users) {
-            const popularity = await user.getPopularity();
+            let popularity = await user.getPopularity();
+
+            if (!popularity) {
+                popularity = await UserPopularity.create({ userId: user.id, popularityScore: 0 });
+            }
 
             const videos = await Video.findAll({ 
                 where: { creatorId: user.id },
@@ -38,10 +44,13 @@ cron.schedule("0 0 * * *", async () => { // run every day at midnight
             score += totalShares * 3; // 3 points for each share
             score += followersCount * 5; // 5 points for each follower
 
-            // Update the popularity score
+            
             await popularity.update({ popularityScore: score });
         }
     } catch (error) {
         console.error("Error updating popularity scores:", error);
     }
-});
+};
+
+cron.schedule("0 0 * * *", updateUserPopularityScores);
+

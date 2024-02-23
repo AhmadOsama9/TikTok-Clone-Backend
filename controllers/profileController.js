@@ -496,7 +496,9 @@ const changeProfilePassword = async (req, res) => {
 const changeProfileName = async (req, res) => { 
     try {
         const { userId } = req.user;
-        const { newName } = req.body;
+        let { newName } = req.body;
+        
+        newName = newName.toLowerCase();
 
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
@@ -678,6 +680,8 @@ const changeProfileUsername = async (req, res) => {
         const { userId } = req.user;
         let { newUsername } = req.body;
 
+        newUsername = newUsername.toLowerCase();
+
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
@@ -734,9 +738,6 @@ const saveVideo = async (req, res) => {
         const { userId } = req.user;
         const { videoId } = req.params;
 
-        console.log("userId: ", userId);
-
-
         if (!videoId)
             return res.status(400).json({ error: "Please provide a videoId" });
 
@@ -750,7 +751,9 @@ const saveVideo = async (req, res) => {
             return res.status(400).json({ error: "Video already saved" });
         }
 
-        const newSavedVideo = await SavedVideo.create({ userId, videoId });
+        console.log("userId: ", userId);
+        console.log("videoId: ", videoId);
+        await SavedVideo.create({ userId, videoId });
         res.status(200).json({ message: "Video saved successfully" });
 
     } catch (error) {

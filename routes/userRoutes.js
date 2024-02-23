@@ -383,7 +383,7 @@ router.post("/refer-user", referredUser);
 
 /**
  * @swagger
- * /api/user/search?username=ahmed&offset=10:
+ * /api/user/search?username=ahmed&offset=0:
  *   get:
  *     tags:
  *      - Users
@@ -392,6 +392,12 @@ router.post("/refer-user", referredUser);
  *     summary: Search users with pagination
  *     description: Search for users whose username contains the specified term. Returns the top 5 matches from the specified page. Requires a Bearer token in the Authorization header.
  *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
  *      - in: query
  *        name: username
  *        required: true
@@ -400,8 +406,8 @@ router.post("/refer-user", referredUser);
  *        description: The search term
  *      - in: query
  *        name: offset
- *        schema:
- *          type: integer
+ *        type: integer
+ *        default: 0
  *        description: The number of users to skip before starting to return the matches
  *     responses:
  *       200:
@@ -445,6 +451,12 @@ router.get("/search", searchUsersUsingPagination);
  *     summary: Autocomplete user search
  *     description: Search for users whose username starts with the specified term. Returns the top 5 matches. Requires a Bearer token in the Authorization header.
  *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
  *      - in: query
  *        name: username
  *        required: true
