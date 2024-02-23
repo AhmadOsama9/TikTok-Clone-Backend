@@ -107,6 +107,9 @@ Video.belongsToMany(User, {
     as: 'savedByUsers' 
 });
 
+User.hasMany(Video, { foreignKey: 'creatorId', as: 'createdVideos' });
+Video.belongsTo(User, { foreignKey: 'creatorId', as: 'creator' });
+
 SavedVideo.belongsTo(User, { foreignKey: 'userId' });
 
 SavedVideo.belongsTo(Video, { foreignKey: 'videoId' });

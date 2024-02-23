@@ -326,13 +326,14 @@ const uploadVideo = async (req, res) => {
 
         const thumbnailFileName = await uploadToCloudStorage(imagePath, `thumbnails/${userId}/${Date.now()}.jpg`);
 
+        let description = req.body.description;
+        description = description.toLowerCase();
+
         const video = await Video.create({
             creatorId: userId,
             fileName: fileName,
             thumbnailFileName: thumbnailFileName,
-            videoSize: newSize, //Before compression
-            videoName: videoFile.originalname,
-            description: req.body.description,
+            description: description,
             category: req.body.category,
         });
 
@@ -391,15 +392,6 @@ async function getSignedUrl(fileName) {
 const getVideoThumbnail = async (req, res) => {
     try {
         const { userId } = req.user;
-
-        //Think that I will remove the unnecessary checking
-        //for the user, cause he passed the jwt token
-        //so the checking is just making sure that
-        //the user is not deleted or something like that
-        //but maybe to check if the user is banned or not
-        //I will add this checking later
-        //But since that will be for all of them
-        //I think I will just make a middleware for that
 
         const videoId = req.params.videoId;
         const video = await Video.findOne({ where: { id: videoId } });
@@ -700,6 +692,92 @@ const shareVideo = async (req, res) => {
     }
 }
 
+const searchVideosUsingPagination = async (req, res) => {
+    try {
+        let { description } = req.query;
+        const { offset = 0 } = req.query;
+
+        description = description.toLowerCase();
+        
+        if (!description)
+            return res.status(400).json({ error: 'description is required' });
+
+        const videos = await Video.findAll({
+            where: {
+                description: {
+                    [Op.like]: '%' + description + '%'
+                }
+            },
+            attributes: ['id', 'description', 'likes', 'shareCount', 'createdAt'],
+            limit: process.env.SEARCH_VIDEO_LIMIT || 5,
+            offset: offset,
+            include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['username'],
+                include: [{
+                    model: Profile,
+                    as: 'profile',
+                    attributes: ['imageFileName'],
+                }],
+            }],
+            order: [['popularityScore', 'DESC']]
+        });
+
+        for (let video of videos) {
+            if (video.creator && video.creator.Profile && video.creator.Profile.imageFileName) {
+                video.creator.Profile.imageURL = await getSignedUrl(video.creator.Profile.imageFileName);
+            }
+        }
+
+        return res.status(200).json({ videos });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const autocompleteVideos = async (req, res) => {
+    try {
+        let { description } = req.query;
+        description = description.toLowerCase();
+        
+        if (!description)
+            return res.status(400).json({ error: 'description is required' });
+
+        const videos = await Video.findAll({
+            where: {
+                description: {
+                    [Op.like]: description + '%'
+                }
+            },
+            attributes: ['id', 'description', 'likes', 'shareCount', 'createdAt'],
+            limit: process.env.AUTO_COMPLETE_LIMIT || 5,
+            include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['username'],
+                include: [{
+                    model: Profile,
+                    as: 'profile',
+                    attributes: ['imageFileName'],
+                }],
+            }],
+            order: [['popularityScore', 'DESC']]
+        });
+
+        for (let video of videos) {
+            if (video.creator && video.creator.Profile && video.creator.Profile.imageFileName) {
+                video.creator.Profile.imageURL = await getSignedUrl(video.creator.Profile.imageFileName);
+            }
+        }
+
+        return res.status(200).json({ videos });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
 
 module.exports = {
     uploadVideo,
@@ -711,4 +789,6 @@ module.exports = {
     getCreatorComments,
     likeAndUnlikeVideo,
     shareVideo,
+    searchVideosUsingPagination,
+    autocompleteVideos,
 }

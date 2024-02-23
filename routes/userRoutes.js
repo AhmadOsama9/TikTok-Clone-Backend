@@ -442,7 +442,7 @@ router.get("/search", searchUsersUsingPagination);
 
 /**
  * @swagger
- * /api/user/autocomplete?username=ahmed:
+ * /api/user/autocomplete?username:
  *   get:
  *     tags:
  *      - Users

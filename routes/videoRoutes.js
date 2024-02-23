@@ -28,6 +28,8 @@ const {
     getCreatorComments,
     likeAndUnlikeVideo,
     shareVideo,
+    searchVideosUsingPagination,
+    autocompleteVideos
 } = require("../controllers/videoController");
 
 /**
@@ -121,7 +123,7 @@ router.get("/thumbnail/:videoId", getVideoThumbnail);
 
 /**
  * @swagger
- * /api/video/{videoId}:
+ * /api/video/get/{videoId}:
  *   get:
  *     tags:
  *      - Videos
@@ -156,7 +158,7 @@ router.get("/thumbnail/:videoId", getVideoThumbnail);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/:videoId", getVideo);
+router.get("/get/:videoId", getVideo);
 
 /**
  * @swagger
@@ -451,5 +453,108 @@ router.post("/like-and-unlike", likeAndUnlikeVideo);
  *         description: Internal server error
  */
 router.post("/share", shareVideo);
+
+/**
+ * @swagger
+ * /api/video/search?description&offset=0:
+ *   get:
+ *     tags:
+ *      - Videos
+ *     summary: Search for videos by description
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        schema:
+ *          type: string
+ *        required: true
+ *        description: x-api-key
+ *      - in: query
+ *        name: description
+ *        schema:
+ *          type: string
+ *        required: true
+ *        description: The description of the video
+ *      - in: query
+ *        name: offset
+ *        schema:
+ *          type: integer
+ *        required: false
+ *        description: The offset for pagination
+ *     responses:
+ *       200:
+ *         description: Videos fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 videos:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       description:
+ *                         type: string
+ *                       likes:
+ *                         type: integer
+ *                       shareCount:
+ *                         type: integer
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       creator:
+ *                         type: object
+ *                         properties:
+ *                           username:
+ *                             type: string
+ *                           Profile:
+ *                             type: object
+ *                             properties:
+ *                               imageFileName:
+ *                                 type: string
+ *                               imageURL:
+ *                                 type: string
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Internal server error
+ */
+router.get("/search", searchVideosUsingPagination);
+
+/**
+ * @swagger
+ * /api/video/autocomplete?description:
+ *   get:
+ *     tags:
+ *      - Videos
+ *     summary: Autocomplete video descriptions
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        schema:
+ *          type: string
+ *        required: true
+ *        description: x-api-key
+ *      - in: query
+ *        name: description
+ *        schema:
+ *          type: string
+ *        required: true
+ *        description: The description of the video
+ *     responses:
+ *       200:
+ *         description: Videos fetched successfully
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Internal server error
+ */
+router.get("/autocomplete", autocompleteVideos);
 
 module.exports = router;

@@ -54,3 +54,8 @@ const updateUserPopularityScores = async () => { // run every day at midnight
 
 cron.schedule("0 0 * * *", updateUserPopularityScores);
 
+// updateUserPopularityScores().then(() => {
+//     console.log('Popularity scores updated');
+// }).catch((error) => {
+//     console.error('Error updating popularity scores:', error);
+// });

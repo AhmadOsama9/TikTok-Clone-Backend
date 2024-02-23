@@ -433,14 +433,12 @@ const searchUsersUsingPagination = async (req, res) => {
         let { username } = req.query;
         const { offset = 0 } = req.query;
 
-        console.log("offset", offset)
-
         username = username.toLowerCase();
         
         if (!username)
             return res.status(400).json({ error: 'Username is required' });
 
-        const result = await User.findAndCountAll({
+        const users = await User.findAll({
             where: {
                 username: {
                     [Op.like]: '%' + username + '%'
@@ -461,13 +459,13 @@ const searchUsersUsingPagination = async (req, res) => {
             order: [[{ model: UserPopularity, as: 'popularity' }, 'popularityScore', 'DESC']]
         });
 
-        for (let user of result.rows) {
+        for (let user of users) {
             if (user.Profile && user.Profile.imageFileName) {
                 user.Profile.imageURL = await getSignedUrl(user.Profile.imageFileName);
             }
         }
 
-        return res.status(200).json({ users: result.rows });
+        return res.status(200).json({ users });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -482,7 +480,7 @@ const autocompleteUsers = async (req, res) => {
         if (!username)
             return res.status(400).json({ error: 'Username is required' });
 
-        const result = await User.findAndCountAll({
+        const users = await User.findAll({
             where: {
                 username: {
                     [Op.like]: username + '%'
@@ -502,13 +500,13 @@ const autocompleteUsers = async (req, res) => {
             order: [[{ model: UserPopularity, as: 'popularity' }, 'popularityScore', 'DESC']]
         });
 
-        for (let user of result.rows) {
+        for (let user of users) {
             if (user.Profile && user.Profile.imageFileName) {
                 user.Profile.imageURL = await getSignedUrl(user.Profile.imageFileName);
             }
         }
 
-        return res.status(200).json({ users: result.rows });
+        return res.status(200).json({ users });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });

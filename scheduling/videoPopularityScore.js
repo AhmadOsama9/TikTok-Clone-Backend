@@ -2,7 +2,7 @@ const cron = require("node-cron");
 const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
 
-cron.schedule("0 0 * * *", async () => { // run every day at midnight
+const updateVideoPopularityScore = async () => { 
     try {
         const videos = await Video.findAll({ attributes: ['id', 'likes', 'shareCount'] });
 
@@ -14,4 +14,12 @@ cron.schedule("0 0 * * *", async () => { // run every day at midnight
     } catch (error) {
         console.error("Error updating video popularity scores:", error);
     }
-});
+};
+
+cron.schedule("0 0 * * *", updateVideoPopularityScore);
+
+// updateVideoPopularityScore().then(() => { 
+//     console.log('Video popularity scores updated');
+// }).catch((error) => {
+//     console.error('Error updating video popularity scores:', error);
+// });

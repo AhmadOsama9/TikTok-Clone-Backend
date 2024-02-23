@@ -15,7 +15,33 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         validate: {
             isIn: {
-                args: [['category1', 'category2', 'category3']],  // Replace with your actual categories
+                args: [[
+                    "الكل",
+                    "الرياضة",
+                    "التكنولوجيا",
+                    "السياسة",
+                    "الاقتصاد",
+                    "الفن",
+                    "الثقافة",
+                    "العلوم",
+                    "الدين",
+                    "التاريخ",
+                    "الطب",
+                    "البيئة",
+                    "الترفيه",
+                    "السفر",
+                    "الطبخ",
+                    "التعليم",
+                    "الأدب",
+                    "الأفلام",
+                    "الأخبار",
+                    "الأعمال",
+                    "التسويق",
+                    "التصميم",
+                    "التطوير",
+                    "التحفيز",
+                    "التنمية البشرية",
+                ]],
                 msg: "Invalid category"
             }
         }
@@ -29,8 +55,8 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         validate: {
             len: {
-                args: [20],
-                msg: "Description must be at least 20 characters long"
+                args: [5, 30],
+                msg: "Description must be between 5 and 30 characters long"
             }
         }
       },
@@ -46,12 +72,10 @@ module.exports = (sequelize, DataTypes) => {
           type: DataTypes.DOUBLE,
           defaultValue: 0,
       },
-      videoPopularityScore: {
+      popularityScore: {
         type: DataTypes.DOUBLE,
         defaultValue: 0,
       },
       isTrending: DataTypes.BOOLEAN,
-      videoSize: DataTypes.INTEGER,
-      videoName: DataTypes.STRING,
     });
 };
