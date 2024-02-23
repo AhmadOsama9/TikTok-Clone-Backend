@@ -21,12 +21,6 @@ const {
  *      - bearerAuth: []
  *     parameters:
  *      - in: header
- *        name: Authorization
- *        required: true
- *        schema:
- *          type: string
- *        description: The JWT token of the user.
- *      - in: header
  *        name: X-API-KEY
  *        required: true
  *        schema:
@@ -50,8 +44,8 @@ const {
  *                 type: integer
  *                 description: The reference ID related to the report.
  *               referenceType:
- *                 type: integer(1 for user, 2 for comment or 3 for video)
- *                 description: The type of the reference related to the report
+ *                 type: integer
+ *                 description: (1 for user, 2 for comment or 3 for video or 4 for message)
  *     responses:
  *       200:
  *         description: The created report
@@ -97,12 +91,6 @@ router.post("/create", createReport);
  *        schema:
  *          type: integer
  *        description: The ID of the report to update.
- *      - in: header
- *        name: Authorization
- *        required: true
- *        schema:
- *          type: string
- *        description: The JWT token of the user.
  *      - in: header
  *        name: X-API-KEY
  *        required: true
@@ -167,12 +155,6 @@ router.put("/update/:id", updateReport);
  *          type: integer
  *        description: The ID of the report to retrieve.
  *      - in: header
- *        name: Authorization
- *        required: true
- *        schema:
- *          type: string
- *        description: The JWT token of the user.
- *      - in: header
  *        name: X-API-KEY
  *        required: true
  *        schema:
@@ -202,47 +184,21 @@ router.get("/get/:id", getReportById);
 
 /**
  * @swagger
- * /api/report/get-all/{id}:
- *   put:
+ * /api/report/get-all:
+ *   get:
  *     tags:
  *       - Reports
- *     summary: Update a report by ID
- *     operationId: updateReport
+ *     summary: get all reports
+ *     operationId: getAllReports
  *     security:
  *      - bearerAuth: []
  *     parameters:
- *      - in: path
- *        name: id
- *        required: true
- *        schema:
- *          type: integer
- *        description: The ID of the report to update.
- *      - in: header
- *        name: Authorization
- *        required: true
- *        schema:
- *          type: string
- *        description: The JWT token of the user.
  *      - in: header
  *        name: X-API-KEY
  *        required: true
  *        schema:
  *          type: string
  *        description: The API key.
- *     requestBody:
- *       description: Report data to update
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *                 description: The new title of the report.
- *               description:
- *                 type: string
- *                 description: The new description of the report.
  *     responses:
  *       200:
  *         description: The report was updated successfully
@@ -286,12 +242,6 @@ router.get("/get-all", getAllReports);
  *        schema:
  *          type: integer
  *        description: The ID of the report to delete.
- *      - in: header
- *        name: Authorization
- *        required: true
- *        schema:
- *          type: string
- *        description: The JWT token of the user.
  *      - in: header
  *        name: X-API-KEY
  *        required: true

@@ -236,7 +236,7 @@ const getUserProfile = async (req, res) => {
             photoUrl: imageUrl,
             numberOfVideos: videoData.length,
             isverified: user.isVerified,
-            referrals: user.referralCount || 0, 
+            referrals: user.referrals || 0, 
             totalLikes
         };
 
@@ -245,6 +245,7 @@ const getUserProfile = async (req, res) => {
         res.status(500).json({error: error.message});
     }
 }
+
 
 
 const getOtherUserProfile = async (req, res) => {
@@ -733,10 +734,13 @@ const saveVideo = async (req, res) => {
         const { userId } = req.user;
         const { videoId } = req.params;
 
+        console.log("userId: ", userId);
+
+
         if (!videoId)
             return res.status(400).json({ error: "Please provide a videoId" });
 
-        const video = await Video.findOne({ where: { id: videoId } });
+        const video = await Video.findByPk(videoId);
         if (!video) {
             return res.status(404).json({ error: "Video not found" });
         }

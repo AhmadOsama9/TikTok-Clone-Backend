@@ -2,6 +2,7 @@ const Report = require("../config/db").Report;
 const User = require("../config/db").User;
 const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
+const Message = require("../config/db").Message;
 
 
 const createReport = async (req, res) => {
@@ -12,7 +13,7 @@ const createReport = async (req, res) => {
         if (!title || !description || !referenceId || !referenceType)
             return res.status(400).json({ message: "All fields are required" });
 
-        if (![1, 2, 3].includes(referenceType)) {
+        if (![1, 2, 3, 4].includes(referenceType)) {
             return res.status(400).json({ message: "Invalid referenceType" });
         }
 
@@ -27,12 +28,22 @@ const createReport = async (req, res) => {
             case 3:
                 referencedItem = await Video.findByPk(referenceId);
                 break;
+            case 4:
+                referencedItem = await Message.findByPk(referenceId);
+                break;
             default:
                 break;
         }
-
+        
         if (!referencedItem) {
             return res.status(400).json({ message: "Referenced item not found" });
+        }
+        
+        if ((referenceType === 1 && userId === referencedItem.id) ||
+            (referenceType === 2 && userId === referencedItem.userId) ||
+            (referenceType === 3 && userId == referencedItem.creatorId) ||
+            (referenceType === 4 && userId == referencedItem.senderId)) {
+            return res.status(400).json({ message: "You can't report yourself" });
         }
 
         const report = await Report.create({
@@ -74,33 +85,36 @@ const getAllReports = async (req, res) => {
     }
 };
 
-
 const updateReport = async (req, res) => {
     try {
+        const { userId } = req.user;
         const { title, description } = req.body;
+        const reportId = req.params.id;
         if (!title && !description)
             return res.status(400).json({ message: "At least one field is required" });
 
-        const report = await Report.findByPk(req.params.id);
-        if (report) {
-            await report.update({ title, description });
-            res.status(200).json({ message: 'Report updated' });
-        } else {
-            res.status(404).json({ message: 'Report not found' });
-        }
+        const report = await Report.findByPk(reportId);
+        if (!report)
+            return res.status(404).json({ message: "Report not found" });
+            
+        if (userId !== report.userId)
+            return res.status(400).json({ message: "Unauthorized" });
+
+        if (report.title === title && report.description === description)
+            return res.status(400).json({ message: "No changes detected" });
+
+        await report.update({ title, description });
+        return res.status(200).json({ message: 'Report updated' });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+       return res.status(500).json({ message: err.message });
     }
 };
 
 
 const deleteReport = async (req, res) => {
     try {
-        const user  = await User.findByPk(req.user.userId);
-        if (!user)
-            return res.status(400).json({ message: "Unauthorized" });
-        if (!user.isAdmin)
-            return res.status(400).json({ message: "Unauthorized" });
+        // if (!user.isAdmin)
+        //     return res.status(400).json({ message: "Unauthorized" });
 
         const report = await Report.findByPk(req.params.id);
         if (report) {

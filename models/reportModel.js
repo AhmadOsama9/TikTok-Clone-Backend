@@ -7,8 +7,8 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         validate: {
           isIn: {
-            args: [[1, 2, 3]],
-            msg: "Reference type must be 1, 2 or 3"
+            args: [[1, 2, 3, 4]],
+            msg: "Reference type must be 1, 2, 3 or 4"
           }
         }
       },

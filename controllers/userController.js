@@ -401,6 +401,9 @@ const referredUser = async (req, res) => {
         if (referralUser.id === userId)
             return res.status(400).json({ error: 'You cannot refer yourself' });
 
+        if (referralUser.id > referredUser.id)
+            return res.status(400).json({ error: 'You cannot refer a user who has a lower id than you' });
+
         if (referredUser.referred)
             return res.status(400).json({ error: 'You have already been referred' });
 
@@ -408,7 +411,6 @@ const referredUser = async (req, res) => {
 
         referredUser.referred = true;
         await referredUser.save({ transaction });
-
         referralUser.referrals += 1;
         await referralUser.save({ transaction });
 

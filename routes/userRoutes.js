@@ -345,6 +345,13 @@ router.get("/check-ban-status", checkBanStatus);
  *       - bearerAuth: []
  *     summary: Refer a user
  *     description: Refer a user using their referral code. Requires a Bearer token in the Authorization header.
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: API key
  *     requestBody:
  *       required: true
  *       content:
