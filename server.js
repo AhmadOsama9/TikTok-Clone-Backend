@@ -36,6 +36,7 @@ const followRoutes = require("./routes/followRoutes");
 const rateRoutes = require("./routes/rateRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const savedVideosRoutes = require("./routes/savedVideosRoutes");
+const notificationRoutes = require("./routes/notificationsRoutes");
 
 //Middlewares
 
@@ -114,6 +115,7 @@ app.use("/api/follow/", followRoutes);
 app.use("/api/rate/", rateRoutes);
 app.use("/api/chat/", chatRoutes);
 app.use("/api/profile/", savedVideosRoutes);
+app.use("/api/notification/", notificationRoutes);
 
 
 //starting the server

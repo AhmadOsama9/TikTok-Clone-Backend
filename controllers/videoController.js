@@ -5,6 +5,7 @@ const Profile = require("../config/db").Profile;
 const VideoLike = require("../config/db").VideoLike;
 const { Op } = require("sequelize");
 const Sequelize = require("sequelize");
+const { addNotification } = require("./notificationsController");
 
 const nsfwjs = require("nsfwjs");
 const tf = require("@tensorflow/tfjs-node");
@@ -641,36 +642,53 @@ const updateVideoDescription = async (req, res) => {
 
 }
 
+const likeVideo = async (userId, videoId, transaction) => {
+    const video = await Video.findByPk(videoId);
+    if (!video)
+        throw new Error('Video not found');
+
+    await VideoLike.create({ userId, videoId }, { transaction });
+    video.likes += 1;
+    await video.save({ transaction });
+
+    await addNotification(video.creatorId, videoId, null, userId, 1, 'New Like', transaction);
+};
+
+const unlikeVideo = async (userId, videoId, transaction) => {
+    const video = await Video.findByPk(videoId);
+    if (!video)
+        throw new Error('Video not found');
+
+    const like = await VideoLike.findOne({ where: { userId, videoId } });
+    if (like) {
+        await like.destroy({ transaction });
+        video.likes -= 1;
+        await video.save({ transaction });
+    }
+};
+
 const likeAndUnlikeVideo = async (req, res) => {
+    const { userId } = req.user;
+    const { videoId } = req.body;
+
+    if (!videoId) {
+        return res.status(400).json({ message: "Video ID is required" });
+    }
+
+    const like = await VideoLike.findOne({ where: { userId, videoId } });
+
     try {
-        const { userId } = req.user;
-        const { videoId } = req.body;
-
-        if (!videoId) {
-            return res.status(400).json({ message: "Video ID is required" });
-        }
-        const video = await Video.findByPk(videoId);
-        if (!video)
-            return res.status(404).json({ message: "Video not found" });
-
-        const like = await VideoLike.findOne({ where: { userId: userId, videoId: videoId } });
         if (like) {
-            await like.destroy();
-            video.likes -= 1;
-            await video.save();
+            await unlikeVideo(userId, videoId);
             return res.status(200).json({ message: "Video unliked successfully" });
         } else {
-            await VideoLike.create({ userId: userId, videoId: videoId });
-            video.likes += 1;
-            await video.save();
+            await likeVideo(userId, videoId);
             return res.status(200).json({ message: "Video liked successfully" });
         }
-
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
-
+};
 const shareVideo = async (req, res) => {
     try {
         const { userId } = req.user;

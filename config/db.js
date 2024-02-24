@@ -15,6 +15,7 @@ const userPersonalizationModel = require("../models/userPersonalizationModel");
 const recentInteractionModel = require("../models/recentInteractionModel");
 const watchedVideoModel = require("../models/watchedVideoModel");
 const videoLikeModel = require("../models/videoLikeModel");
+const notificationModel = require("../models/notificationModel");
 
 // config = {
 //     host    : "127.0.0.1",
@@ -47,6 +48,7 @@ const UserPersonalization = userPersonalizationModel(sequelize, DataTypes);
 const RecentInteraction = recentInteractionModel(sequelize, DataTypes);
 const WatchedVideo = watchedVideoModel(sequelize, DataTypes);
 const VideoLike = videoLikeModel(sequelize, DataTypes);
+const Notification = notificationModel(sequelize, DataTypes);
 
 //Relations between tables
 
@@ -275,8 +277,19 @@ VideoLike.belongsTo(Video, {
     as: 'video',
 });
 
+User.hasMany(Notification, {
+    foreignKey: 'userId',
+    as: 'notifications',
+});
+
+Notification.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user',
+});
+
 
 async function syncModels() {
+    await Notification.sync({alter: true});
     await User.sync({alter: true});
     await Video.sync({alter: true});
     await VideoLike.sync({alter: true});
@@ -296,6 +309,7 @@ async function syncModels() {
 }
 
 async function dropModels() {
+    await Notification.drop();
     await VideoLike.drop();
     await WatchedVideo.drop();
     await RecentInteraction.drop();
@@ -350,6 +364,7 @@ module.exports = {
     RecentInteraction,
     WatchedVideo,
     VideoLike,
+    Notification,
     sequelize
 }
 

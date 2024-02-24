@@ -1,5 +1,6 @@
 const Follow = require("../config/db").Follow;
 const User = require("../config/db").User;
+const { addNotification } = require("./notificationsController");
 
 const { Op } = require("sequelize");
 
@@ -31,6 +32,8 @@ const followUser = async (req, res) => {
             return res.status(400).json({ message: "You already follow this user" });
 
             await Follow.create({ followerId: userId, followingId: followId });
+            
+            await addNotification(followId, null, null, userId, 3, 'New Follower');
 
         return res.status(200).json({ message: "User followed successfully" });
 
