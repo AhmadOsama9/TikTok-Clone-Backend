@@ -19,5 +19,14 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
+      isViewed: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+      },
     });
-  };
+};
+
+//1 for users
+//2 for comments
+//3 for videos
+//4 for messages

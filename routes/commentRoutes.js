@@ -7,6 +7,7 @@ const {
     replyToComment,
     addGiftComment,
     updateComment,
+    getCommentUsingId,
 } = require("../controllers/commentController");
 
 /**
@@ -338,6 +339,57 @@ router.post("/add-gift-comment/", addGiftComment);
  *               $ref: '#/components/schemas/Error'
  */
 router.put("/update/:id", updateComment);
+
+/**
+ * @swagger
+ * /api/comment/get-comment/{id}:
+ *   get:
+ *     tags:
+ *       - Comments
+ *     summary: Get a comment by ID
+ *     operationId: getCommentUsingId
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: path
+ *        name: id
+ *        required: true
+ *        schema:
+ *          type: integer
+ *        description: The ID of the comment to retrieve.
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: x-api-key.
+ *     responses:
+ *       200:
+ *         description: Comment retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Comment'
+ *       403:
+ *         description: You are not authorized to view this comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Comment not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: An error occurred
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get("/get-comment/:id", getCommentUsingId);
 
 
 module.exports = router;

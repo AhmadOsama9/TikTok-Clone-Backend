@@ -1,6 +1,7 @@
 const Comment = require("../config/db").Comment;
 const Video = require("../config/db").Video;
 const User = require("../config/db").User;
+const UserStatus = require("../config/db").UserStatus;
 const sequelize = require('../config/db').sequelize;
 const Transaction = require('../config/db').Transaction;
 const { addNotification } = require("./notificationsController");
@@ -38,9 +39,9 @@ const addComment = async (req, res) => {
             }
         }
 
-        res.status(200).json(comment);
+        return res.status(200).json(comment);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        return res.status(500).json({ message: err.message });
     }
 };
 
@@ -121,30 +122,9 @@ const addGiftComment = async (req, res) => {
 
         await transaction.commit();
 
-        res.status(200).json(comment);
+        return res.status(200).json(comment);
     } catch (err) {
         if (transaction) await transaction.rollback();
-        res.status(500).json({ message: err.message });
-    }
-};
-
-const deleteComment = async (req, res) => {
-    try {
-        const { userId } = req.user;
-        const commentId = req.params.id;
-
-        const comment = await Comment.findByPk(commentId);
-        if (!comment) {
-            return res.status(404).json({ message: 'Comment not found' });
-        }
-
-        if (comment.userId !== userId) {
-            return res.status(403).json({ message: 'You are not authorized to delete this comment' });
-        }
-
-        await comment.destroy();
-        return res.status(200).json({ message: 'Comment deleted' });
-    } catch (err) {
         return res.status(500).json({ message: err.message });
     }
 };
@@ -173,9 +153,9 @@ const replyToComment = async (req, res) => {
             userId
         });
 
-        res.status(200).json(reply);
+        return res.status(200).json(reply);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        return res.status(500).json({ message: err.message });
     }
 };
 
@@ -200,16 +180,76 @@ const updateComment = async (req, res) => {
         if (!content || content.trim() === '')
             return res.status(400).json({ message: 'Content is required' });
 
+        if (comment.content === content)
+            return res.status(400).json({ message: 'Content is the same' });
+
         comment.content = content;
         await comment.save();
 
-        res.status(200).json(comment);
+        return res.status(200).json(comment);
 
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 }
 
+const getCommentUsingId = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const commentId = req.params.id;
+
+        if (!commentId)
+            return res.status(400).json({ message: 'Comment id is required' });
+
+        const userStatus = UserStatus.findByPk(userId);
+        if (!userStatus || !userStatus.isAdmin)
+            return res.status(403).json({ message: 'You are not authorized to view this comment' });
+
+
+        const comment = await Comment.findByPk(commentId);
+        if (!comment) {
+            return res.status(404).json({ message: 'Comment not found' });
+        }
+        return res.status(200).json(comment);
+    } catch (error) {
+       return res.status(500).json({ message: error.message });
+    }
+}
+
+
+const deleteComment = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const commentId = req.params.id;
+
+        if (!commentId)
+            return res.status(400).json({ message: 'Comment id is required' });
+
+        const userStatus = await UserStatus.findByPk(userId);
+        if (!userStatus) {
+            return res.status(404).json({ message: 'UserStatus not found' });
+        }
+
+        const comment = await Comment.findByPk(commentId);
+        if (!comment) {
+            return res.status(404).json({ message: 'Comment not found' });
+        }
+
+        const video = await Video.findByPk(comment.videoId);
+        if (!video) {
+            return res.status(404).json({ message: 'Video not found' });
+        }
+
+        if (comment.userId !== userId && !userStatus.isAdmin && video.creatorId !== userId) {
+            return res.status(403).json({ message: 'You are not authorized to delete this comment' });
+        }
+
+        await comment.destroy();
+        return res.status(200).json({ message: 'Comment deleted' });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
 
 
 module.exports = {
@@ -217,5 +257,6 @@ module.exports = {
     deleteComment,
     replyToComment,
     addGiftComment,
-    updateComment
+    updateComment,
+    getCommentUsingId,
 }

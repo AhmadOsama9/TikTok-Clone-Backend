@@ -1,5 +1,6 @@
 const Report = require("../config/db").Report;
 const User = require("../config/db").User;
+const UserStatus = require("../config/db").UserStatus;
 const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
 const Message = require("../config/db").Message;
@@ -51,7 +52,8 @@ const createReport = async (req, res) => {
             description,
             referenceId,
             referenceType,
-            userId
+            userId,
+            isViewed: false,
         });
 
         res.status(200).json(report);
@@ -64,6 +66,11 @@ const createReport = async (req, res) => {
 
 const getReportById = async (req, res) => {
     try {
+        const { userId } = req.user;
+        const userStatus = await UserStatus.findOne({ where: { userId } });
+        if (!userStatus || !userStatus.isAdmin)
+            return res.status(400).json({ message: "Unauthorized" });
+
         const report = await Report.findByPk(req.params.id);
         if (report) {
             res.status(200).json(report);
@@ -78,12 +85,40 @@ const getReportById = async (req, res) => {
 
 const getAllReports = async (req, res) => {
     try {
+        const { userId } = req.user;
+
+        const userStatus = await UserStatus.findOne({ where: { userId } });
+
+        if (!userStatus || !userStatus.isAdmin) {
+            return res.status(403).json({ message: 'You are not authorized to perform this action' });
+        }
+        
         const reports = await Report.findAll();
         res.status(200).json(reports);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 };
+
+const getUnviewedReports = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const userStatus = await UserStatus.findOne({ where: { userId } });
+
+        if (!userStatus || !userStatus.isAdmin) {
+            return res.status(403).json({ message: 'You are not authorized to perform this action' });
+        }
+
+        const reports = await Report.findAll({
+            where: { isViewed: false },
+        });
+
+        res.json({ reports });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 
 const updateReport = async (req, res) => {
     try {
@@ -100,8 +135,11 @@ const updateReport = async (req, res) => {
         if (userId !== report.userId)
             return res.status(400).json({ message: "Unauthorized" });
 
-        if (report.title === title && report.description === description)
-            return res.status(400).json({ message: "No changes detected" });
+        if (title && (title.trim() === '' || title.trim() === report.title))
+        return res.status(400).json({ message: "make sure that you sent a title and it's an updated" });
+    
+        if (description && (description.trim() === '' || description.trim() === report.description))
+            return res.status(400).json({ message: "make sure that you sent a description and it's an updated" });
 
         await report.update({ title, description });
         return res.status(200).json({ message: 'Report updated' });
@@ -110,28 +148,62 @@ const updateReport = async (req, res) => {
     }
 };
 
-
 const deleteReport = async (req, res) => {
-    try {
-        // if (!user.isAdmin)
-        //     return res.status(400).json({ message: "Unauthorized" });
+    const { userId } = req.user; 
+    const reportId = req.params.id;
 
-        const report = await Report.findByPk(req.params.id);
-        if (report) {
-            await report.destroy();
-            res.status(200).json({ message: 'Report deleted' });
-        } else {
-            res.status(404).json({ message: 'Report not found' });
+    try {
+        const report = await Report.findByPk(reportId);
+
+        if (!report) {
+            return res.status(404).json({ message: 'Report not found' });
         }
-    } catch (err) {
-        res.status(500).json({ message: err.message });
+
+        const userStatus = await UserStatus.findOne({ where: { userId } });
+
+        if (userId !== report.userId && (!userStatus || !userStatus.isAdmin)) {
+            return res.status(403).json({ message: 'You are not authorized to perform this action' });
+        }
+
+        await report.destroy();
+
+        return res.status(200).json({ message: 'Report deleted successfully' });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
     }
 };
+
+const setReportIsViewed = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const userStatus = await UserStatus.findOne({ where: { userId } });
+        if (!userStatus || !userStatus.isAdmin)
+            return res.status(400).json({ message: "Unauthorized" });
+
+        const reportId = req.params.id;
+        const report = await Report.findByPk(reportId);
+        if (!report) {
+            return res.status(404).json({ message: "Report not found" });
+        }
+
+        if (report.isViewed) 
+            return res.status(400).json({ message: "Report already marked as viewed" });
+        
+        report.isViewed = true;
+        await report.save();
+        res.status(200).json({ message: "Report marked as viewed" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 
 module.exports = {
     createReport,
     getReportById,
     getAllReports,
+    getUnviewedReports,
     updateReport,
-    deleteReport
+    deleteReport,
+    setReportIsViewed,
 }

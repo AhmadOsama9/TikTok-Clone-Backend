@@ -1,8 +1,7 @@
 const Rate = require("../config/db").Rate;
 const Video = require("../config/db").Video;
-const User = require("../config/db").User;
+const VideoMetadata = require("../config/db").VideoMetadata;
 const sequelize = require("../config/db").sequelize;
-
 
 const addRate = async (req, res) => {
     const t = await sequelize.transaction();
@@ -29,10 +28,16 @@ const addRate = async (req, res) => {
 
         await Rate.create({ userId, videoId, rating }, { transaction: t });
 
-        video.totalRating += rating;
-        video.totalRatings += 1;
-        video.averageRating = video.totalRating / video.totalRatings;
-        await video.save({ transaction: t });
+        const videoMetadata = await VideoMetadata.findOne({ where: { videoId: videoId } });
+        const newTotalRatings = videoMetadata.totalRatings + 1;
+        const newTotalRating = videoMetadata.totalRating + rating;
+        const newAverageRating = newTotalRating / newTotalRatings;
+
+        await videoMetadata.update({
+            totalRatings: newTotalRatings,
+            totalRating: newTotalRating,
+            averageRating: newAverageRating
+        }, { transaction: t });
 
         await t.commit();
 

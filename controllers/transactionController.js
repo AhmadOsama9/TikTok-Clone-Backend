@@ -28,6 +28,10 @@ const getBalanceAndTransactions = async (req, res) => {
                     { receiverId: userId }
                 ]
             },
+            include: [
+                { model: User, as: 'sender', attributes: ['username'] },
+                { model: User, as: 'receiver', attributes: ['username'] }
+            ],
             order: [['createdAt', 'DESC']]
         });
 
@@ -44,6 +48,7 @@ const getBalanceAndTransactions = async (req, res) => {
         return res.status(500).send({ error: error.message });
     }
 }
+
 /*
 2- Add Balance
             Description: This api is used to add balance to the user (JWT token).
@@ -58,14 +63,6 @@ const addBalance = async (req, res) => {
         const { userId } = req.user;
         const { cardCode, balance } = req.body;
 
-        //here we should handle the cardCode case
-        //were I will be talking with the firebase database
-        //for those cards and check if the card is valid or not
-        //and if it is valid I will get the balance from the card
-        //and add it to the user balance
-        //for now I will just take the balance that I want to add
-        
-
         if (!balance)
             return res.status(400).send({ message: "Balance is required" });
 
@@ -77,17 +74,13 @@ const addBalance = async (req, res) => {
         if (!user) {
             return res.status(404).send({ message: "User not found" });
         }
-        console.log("username: ", user.username);
 
         user.balance += balance;
         await user.save({ transaction });
 
-        console.log("balance is: ", balance);
-
         await Transaction.create({
             amount: balance,
             receiverId: userId,
-            receiverUsername: user.username,
         }, { transaction });
 
         await transaction.commit();
@@ -100,23 +93,11 @@ const addBalance = async (req, res) => {
     }
 }
 
-/*
-3- Send gift
-            Description: This api is used to Send a gift to another user (JWT token).
-            The user must send the receiver id and the gift value. The receiver will get the money in his balance and the user will lose the money from his balance. (must check if the user has enough money).
-            Parameters:
-                - receiver id
-                - gift value
-            Note: A transaction will be added to the sender and the receiver.
-*/
 const sendGift = async (req, res) => { 
     const t = await sequelize.transaction();
     try {
         const { userId } = req.user;
         const { receiverId, amount } = req.body;
-
-        console.log("receiverId", receiverId);
-        console.log("ammonut ", amount);
 
         if (amount <= 0) {
             return res.status(400).send({ message: "Invalid balance" });
@@ -145,8 +126,6 @@ const sendGift = async (req, res) => {
             amount: amount,
             senderId: sender.id,
             receiverId: receiver.id,
-            senderUsername: sender.username,
-            receiverUsername: receiver.username
         }, { transaction: t });
 
         await t.commit();

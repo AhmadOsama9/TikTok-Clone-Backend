@@ -1,18 +1,25 @@
 const UserPersonalization = require("../config/db").UserPersonalization;
 const Video = require("../config/db").Video;
-const RecentInteraction = require("../config/db").RecentInteraction;
+const Rate = require("../config/db").Rate;
 const WatchedVideo = require("../config/db").WatchedVideo;
+const VideoCategory = require("../config/db").VideoCategory;
 const sequelize = require("../config/db").sequelize;
 const { Op } = require("sequelize");
 const { getSignedUrl } = require("../controllers/profileController");
+const fetchVideoData = require("../helper/fetchVideoData")
 
 //Should use rate for the recommendation
 
+// Create user personalization
+// This function is called whenever a user interacts with a video
+// The function updates the user's personalization based on the interaction
+// The function also updates the user's watched videos
+// The function also updates the video's views count
 const createUserPersonalization = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { userId } = req.user;
-        const { videoId, liked, viewed, shared, commented } = req.body;
+        const { videoId, liked, viewed, shared, commented, rated } = req.body;
 
         if (!videoId)
             return res.status(400).json({ message: 'Video ID is required' });
@@ -25,69 +32,102 @@ const createUserPersonalization = async (req, res) => {
         if (!video)
             return res.status(404).json({ message: 'Video not found' });
 
-        let category = video.category;
-
-        let userPersonalization = await UserPersonalization.findOne({
-            where: { userId, category }
+        const videoCategories = await VideoCategory.findAll({ 
+            where: { videoId },
+            attributes: ['name']
         });
 
-        if (!userPersonalization) {
-            userPersonalization = await UserPersonalization.create({
-                userId, category, topVideoIds: [videoId]
+        if (!videoCategories.length)
+            return res.status(404).json({ message: 'Video not found' });
+
+        const rating = await Rate.findOne({
+            where: {
+                userId: userId,
+                videoId: videoId
+            }
+        });
+
+        for (let i = 0; i < videoCategories.length; i++) {
+            let category = videoCategories[i].name;
+
+            let userPersonalization = await UserPersonalization.findOne({
+                where: { userId, category }
+            });
+
+            if (!userPersonalization) {
+                userPersonalization = await UserPersonalization.create({
+                    userId, category
+                }, { transaction });
+            }
+
+        
+
+            let interactionCount = 0;
+            if (viewed) interactionCount += 5;
+            if (liked) interactionCount += 10;
+            if (commented) interactionCount += 20;
+            if (shared) interactionCount += 30;
+            if (rating) {
+                switch (true) {
+                    case (rating.rate >= 1 && rating.rate < 2):
+                        interactionCount += 5;
+                        break;
+                    case (rating.rate >= 2 && rating.rate < 3):
+                        interactionCount += 10;
+                        break;
+                    case (rating.rate >= 3 && rating.rate < 4):
+                        interactionCount += 15;
+                        break;
+                    case (rating.rate >= 4 && rating.rate < 5):
+                        interactionCount += 20;
+                        break;
+                    case (rating.rate == 5):
+                        interactionCount += 25;
+                        break;
+                    default:
+                        interactionCount--;
+                        break;
+                }
+            }
+            
+            if (userPersonalization.currentInterest < userPersonalization.peakInterest) {
+                const difference = userPersonalization.peakInterest - userPersonalization.currentInterest;
+                let boost = 0;
+            
+                if (difference > 1) {
+                    boost = 10;
+                } else if(difference > 0.5) {
+                    boost = 5;
+                } else if (difference > 0.25) {
+                    boost = 3;
+                } else if (difference > 0.15) {
+                    boost = 2;
+                } else if (difference > 0.05) {
+                    boost = 1;
+                }
+            
+                interactionCount += boost;
+            }
+
+            interactionCount = Math.min((interactionCount / 105) * 5, 5);
+
+            userPersonalization.totalInteractions += 1;
+            userPersonalization.currentInterest = (userPersonalization.currentInterest * (userPersonalization.totalInteractions - 1) + interactionCount) / userPersonalization.totalInteractions;
+
+            if (userPersonalization.currentInterest > userPersonalization.peakInterest) {
+                userPersonalization.peakInterest = userPersonalization.currentInterest;
+            }
+
+            const watchedVideos = await WatchedVideo.findAll({
+                where: { userId },
+                order: [['createdAt', 'ASC']],
             }, { transaction });
-        }
-
-        let interactionCount = 0;
-        if (viewed) interactionCount += 5;
-        if (liked) interactionCount += 10;
-        if (commented) interactionCount += 20;
-        if (shared) interactionCount += 30;
-        
-        if (userPersonalization.currentInterest < userPersonalization.peakInterest) {
-            const difference = userPersonalization.peakInterest - userPersonalization.currentInterest;
-            let boost = 0;
-        
-            if (difference > 1) {
-                boost = 10;
-            } else if(difference > 0.5) {
-                boost = 5;
-            } else if (difference > 0.25) {
-                boost = 3;
-            } else if (difference > 0.15) {
-                boost = 2;
-            } else if (difference > 0.05) {
-                boost = 1;
+            
+            if (watchedVideos.length > 50) {
+                await watchedVideos[0].destroy({ transaction });
             }
-        
-            interactionCount += boost;
-        }
 
-        interactionCount = (interactionCount / 65) * 5;
-
-        userPersonalization.totalInteractions += 1;
-        userPersonalization.currentInterest = (userPersonalization.currentInterest * (userPersonalization.totalInteractions - 1) + interactionCount) / userPersonalization.totalInteractions;
-
-        if (userPersonalization.currentInterest > userPersonalization.peakInterest) {
-            userPersonalization.peakInterest = userPersonalization.currentInterest;
-        }
-
-        if (!userPersonalization.topVideoIds.includes(videoId)) {
-            if (userPersonalization.topVideoIds.length < 10) {
-                userPersonalization.topVideoIds.push(videoId);
-            } else {
-                // Replace the oldest video ID with the new one
-                userPersonalization.topVideoIds.shift();
-                userPersonalization.topVideoIds.push(videoId);
-            }
-        }
-
-        const watchedVideos = await WatchedVideo.findAll({
-            where: { userId },
-            order: [['createdAt', 'ASC']],
-        }, { transaction });
-        
-        if (watchedVideos.length > 50) {
-            await watchedVideos[0].destroy({ transaction });
+            await userPersonalization.save({ transaction });
         }
 
         await WatchedVideo.create({
@@ -95,23 +135,6 @@ const createUserPersonalization = async (req, res) => {
             videoId,
         }, { transaction });
 
-        await RecentInteraction.create({
-            userId,
-            videoId,
-            category,
-        }, { transaction });
-
-        // If there are more than 20 RecentInteractions for this user, delete the oldest one
-        const recentInteractions = await RecentInteraction.findAll({
-            where: { userId },
-            order: [['createdAt', 'ASC']],
-        }, { transaction });
-
-        if (recentInteractions.length > 20) {
-            await recentInteractions[0].destroy( { transaction });
-        }
-
-        await userPersonalization.save({ transaction });
 
         await transaction.commit();
 
@@ -123,55 +146,17 @@ const createUserPersonalization = async (req, res) => {
     }
 }
 
-const decayUserPersonalization = async (userId) => {
-    const transaction = await sequelize.transaction();
-    try {
-        // Fetch the last 20 interactions for this user
-        const recentInteractions = await RecentInteraction.findAll({
-            where: { userId },
-            order: [['createdAt', 'DESC']],
-            limit: 20,
-        }, { transaction });
 
-        // Count the number of interactions for each category
-        const categoryCounts = {};
-        for (const interaction of recentInteractions) {
-            if (!categoryCounts[interaction.category]) {
-                categoryCounts[interaction.category] = 0;
-            }
-            categoryCounts[interaction.category]++;
-        }
-
-        // Fetch the user's personalizations
-        const userPersonalizations = await UserPersonalization.findAll({
-            where: { userId },
-        }, { transaction });
-
-        // Apply the decay factor to categories with a small proportion of interactions
-        for (const personalization of userPersonalizations) {
-            const categoryCount = categoryCounts[personalization.category] || 0;
-            const proportion = categoryCount / recentInteractions.length;
-
-            if (proportion < 0.05) { // Adjust this threshold as needed
-                personalization.currentInterest *= 0.9; // Adjust this decay factor as needed
-                await personalization.save({ transaction });
-            }
-        }
-
-        await transaction.commit();
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
-};
 
 // Fetch user personalizations
 const fetchUserPersonalizations = async (userId) => {
     let userPersonalizations = await UserPersonalization.findAll({
         where: { userId },
     });
+
+    // If no personalization data is found, return an empty array
     if (!userPersonalizations) {
-        throw new Error('User personalization not found');
+        return [];
     }
 
     // Sort userPersonalizations in descending order based on currentInterest
@@ -180,205 +165,183 @@ const fetchUserPersonalizations = async (userId) => {
     return userPersonalizations;
 };
 
+
 // Fetch popular videos
 const fetchPopularVideos = async (category, limit, watchedVideoIds) => {
     return await Video.findAll({
+        include: [
+            { 
+                model: VideoMetadata, 
+                as: 'metadata',
+                order: [['popularityScore', 'DESC']],
+                limit,
+            },
+            { 
+                model: VideoCategory, 
+                where: { name: category }
+            }
+        ],
         where: { 
-            category,
             videoId: { [Op.notIn]: watchedVideoIds }
         },
-        order: [['videoPopularityScore', 'DESC']],
-        limit,
     });
 };
 
 // Fetch new videos
 const fetchNewVideos = async (category, limit, watchedVideoIds) => {
     return await Video.findAll({
+        include: [
+            { 
+                model: VideoMetadata, 
+                as: 'metadata',
+                order: [['createdAt', 'DESC']],
+                limit,
+            },
+            { 
+                model: VideoCategory, 
+                where: { name: category }
+            }
+        ],
         where: { 
-            category,
             videoId: { [Op.notIn]: watchedVideoIds }
         },
-        order: [['createdAt', 'DESC']],
-        limit,
     });
 };
 
-// Fetch videos without excluding watched ones
-const fetchVideosWithoutExcludingWatched = async (category, limit) => {
-    const popularLimit = Math.round(limit * 0.7);
-    const newLimit = limit - popularLimit;
-
-    const popularVideos = await Video.findAll({
-        where: { category },
-        order: [['videoPopularityScore', 'DESC']],
-        limit: popularLimit,
-    });
-
-    const newVideos = await Video.findAll({
-        where: { category },
-        order: [['createdAt', 'DESC']],
-        limit: newLimit,
-    });
-
+const fetchVideos = async (category, popularLimit, newLimit, watchedVideosIds) => {
+    const popularVideos = await fetchPopularVideos(category, popularLimit, watchedVideosIds);
+    const newVideos = await fetchNewVideos(category, newLimit, watchedVideosIds);
     return [...popularVideos, ...newVideos];
 };
 
-// Main function
+const fetchRecommendedVideos = async (userPersonalizations, totalInterest, remainingVideos, watchedVideosIds) => {
+    const recommendedVideos = [];
+    for (const personalization of userPersonalizations) {
+        let limit = Math.round((personalization.currentInterest / totalInterest) * remainingVideos);
+        let popularLimit = Math.round(limit * 0.6); // 60% popular
+        let newLimit = limit - popularLimit; // 40% new
+
+        const videos = await fetchVideos(personalization.category, popularLimit, newLimit, watchedVideosIds);
+        recommendedVideos.push(...videos);
+        remainingVideos -= videos.length; // Update the number of remaining videos
+
+        // If there are fewer unwatched videos in a category than the user's interest in that category, 
+        // fetch videos from other categories according to their highest interest
+        if (videos.length < limit) {
+            const remainingLimit = limit - videos.length;
+            const otherCategories = userPersonalizations.filter(p => p.category !== personalization.category);
+            const otherTotalInterest = otherCategories.reduce((total, p) => total + p.currentInterest, 0);
+            const otherVideos = await fetchRecommendedVideos(otherCategories, otherTotalInterest, remainingLimit, watchedVideosIds);
+            recommendedVideos.push(...otherVideos.recommendedVideos);
+            remainingVideos -= otherVideos.recommendedVideos.length;
+        }
+
+        if (remainingVideos <= 0) break; // If we've fetched enough videos, stop looping
+    }
+    return { recommendedVideos, remainingVideos };
+};
+
+const fetchNonInteractedVideos = async (nonInteractedCategories, remainingVideos, watchedVideosIds) => {
+    const recommendedVideos = [];
+    for (const category of nonInteractedCategories) {
+        let popularLimit = Math.round(remainingVideos * 0.6); // 60% popular
+        let newLimit = remainingVideos - popularLimit; // 40% new
+
+        const videos = await fetchVideos(category.name, popularLimit, newLimit, watchedVideosIds);
+        recommendedVideos.push(...videos);
+        remainingVideos -= videos.length; // Update the number of remaining videos
+
+        if (remainingVideos <= 0) break; // If we've fetched enough videos, stop looping
+    }
+    return { recommendedVideos, remainingVideos };
+};
+
+const fetchWatchedVideos = async (userId, userPersonalizations, totalInterest, remainingVideos) => {
+    const allWatchedVideos = await WatchedVideo.findAll({
+        where: { userId },
+        include: Video
+    });
+
+    const recommendedVideos = [];
+    if (allWatchedVideos.length > 0) {
+        if (userPersonalizations.every(personalization => personalization.currentInterest === userPersonalizations[0].currentInterest)) {
+            // The interest value is evenly distributed across all categories, so we randomize the categories and scores
+            const randomWatchedVideos = allWatchedVideos.sort(() => Math.random() - 0.5).slice(0, remainingVideos);
+            recommendedVideos.push(...randomWatchedVideos);
+        } else {
+            // Fill the rest with a mix of the watched videos, using the same ratio of 60 to 40 for popular and new videos in the categories that the user is interested in
+            for (const personalization of userPersonalizations) {
+                let limit = Math.round((personalization.currentInterest / totalInterest) * remainingVideos);
+                let popularLimit = Math.round(limit * 0.6); // 60% popular
+                let newLimit = limit - popularLimit; // 40% new
+
+                const categoryWatchedVideos = allWatchedVideos.filter(video => video.category === personalization.category);
+                const popularWatchedVideos = categoryWatchedVideos.sort((a, b) => b.videoPopularityScore - a.videoPopularityScore).slice(0, popularLimit);
+                recommendedVideos.push(...popularWatchedVideos);
+                remainingVideos -= popularWatchedVideos.length; // Update the number of remaining videos
+
+                if (remainingVideos <= 0) break; // If we've filled the rest, stop looping
+
+                const newWatchedVideos = categoryWatchedVideos.sort((a, b) => b.createdAt - a.createdAt).slice(0, newLimit);
+                recommendedVideos.push(...newWatchedVideos);
+                remainingVideos -= newWatchedVideos.length; // Update the number of remaining videos
+
+                if (remainingVideos <= 0) break; // If we've filled the rest, stop looping
+            }
+        }
+    }
+    return recommendedVideos;
+};
+
 const getRecommendedVideos = async (req, res) => {
     try {
         const { userId } = req.user;
 
-        const userPersonalizations = await fetchUserPersonalizations(userId);
-        const totalInterest = userPersonalizations.reduce((total, personalization) => total + personalization.currentInterest, 0);
+        let userPersonalizations = await fetchUserPersonalizations(userId);
+        let totalInterest = userPersonalizations.reduce((total, personalization) => total + personalization.currentInterest, 0);
 
-        const recommendedVideos = [];
-        let remainingVideos = 10; // Total number of videos to fetch
+        let remainingVideos = process.env.RECOMMENDED_VIDEOS_LIMIT || 10;
+
+        const watchedVideos = await WatchedVideo.findAll({
+            where: { userId },
+            attributes: ['videoId']
+        });
+        let watchedVideosIds = watchedVideos.map(video => video.videoId);
 
         // Fetch popular and new videos
-        for (const personalization of userPersonalizations) {
-            let limit = Math.round((personalization.currentInterest / totalInterest) * remainingVideos * 0.7);
-            limit = Math.min(limit, remainingVideos); // Ensure we don't fetch more videos than remaining
+        let result = await fetchRecommendedVideos(userPersonalizations, totalInterest, remainingVideos, watchedVideosIds);
+        remainingVideos = result.remainingVideos;
+        let recommendedVideos = result.recommendedVideos;
 
-            const popularVideos = await fetchPopularVideos(personalization.category, limit, watchedVideoIds);
-            recommendedVideos.push(...popularVideos);
-            remainingVideos -= popularVideos.length; // Update the number of remaining videos
+        // If there are no more unwatched videos in the categories the user has interacted with, fetch videos from other categories
+        if (remainingVideos > 0) {
+            const allPossibleCategories = UserPersonalization.rawAttributes.category.validate.isIn.args[0];
+            const interactedCategories = userPersonalizations.map(personalization => personalization.category);
+            const nonInteractedCategories = allPossibleCategories.filter(category => !interactedCategories.includes(category));
 
-            if (remainingVideos <= 0) break; // If we've fetched enough videos, stop looping
-
-            limit = Math.round((personalization.currentInterest / totalInterest) * remainingVideos);
-            limit = Math.min(limit, remainingVideos); // Ensure we don't fetch more videos than remaining
-
-            const newVideos = await fetchNewVideos(personalization.category, limit, watchedVideoIds);
-            recommendedVideos.push(...newVideos);
-            remainingVideos -= newVideos.length; // Update the number of remaining videos
-
-            if (remainingVideos <= 0) break; // If we've fetched enough videos, stop looping
+            const result = await fetchNonInteractedVideos(nonInteractedCategories, remainingVideos, watchedVideosIds);
+            recommendedVideos.push(...result.recommendedVideos);
+            remainingVideos = result.remainingVideos;
         }
 
-        // Fetch more videos without excluding watched ones if necessary
-        if (recommendedVideos.length < 10) {
-            for (const personalization of userPersonalizations) {
-                if (recommendedVideos.length >= 10) break; // If we've fetched enough videos, stop looping
-
-                let limit = Math.round((personalization.currentInterest / totalInterest) * (10 - recommendedVideos.length));
-                limit = Math.min(limit, 10 - recommendedVideos.length); // Ensure we don't fetch more videos than remaining
-
-                const videos = await fetchVideosWithoutExcludingWatched(personalization.category, limit);
-                recommendedVideos.push(...videos);
-            }
+        // If the number of recommended videos hasn't reached the limit, fill the rest with a mix of watched videos
+        if (remainingVideos > 0) {
+            const watchedVideos = await fetchWatchedVideos(userId, userPersonalizations, totalInterest, remainingVideos);
+            recommendedVideos.push(...watchedVideos);
         }
 
-        if (recommendedVideos.length === 0) {
-            const trendingVideos = await getTrendingVideos(userId);
-            return res.status(200).json({ recommendedVideos: trendingVideos });
-        }
+        const recommendedVideosData = await Promise.all(recommendedVideos.map(video => fetchVideoData(video.id, userId)));
 
-
-        const recommendedVideosWithSignedUrls = await Promise.all(recommendedVideos.map(async (video) => {
-            const videoUrl = await getSignedUrl(video.fileName);
-            const videoThumbnailUrl = await getSignedUrl(video.thumbnailFileName);
-        
-            return {
-                videoId: video.videoId,
-                description: video.description,
-                category: video.category,
-                videoUrl,
-                videoThumbnailUrl,
-            };
-        }));
-
-        return res.status(200).json({ recommendedVideosWithSignedUrls });
-
-
-
+        return res.status(200).json({ recommendedVideosData });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 };
 
 
-async function getTrendingVideos(userId) {
-    try {
-        const totalVideos = 10; // Total number of videos to fetch
-        const explorationLimit = Math.round(totalVideos * 0.7); // 70% of totalVideos
-
-        const watchedVideos = await WatchedVideo.findAll({ where: { userId } });
-        const watchedVideoIds = watchedVideos.map(video => video.videoId);
-
-        let explorationVideos = await Video.findAll({
-            where: { videoId: { [Op.notIn]: watchedVideoIds } },
-            order: [['videoPopularityScore', 'DESC']],
-            limit: explorationLimit,
-        });
-
-        let exploitationRemaining = totalVideos - explorationVideos.length;
-        let exploitationVideos = await Video.findAll({
-            where: { videoId: { [Op.notIn]: watchedVideoIds } },
-            order: [['createdAt', 'DESC']],
-            limit: exploitationRemaining,
-        });
-
-        if (explorationVideos.length + exploitationVideos.length < totalVideos) {
-            const remainingVideos = totalVideos - explorationVideos.length - exploitationVideos.length;
-            const popularLimit = Math.round(remainingVideos * 0.7);
-            const newLimit = remainingVideos - popularLimit;
-
-            const popularVideos = await Video.findAll({
-                where: { category },
-                order: [['videoPopularityScore', 'DESC']],
-                limit: popularLimit,
-            });
-
-            const newVideos = await Video.findAll({
-                where: { category },
-                order: [['createdAt', 'DESC']],
-                limit: newLimit,
-            });
-
-            explorationVideos = [...explorationVideos, ...popularVideos];
-            exploitationVideos = [...exploitationVideos, ...newVideos];
-        }
-
-        const trendingVideos = [...explorationVideos, ...exploitationVideos];
-
-        const trendingVideosWithSignedUrls = await Promise.all(trendingVideos.map(async (video) => {
-            const videoUrl = await getSignedUrl(video.fileName);
-            const videoThumbnailUrl = await getSignedUrl(video.thumbnailFileName);
-        
-            return {
-                videoId: video.videoId,
-                description: video.description,
-                category: video.category,
-                videoUrl,
-                videoThumbnailUrl,
-            };
-        }));
-
-        return trendingVideosWithSignedUrls;
-    } catch (error) {
-        console.error(error);
-        return [];
-    }
-}
-
-const usingGetTrendingVideos = async (req, res) => {
-    try {
-
-        const trendingVideos = await getTrendingVideos(userId);
-
-        return res.status(200).json({ trendingVideos });
-
-    } catch (error) {
-        return res.status(500).json({ error: error.message })
-    }
-}
-
 module.exports = {
     createUserPersonalization,
-    decayUserPersonalization,
     getRecommendedVideos,
-    usingGetTrendingVideos,
 };
 
 //So we will assume that there's no user that will keep on missing with the algorithm

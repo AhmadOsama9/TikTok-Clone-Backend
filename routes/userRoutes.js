@@ -12,6 +12,11 @@ const {
     referredUser,
     searchUsersUsingPagination,
     autocompleteUsers,
+    banUser,
+    unbanUser,
+    setUserIsVerified,
+    getUserInfo,
+
 } = require("../controllers/userController");
 
 /**
@@ -334,6 +339,225 @@ router.post("/send-verification-code", sendVerificationCode);
  *         description: Server error
  */
 router.get("/check-ban-status", checkBanStatus);
+
+/**
+ * @swagger
+ * /api/user/ban/{toBeBannedUserId}:
+ *   put:
+ *     tags:
+ *       - Users
+ *     summary: Ban a user
+ *     operationId: banUser
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *      - in: path
+ *        name: toBeBannedUserId
+ *        required: true
+ *        schema:
+ *          type: integer
+ *        description: The ID of the user to be banned.
+ *     responses:
+ *       200:
+ *         description: The user was banned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User has been banned successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: An error occurred.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put("/ban/:toBeBannedUserId", banUser);
+
+/**
+ * @swagger
+ * /api/user/unban/{toBeUnbannedUserId}:
+ *   put:
+ *     tags:
+ *       - Users
+ *     summary: Unban a user
+ *     operationId: unbanUser
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *      - in: path
+ *        name: toBeUnbannedUserId
+ *        required: true
+ *        schema:
+ *          type: integer
+ *        description: The ID of the user to be unbanned.
+ *     responses:
+ *       200:
+ *         description: The user was unbanned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User has been unbanned successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: An error occurred.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put("/unban/:toBeUnbannedUserId", unbanUser);
+
+/**
+ * @swagger
+ * /api/user/verify/{toBeVerifiedUserId}:
+ *   put:
+ *     tags:
+ *       - Users
+ *     summary: Verify a user
+ *     operationId: setUserIsVerified
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *      - in: path
+ *        name: toBeVerifiedUserId
+ *        required: true
+ *        schema:
+ *          type: integer
+ *        description: The ID of the user to be verified.
+ *     responses:
+ *       200:
+ *         description: The user was verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User has been verified successfully
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Forbidden
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: An error occurred.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put("/verify/:toBeVerifiedUserId", setUserIsVerified);
+
+/**
+ * @swagger
+ * /api/user/info:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Get user information
+ *     operationId: getUserInfo
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *     responses:
+ *       200:
+ *         description: The user information was fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 uid:
+ *                   type: integer
+ *                 name:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 phone:
+ *                   type: string
+ *                 isverified:
+ *                   type: boolean
+ *                 referralCode:
+ *                   type: string
+ *                 userName:
+ *                   type: string
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: An error occurred.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get("/info", getUserInfo);
 
 /**
  * @swagger

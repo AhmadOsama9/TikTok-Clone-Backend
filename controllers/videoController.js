@@ -2,7 +2,14 @@ const User = require("../config/db").User;
 const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
 const Profile = require("../config/db").Profile;
+const Follow = require("../config/db").Follow;
+const UserStatus = require("../config/db").UserStatus;
 const VideoLike = require("../config/db").VideoLike;
+const VideoMetadata = require("../config/db").VideoMetadata;
+const VideoCategory = require("../config/db").VideoCategory;
+const VideoView = require("../config/db").VideoView;
+const Rate = require("../config/db").Rate;
+const Report = require("../config/db").Report;
 const { Op } = require("sequelize");
 const Sequelize = require("sequelize");
 const { addNotification } = require("./notificationsController");
@@ -16,10 +23,11 @@ const { Readable, PassThrough } = require('stream');
 const fs = require("fs");
 const path = require("path");
 
-const storage = require("../config/cloudStorage");
 const { sequelize } = require("../config/db");
-
-const bucketName = process.env.VIDEO_BUCKET_NAME || "kn_story_app";
+const getSignedUrl = require("../cloudFunctions/getSignedUrl");
+const uploadToCloudStorage = require("../cloudFunctions/uploadFiles");
+const deleteFromCloudStorage = require("../cloudFunctions/deleteFiles");
+const fetchVideoData = require("../helper/fetchVideoData");
 
 //I plan on finding the best algorithm
 //for the detection of the inappropriate content
@@ -29,27 +37,8 @@ const bucketName = process.env.VIDEO_BUCKET_NAME || "kn_story_app";
 //Also I need to check the audio if there's anything free
 //like NSFW audio or something like that
 
-const deleteAllVideos = async (req, res) => {
-    try {
-        await Video.destroy({ where: {} });
-        console.log("All videos deleted");
-    } catch (error) {
-        console.log("Error in deleteAllVideos: ", error);
-    }
-}
 
-const getAllVideos = async (req, res) => {
-    try {
-        const videos = await Video.findAll();
-        console.log("All videos: ", videos);
-    } catch (error) {
-        console.log("Error in getAllVideos: ", error);
-    }
-}
 
-//getAllVideos();
-
-//deleteAllVideos();
 
 const getVideoInfo = (videoPath) => {
     return new Promise((resolve, reject) => {
@@ -262,6 +251,20 @@ const validateAndCompressThumbnail = async (imagePath) => {
 const uploadVideo = async (req, res) => {
     let responseSent = false;
     try {
+        let categories = req.body.categories;
+        let description = req.body.description;
+
+        if (!description || !categories)
+            return res.status(400).json({ message: "Description and categories are required" });
+
+        if (typeof categories === 'string')
+            categories = [categories];
+        
+        if (!Array.isArray(categories))
+            return res.status(400).json({ message: "Categories should be an array" });
+
+        description = description.toLowerCase();
+
         console.log("UploadVideo function called");
         const { userId } = req.user;
 
@@ -279,7 +282,7 @@ const uploadVideo = async (req, res) => {
             throw new Error("Failed to read video or image");
         }
 
-        const maxSize = 60 * 1024 * 1024; // 60MB
+        const maxSize = process.env.MAX_VIDEO_SIZE || 60 * 1024 * 1024;
         if (videoFile.size > maxSize) {
             throw new Error("File size too large. Please upload a video less than 60MB.");
         }
@@ -326,18 +329,26 @@ const uploadVideo = async (req, res) => {
         const fileName = await uploadToCloudStorage(videoPath, `videos/${userId}/${Date.now()}.mp4`);
 
         const thumbnailFileName = await uploadToCloudStorage(imagePath, `thumbnails/${userId}/${Date.now()}.jpg`);
-
-        let description = req.body.description;
-        description = description.toLowerCase();
-
-        const video = await Video.create({
-            creatorId: userId,
-            fileName: fileName,
-            thumbnailFileName: thumbnailFileName,
-            description: description,
-            category: req.body.category,
-        });
-
+        let video = null;
+        try {
+            await sequelize.transaction(async (transaction) => {
+                video = await Video.create({
+                creatorId: userId,
+                fileName: fileName,
+                thumbnailFileName: thumbnailFileName,
+                description: description,
+                }, { transaction });
+        
+                const videoCategories = categories.map(name => ({ name, videoId: video.id }));
+                await VideoCategory.bulkCreate(videoCategories, { transaction });
+        
+                await VideoMetadata.create({ videoId: video.id }, { transaction });
+            });
+        } catch (error) {
+            await deleteFromCloudStorage(fileName);
+            await deleteFromCloudStorage(thumbnailFileName);
+            throw new Error(error);
+        }
 
         return res.status(200).json({message: "Video uploaded successfully", videoId: video.id});
     } catch (error) {
@@ -363,33 +374,6 @@ const uploadVideo = async (req, res) => {
     }
 }
 
-async function uploadToCloudStorage(filePath, fileName) {
-    const bucket = storage.bucket(bucketName);
-    const file = bucket.file(fileName);
-
-    await bucket.upload(filePath, {
-        destination: fileName,
-        metadata: {
-            catcheControl: 'public, max-age=31536000',
-        }
-    })
-
-    return fileName;
-}
-
-async function getSignedUrl(fileName) {
-    const options = {
-        version: 'v4',
-        action: 'read',
-        expires: Date.now() + 15 * 60 * 1000,
-    };
-
-    const [url] = await storage.bucket(bucketName).file(fileName).getSignedUrl(options);
-
-    return url;
-}
-
-
 const getVideoThumbnail = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -407,29 +391,6 @@ const getVideoThumbnail = async (req, res) => {
         const url = await getSignedUrl(video.thumbnailFileName);
 
         return res.status(200).json({ thumbnailUrl: url });
-
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
-    }
-}
-
-const getVideo = async (req, res) => { 
-    try {
-        const { userId } = req.user;
-
-        const videoId = req.params.videoId;
-        const video = await Video.findOne({ where: { id: videoId } });
-        if (!video) {
-            return res.status(404).json({ message: "Video not found" });
-        }
-
-        if (!video.fileName) {
-            return res.status(404).json({ message: "Video not found cause fileName is missing" });
-        }
-
-        const url = await getSignedUrl(video.fileName);
-
-        return res.status(200).json({ videoUrl: url });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -505,11 +466,18 @@ const getCommentsUsingPagination = async (req, res) =>{
                     model: User,
                     as: 'user',
                     attributes: ['username'], // Only fetch username from User
-                    include: [{
-                        model: Profile,
-                        as: 'profile',
-                        attributes: ['imageFileName'], // Only fetch imageFileName from Profile
-                    }]
+                    include: [
+                        {
+                            model: Profile,
+                            as: 'profile',
+                            attributes: ['imageFileName'], // Only fetch imageFileName from Profile
+                        },
+                        {
+                            model: UserStatus,
+                            as: 'userStatus',
+                            attributes: ['isVerified'], // Only fetch isVerified from UserStatus
+                        }
+                    ]
                 },
                 { 
                     model: Comment, 
@@ -519,10 +487,10 @@ const getCommentsUsingPagination = async (req, res) =>{
             order: [
                 [sequelize.literal('"Comment"."giftType" IS NOT NULL'), 'DESC'],
                 ['giftType', 'DESC'],
+                [sequelize.literal('"user->userStatus"."isVerified" DESC')], // Order by isVerified field
                 ['createdAt', 'DESC']
             ]
         });
-
         const commentsData = await Promise.all(comments.map(async comment => {
             let imageUrl = null;
             if (comment.user.profile.imageFileName)
@@ -648,8 +616,10 @@ const likeVideo = async (userId, videoId, transaction) => {
         throw new Error('Video not found');
 
     await VideoLike.create({ userId, videoId }, { transaction });
-    video.likes += 1;
-    await video.save({ transaction });
+
+    const videoMetadata = await VideoMetadata.findOne({ where: { videoId } });
+    videoMetadata.likeCount += 1;
+    await videoMetadata.save({ transaction });
 
     await addNotification(video.creatorId, videoId, null, userId, 1, 'New Like', transaction);
 };
@@ -662,8 +632,10 @@ const unlikeVideo = async (userId, videoId, transaction) => {
     const like = await VideoLike.findOne({ where: { userId, videoId } });
     if (like) {
         await like.destroy({ transaction });
-        video.likes -= 1;
-        await video.save({ transaction });
+
+        const videoMetadata = await VideoMetadata.findOne({ where: { videoId } });
+        videoMetadata.likeCount -= 1;
+        await videoMetadata.save({ transaction });
     }
 };
 
@@ -689,6 +661,7 @@ const likeAndUnlikeVideo = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
+
 const shareVideo = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -701,14 +674,16 @@ const shareVideo = async (req, res) => {
         if (!video)
             return res.status(404).json({ message: "Video not found" });
 
-        video.shareCount += 1;
-        video.save();
+        const videoMetadata = await VideoMetadata.findOne({ where: { videoId } });
+        videoMetadata.shareCount += 1;
+        await videoMetadata.save();
+
         return res.status(200).json({ message: "Video shared successfully" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
+};
 
 const searchVideosUsingPagination = async (req, res) => {
     try {
@@ -726,19 +701,28 @@ const searchVideosUsingPagination = async (req, res) => {
                     [Op.like]: '%' + description + '%'
                 }
             },
-            attributes: ['id', 'description', 'likes', 'shareCount', 'createdAt'],
+            attributes: ['id', 'description', 'createdAt'],
             limit: process.env.SEARCH_VIDEO_LIMIT || 5,
             offset: offset,
-            include: [{
-                model: User,
-                as: 'creator',
-                attributes: ['username'],
-                include: [{
-                    model: Profile,
-                    as: 'profile',
-                    attributes: ['imageFileName'],
-                }],
-            }],
+            include: [
+                {
+                    model: User,
+                    as: 'creator',
+                    attributes: ['username'],
+                    include: [
+                        {
+                            model: Profile,
+                            as: 'profile',
+                            attributes: ['imageFileName'],
+                        }
+                    ],
+                },
+                {
+                    model: VideoMetadata,
+                    as: 'metadata',
+                    attributes: ['likes', 'shareCount'],
+                }
+            ],
             order: [['popularityScore', 'DESC']]
         });
 
@@ -758,7 +742,7 @@ const searchVideosUsingPagination = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
+};
 
 const autocompleteVideos = async (req, res) => {
     try {
@@ -774,18 +758,27 @@ const autocompleteVideos = async (req, res) => {
                     [Op.like]: description + '%'
                 }
             },
-            attributes: ['id', 'description', 'likes', 'shareCount', 'createdAt'],
+            attributes: ['id', 'description', 'createdAt'],
             limit: process.env.AUTO_COMPLETE_LIMIT || 5,
-            include: [{
-                model: User,
-                as: 'creator',
-                attributes: ['username'],
-                include: [{
-                    model: Profile,
-                    as: 'profile',
-                    attributes: ['imageFileName'],
-                }],
-            }],
+            include: [
+                {
+                    model: User,
+                    as: 'creator',
+                    attributes: ['username'],
+                    include: [
+                        {
+                            model: Profile,
+                            as: 'profile',
+                            attributes: ['imageFileName'],
+                        }
+                    ],
+                },
+                {
+                    model: VideoMetadata,
+                    as: 'metadata',
+                    attributes: ['likes', 'shareCount'],
+                }
+            ],
             order: [['popularityScore', 'DESC']]
         });
 
@@ -805,7 +798,169 @@ const autocompleteVideos = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
+};
+const viewVideo = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { videoId } = req.params;
+        const { viewStrength } = req.body;
+
+        if (!viewStrength)
+            return res.status(400).json({ message: "View strength is required" });
+
+        if (viewStrength < 1 || viewStrength > 3)
+            return res.status(400).json({ message: "Invalid view strength" });
+
+        if (!videoId)
+            return res.status(400).json({ message: "Video ID is required" });
+
+        const video = await Video.findByPk(videoId);
+        if (!video)
+            return res.status(404).json({ message: "Video not found" });
+
+        const videoMetadata = await VideoMetadata.findOne({ where: { videoId } });
+        if (!videoMetadata)
+            return res.status(404).json({ message: "Video metadata not found" });
+
+        const transaction = await sequelize.transaction();
+
+        videoMetadata.viewCount += 1;
+        await videoMetadata.save({ transaction });
+
+        await VideoView.create({ userId, videoId, viewStrength }, { transaction });
+
+        await transaction.commit();
+        return res.status(200).json({ message: "Video viewed successfully" });
+
+    } catch (error) {
+        if (transaction) await transaction.rollback();
+        return res.status(500).json({ error: error.message });
+    }
 }
+
+
+const getVideo = async (req, res) => {
+    try {
+      const { userId } = req.user;
+      const videoId = req.params.videoId;
+      const videoData = await fetchVideoData(videoId, userId);
+      if (!videoData) {
+        return res.status(404).json({ message: 'Video not found' });
+      }
+      res.json({ videos: [videoData] });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+};
+
+const getFollowingsVideos = async (req, res) => {
+    try {
+      const { userId } = req.user;
+      const { offset = 0 } = req.query;
+  
+      const followings = await Follow.findAll({
+        where: { followerId: userId },
+        attributes: ['followingId']
+      });
+  
+      const followingIds = followings.map(follow => follow.followingId);
+  
+      const videos = await Video.findAll({
+        where: { creatorId: followingIds },
+        limit: process.env.FOLLOWINGS_VIDEOS_LIMIT || 6,
+        offset,
+        order: [['createdAt', 'DESC']], // Order by creation date, newest first
+      });
+  
+      const videoResponses = await Promise.all(videos.map(video => fetchVideoData(video.id, userId)));
+  
+      return res.status(200).json({ videos: videoResponses });        
+       
+    } catch (error) {
+      return res.status(500).json({ error: error.message});
+    }
+  }
+  
+  const getFollowersVideos = async (req, res) => {
+    try {
+      const { userId } = req.user;
+      const { offset = 0 } = req.query;
+  
+      const followers = await Follow.findAll({
+        where: { followingId: userId },
+        attributes: ['followerId']
+      });
+  
+      const followersIds = followers.map(follow => follow.followerId);
+  
+      const videos = await Video.findAll({
+        where: { creatorId: followersIds },
+        limit: process.env.FOLLOWERS_VIDEOS_LIMIT || 6,
+        offset,
+        order: [['createdAt', 'DESC']], // Order by creation date, newest first
+      });
+  
+      const videoResponses = await Promise.all(videos.map(video => fetchVideoData(video.id, userId)));
+  
+      return res.status(200).json({ videos: videoResponses });        
+       
+    } catch (error) {
+      return res.status(500).json({ error: error.message});
+    }
+}
+
+const deleteVideo = async (req, res) => {
+    // Start a transaction
+    const t = await sequelize.transaction();
+
+    try {
+        const { userId } = req.user;
+        const videoId = req.params.videoId;
+        // Find the video
+        const video = await Video.findByPk(videoId, { transaction: t });
+
+        if (!video) {
+            throw new Error('Video not found');
+        }
+        const userStatus = await UserStatus.findOne({ where: { userId } });
+
+        if (video.creatorId !== userId && (!userStatus || !userStatus.isAdmin))
+            throw new Error('You are not authorized to delete this video');
+
+
+        // Delete associated records
+        await VideoCategory.destroy({ where: { videoId }, transaction: t });
+        await VideoLike.destroy({ where: { videoId }, transaction: t });
+        await VideoMetadata.destroy({ where: { videoId }, transaction: t });
+        await VideoView.destroy({ where: { videoId }, transaction: t });
+        await Rate.destroy({ where: { videoId }, transaction: t }); // delete associated ratings
+        await Report.destroy({ where: { referenceId: videoId, referenceType: 1 }, transaction: t }); // delete associated reports
+
+        // Delete the comments and their child comments
+        const comments = await Comment.findAll({ where: { videoId }, transaction: t });
+        for (let comment of comments) {
+            await Comment.destroy({ where: { parentId: comment.id }, transaction: t });
+        }
+        await Comment.destroy({ where: { videoId }, transaction: t });
+
+        // Delete the video record
+        await Video.destroy({ where: { id: videoId }, transaction: t });
+
+        // Delete the video file from cloud storage
+        await deleteFromCloudStorage(video.fileName);
+        await deleteFromCloudStorage(video.thumbnailFileName);
+
+        // Commit the transaction
+        await t.commit();
+
+        return res.status(200).json({ message: 'Video deleted successfully' });
+    } catch (error) {
+        // If there's an error, rollback the transaction
+        await t.rollback();
+        return res.status(500).json({ message: error.message });
+    }
+}
+
 
 module.exports = {
     uploadVideo,
@@ -819,4 +974,8 @@ module.exports = {
     shareVideo,
     searchVideosUsingPagination,
     autocompleteVideos,
+    getFollowingsVideos,
+    getFollowersVideos,
+    viewVideo,
+    deleteVideo,
 }

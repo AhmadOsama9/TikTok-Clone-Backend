@@ -4,6 +4,7 @@ const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
 
 
+
 async function addNotification (userId, videoId, commentId, otherUserId, notificationType, title, transaction ) {
     try {
         if (userId === otherUserId) {
@@ -108,6 +109,8 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
 const getNotifications = async (req, res) => { 
     try {
         const { userId } = req.user;
+        //return the creator username
+        //if the count is 1
 
         const notifications = await Notification.findAll({ where : { userId }, order: [['createdAt', 'DESC']] });
 

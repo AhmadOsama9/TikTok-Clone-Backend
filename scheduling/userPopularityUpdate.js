@@ -4,13 +4,25 @@ const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
 const Follow = require("../config/db").Follow;
 const UserPopularity = require("../config/db").UserPopularity;
+const UserStatus = require("../config/db").UserStatus;
+const VideoMetadata = require("../config/db").VideoMetadata;
+
+
 const { Op } = require("sequelize");
 
-const updateUserPopularityScores = async () => { // run every day at midnight
+const updateUserPopularityScores = async () => {
     try {
-        const users = await User.findAll({ attributes: ['id', 'isVerified'] });
+        const users = await User.findAll({ 
+            attributes: ['id'],
+            include: [{
+                model: UserStatus,
+                as: 'userStatus',
+                attributes: ['isVerified']
+            }]
+        });
+
         for (const user of users) {
-            let popularity = await user.getPopularity();
+            let popularity = await UserPopularity.findOne({ where: { userId: user.id } });
 
             if (!popularity) {
                 popularity = await UserPopularity.create({ userId: user.id, popularityScore: 0 });
@@ -18,24 +30,21 @@ const updateUserPopularityScores = async () => { // run every day at midnight
 
             const videos = await Video.findAll({ 
                 where: { creatorId: user.id },
-                attributes: ['id', 'likes', 'shareCount']
+                attributes: ['id'],
+                include: [{
+                    model: VideoMetadata,
+                    as: 'metadata',
+                    attributes: ['likeCount', 'shareCount']
+                }]
             });
 
-            let totalLikes = 0;
-            let totalShares = 0;
-            for (let video of videos) {
-                totalLikes += video.likes;
-                totalShares += video.shareCount;
-            }
-
-            const totalComments = await Comment.count({ 
-                where: { videoId: { [Op.in]: videos.map(video => video.id) } } 
-            });
-
+            const totalLikes = videos.reduce((sum, video) => sum + video.metadata.likeCount, 0);
+            const totalShares = videos.reduce((sum, video) => sum + video.metadata.shareCount, 0);
+            const totalComments = await Comment.count({ where: { videoId: { [Op.in]: videos.map(video => video.id) } } });
             const followersCount = await Follow.count({ where: { followingId: user.id } });
 
             let score = 0;
-            if (user.isVerified) {
+            if (user.userStatus.isVerified) {
                 score += 100; // Give a boost for verified users
             }
             score += videos.length * 5; // 10 points for each video
@@ -44,7 +53,6 @@ const updateUserPopularityScores = async () => { // run every day at midnight
             score += totalShares * 3; // 3 points for each share
             score += followersCount * 5; // 5 points for each follower
 
-            
             await popularity.update({ popularityScore: score });
         }
     } catch (error) {
@@ -52,7 +60,7 @@ const updateUserPopularityScores = async () => { // run every day at midnight
     }
 };
 
-cron.schedule("0 0 * * *", updateUserPopularityScores);
+cron.schedule("0 4 */2 * *", updateUserPopularityScores);
 
 // updateUserPopularityScores().then(() => {
 //     console.log('Popularity scores updated');

@@ -42,7 +42,21 @@ const {
  *                     properties:
  *                       id:
  *                         type: integer
- *                       content:
+ *                       userId:
+ *                         type: integer
+ *                       videoId:
+ *                         type: integer
+ *                       commentId:
+ *                         type: integer
+ *                       otherUserId:
+ *                         type: integer
+ *                       notificationType:
+ *                         type: integer
+ *                       count:
+ *                         type: integer
+ *                       title:
+ *                         type: string
+ *                       body:
  *                         type: string
  *                       isRead:
  *                         type: boolean
@@ -59,7 +73,6 @@ const {
  *                   type: string
  */
 router.get("/", getNotifications);
-
 /**
  * @swagger
  * /api/notification/{notificationId}/mark-as-read:

@@ -3,18 +3,34 @@ module.exports = (sequelize, DataTypes) => {
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            references: {
+                model: 'Users',
+                key: 'id',
+            },
         },
         videoId: {
             type: DataTypes.INTEGER,
             allowNull: true,
+            references: {
+                model: 'Videos',
+                key: 'id',
+            },
         },
         commentId: {
             type: DataTypes.INTEGER,
             allowNull: true,
+            references: {
+                model: 'Comments',
+                key: 'id',
+            },
         },
         otherUserId: {
             type: DataTypes.INTEGER,
             allowNull: true,
+            references: {
+                model: 'Users',
+                key: 'id',
+            },
         },
         notificationType: {
             type: DataTypes.INTEGER,
@@ -33,9 +49,3 @@ module.exports = (sequelize, DataTypes) => {
         isRead: DataTypes.BOOLEAN,
     });
 };
-
-//1 Like
-//2 Comment
-//3 Follow
-//4 Mention
-//5 Gift Comment

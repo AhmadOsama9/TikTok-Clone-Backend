@@ -13,13 +13,8 @@ const { Op } = require('sequelize');
 
 const nsfwjs = require("nsfwjs");
 const tf = require("@tensorflow/tfjs-node");
-const mmmagic = require("mmmagic");
-const Magic = mmmagic.Magic;
 
 const storage = require("../config/cloudStorage");
-const { isNullOrUndefined } = require("util");
-const { get } = require("http");
-
 const bucketName = process.env.IMAGE_BUCKET_NAME || "kn_story_app";
 
 async function listFiles() {
@@ -74,7 +69,7 @@ async function getSignedUrl(fileName) {
         const options = {
             version: 'v4',
             action: 'read',
-            expires: Date.now() + 15 * 60 * 1000,
+            expires: Date.now() + 40 * 60 * 1000,
         };
 
         const [url] = await storage.bucket(bucketName).file(fileName).getSignedUrl(options);

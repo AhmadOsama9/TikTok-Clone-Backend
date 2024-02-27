@@ -10,6 +10,7 @@ const {
     addReactionToMessage,
     deleteMessage,
     deleteReaction,
+    getMessageUsingId,
 } = require("../controllers/chatController");
 
 /**
@@ -215,6 +216,83 @@ router.post("/send-message-using-receiverId", sendMessageUsingReceiverId);
  *                   type: string
  */
 router.get("/:chatId/get-messages", getMessagesUsingPagination);
+
+/**
+ * @swagger
+ * /api/chat/message/get/{messageId}:
+ *   get:
+ *     tags:
+ *       - Message
+ *     summary: Get a specific message using its ID
+ *     operationId: getMessageUsingId
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Numeric ID of the message to retrieve
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The API key.
+ *     responses:
+ *       '200':
+ *         description: Message retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 messageId:
+ *                   type: integer
+ *                 content:
+ *                   type: string
+ *                 senderId:
+ *                   type: integer
+ *                 isSeen:
+ *                   type: integer(0 seen or 1 only sent)
+ *                 reaction:
+ *                   type: integer(1 to 4)
+ *                 replyMessageContent:
+ *                    type: string
+ *                 createdAt:
+ *                   type: string
+ *       '400':
+ *         description: Invalid request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid request
+ *       '404':
+ *         description: Message not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Message not found
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ */
+router.get("/message/get/:messageId", getMessageUsingId);
 
 /**
  * @swagger

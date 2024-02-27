@@ -1,5 +1,7 @@
 const Chat = require("../config/db").Chat;
 const Message = require("../config/db").Message;
+const UserStatus = require("../config/db").UserStatus;
+const UserAuth = require("../config/db").UserAuth;
 const sequelize = require("../config/db").sequelize;
 const { Op } = require("sequelize");
 const { getSignedUrl } = require("./profileController");
@@ -56,13 +58,17 @@ const sendMessageUsingReceiverId = async (req, res) => {
     const { userId } = req.user;
 
     if (replyTo) {
+
+        if (!Number.isInteger(replyTo)) 
+            return res.status(400).json({ message: "Invalid input: replyTo should be an integer" });
+
         const replyMessage = await Message.findByPk(replyTo);
         if (!replyMessage)
             return res.status(404).json({ message: "Message not found" });
     }
 
     if (!receiverId || !message)
-        return res.status(400).json({ message: "Invalid request" });
+        return res.status(400).json({ message: "All Fields must be sent" });
 
     if (!message || message.trim() === '')
     return res.status(400).json({ message: 'Content is required' });
@@ -256,28 +262,48 @@ const getUserChats = async (req, res) => {
                 {
                     model: User,
                     as: 'user1',
-                    attributes: ['id', 'username', 'isVerified'],
+                    attributes: ['id', 'username', 'email', 'phone', 'referralCode', 'referrals', 'referred'],
                     where: { id: { [Op.ne]: userId } },
                     required: false,
                     include: [
                         {
                             model: Profile,
                             as: 'profile',
-                            attributes: ['imageFileName'],
+                            attributes: ['imageFileName', 'bio'],
+                        },
+                        {
+                            model: UserStatus,
+                            as: 'userStatus',
+                            attributes: ['isBanned', 'isAdmin', 'isVerified'],
+                        },
+                        {
+                            model: UserAuth,
+                            as: 'authMethods',
+                            attributes: ['authType', 'authVerified', 'authCode', 'authCodeExpiry'],
                         },
                     ],
                 },
                 {
                     model: User,
                     as: 'user2',
-                    attributes: ['id', 'username', 'isVerified'],
+                    attributes: ['id', 'username', 'email', 'phone', 'referralCode', 'referrals', 'referred'],
                     where: { id: { [Op.ne]: userId } },
                     required: false,
                     include: [
                         {
                             model: Profile,
                             as: 'profile',
-                            attributes: ['imageFileName'],
+                            attributes: ['imageFileName', 'bio'],
+                        },
+                        {
+                            model: UserStatus,
+                            as: 'userStatus',
+                            attributes: ['isBanned', 'isAdmin', 'isVerified'],
+                        },
+                        {
+                            model: UserAuth,
+                            as: 'authMethods',
+                            attributes: ['authType', 'authVerified', 'authCode', 'authCodeExpiry'],
                         },
                     ],
                 },
@@ -309,8 +335,6 @@ const getUserChats = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 }
-
-
 
 
 const addReactionToMessage = async (req, res) => {
@@ -388,6 +412,9 @@ const deleteMessage = async (req, res) => {
         const { messageId } = req.params;
         const { userId } = req.user;
 
+        if (!messageId)
+            return res.status(400).json({ message: "Invalid request" });
+
         const message = await Message.findByPk(messageId);
         if (!message)
             return res.status(404).json({ message: "Message not found" });
@@ -405,6 +432,30 @@ const deleteMessage = async (req, res) => {
 }
 
 
+const getMessageUsingId = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const messageId = req.params.messageId;
+
+        if (!messageId)
+            return res.status(400).json({ message: "Invalid request" });
+
+        const userStatus = await UserStatus.findByPk(userId);
+        if (!userStatus || !userStatus.isAdmin)
+            return res.status(403).json({ message: "You are not authorized to perform this action" });
+
+        const message = await Message.findByPk(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+        return res.status(200).json(message);
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+
 
 module.exports = {
     sendMessageUsingChatId,
@@ -415,4 +466,5 @@ module.exports = {
     addReactionToMessage,
     deleteMessage,
     deleteReaction,
+    getMessageUsingId,
 }

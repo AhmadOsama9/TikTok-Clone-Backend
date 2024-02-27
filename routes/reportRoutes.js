@@ -4,9 +4,11 @@ const router = express.Router();
 const {
     createReport,
     getReportById,
+    getUnviewedReports,
     getAllReports,
     updateReport,
-    deleteReport
+    deleteReport,
+    setReportIsViewed,
 } = require("../controllers/reportController");
 
 /**
@@ -224,6 +226,93 @@ router.get("/get/:id", getReportById);
  *               $ref: '#/components/schemas/Error'
  */
 router.get("/get-all", getAllReports);
+
+/**
+ * @swagger
+ * /api/report/get-unviewed:
+ *   get:
+ *     tags:
+ *       - Reports
+ *     summary: get all unviewed reports
+ *     operationId: getUnviewedReports
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *     responses:
+ *       200:
+ *         description: The unviewed reports were fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reports:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Report'
+ *       500:
+ *         description: An error occurred.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get("/get-unviewed", getUnviewedReports);
+
+/**
+ * @swagger
+ * /api/report/set-viewed/{id}:
+ *   put:
+ *     tags:
+ *       - Reports
+ *     summary: Mark a report as viewed
+ *     operationId: setReportIsViewed
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: The API key.
+ *      - in: path
+ *        name: id
+ *        required: true
+ *        schema:
+ *          type: integer
+ *        description: The ID of the report to mark as viewed.
+ *     responses:
+ *       200:
+ *         description: The report was marked as viewed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Report marked as viewed
+ *       404:
+ *         description: Report not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: An error occurred.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put("/set-viewed/:id", setReportIsViewed);
 
 /**
  * @swagger

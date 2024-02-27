@@ -24,13 +24,6 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id'
         },
         allowNull: false
-      },
-      senderUsername: {
-        type: DataTypes.STRING,
-      },
-      receiverUsername: {
-        type: DataTypes.STRING,
-        allowNull: false
       }
     });
 };
