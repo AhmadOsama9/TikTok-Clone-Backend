@@ -146,6 +146,7 @@ const createUserPersonalization = async (req, res) => {
 
     } catch (error) {
         await transaction.rollback();
+        console.log("the error: ", error);
         return res.status(500).json({ error: error.message });
     }
 }

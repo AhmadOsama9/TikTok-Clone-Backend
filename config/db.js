@@ -601,9 +601,9 @@ const deleteAllVideos = async (req, res) => {
     }
 }
 
-// async function dropVideo() {
-//     await sequelize.query('DROP TABLE IF EXISTS "Videos" CASCADE');
-// }
+async function dropUserPersonalization() {
+    await UserPersonalization.drop();
+}
 
 // dropVideo().catch(console.error);
 
@@ -611,7 +611,7 @@ const deleteAllVideos = async (req, res) => {
 //     await sequelize.query('DROP TABLE IF EXISTS "Users" CASCADE');
 // }
 
-// dropUser().catch(console.error);
+//dropUserPersonalization().catch(console.error);
 
 //getAllUserAssociation();
 

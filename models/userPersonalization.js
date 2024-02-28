@@ -7,7 +7,6 @@ module.exports = (sequelize, DataTypes) => {
                 model: 'Users',
                 key: 'id',
             },
-            primaryKey: true,
         },
         category: {
             type: DataTypes.STRING,
