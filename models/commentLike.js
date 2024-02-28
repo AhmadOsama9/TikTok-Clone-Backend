@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    return sequelize.define('VideoLike', {
+    return sequelize.define('CommentLike', {
         userId: {
             type: DataTypes.INTEGER,
             references: {
@@ -7,10 +7,10 @@ module.exports = (sequelize, DataTypes) => {
                 key: 'id',
             }
         },
-        videoId: {
+        commentId: {
             type: DataTypes.INTEGER,
             references: {
-                model: 'Videos',
+                model: 'Comments',
                 key: 'id',
             }
         }
@@ -18,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
         indexes: [
             {
                 unique: true,
-                fields: ['userId', 'videoId']
+                fields: ['userId', 'commentId']
             }
         ]
     });

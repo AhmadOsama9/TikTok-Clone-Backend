@@ -4,11 +4,10 @@ const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
 
 
-
 async function addNotification (userId, videoId, commentId, otherUserId, notificationType, title, transaction ) {
     try {
         if (userId === otherUserId) {
-            console.log("You can't mention yourself");
+            console.log("You can't notify yourself");
             return;
         }
 
@@ -43,7 +42,7 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
                 order: [['createdAt', 'ASC']]
             });
             if (oldestNotification) {
-                await oldestNotification.destroy();
+                await oldestNotification.destroy({ transaction });
             }
         }
 
@@ -76,7 +75,7 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
                     break;
             }
 
-            await similarNotification.save();
+            await similarNotification.save({ transaction });
         } else {
             let body;
             switch (notificationType) {
@@ -97,7 +96,7 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
                     break;
             }
 
-            await Notification.create({ userId, videoId, commentId, otherUserId, notificationType, count: 1, title, body, isRead: false });
+            await Notification.create({ userId, videoId, commentId, otherUserId, notificationType, count: 1, title, body, isRead: false }, { transaction });
         }
 
     } catch (error) {

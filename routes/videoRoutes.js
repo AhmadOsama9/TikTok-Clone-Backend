@@ -24,8 +24,8 @@ const {
     getVideoThumbnail,
     getVideo, 
     updateVideoDescription,
-    getCommentsUsingPagination,
     getCreatorComments,
+    getCommentsUsingPagination,
     likeAndUnlikeVideo,
     shareVideo,
     searchVideosUsingPagination,
@@ -353,94 +353,6 @@ router.get("/followers", getFollowersVideos);
 
 /**
  * @swagger
- * /api/video/{videoId}/comments:
- *   get:
- *     tags:
- *      - Videos
- *     summary: Get comments for a video with pagination
- *     security:
- *      - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: videoId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID of the video to get creator comments for
- *       - in: header
- *         name: X-API-KEY
- *         schema:
- *           type: string
- *         required: true
- *         description: x-api-key
- *       - name: offset
- *         in: query
- *         type: integer
- *         default: 0
- *         description: Number of comments to skip
- *     responses:
- *       200:
- *         description: Successful response
- *         content:
- *          application/json:
- *           schema:
- *            type: object
- *            properties:
- *             comments:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                   videoId:
- *                     type: string
- *                   userId:
- *                     type: string
- *                   content:
- *                     type: string
- *                   gift:
- *                     type: string
- *                   repliesCount:
- *                     type: integer
- *                   replies:
- *                     type: array
- *                     items:
- *                       type: object
- *                       properties:
- *                         id:
- *                           type: integer
- *                         videoId:
- *                           type: string
- *                         userId:
- *                           type: string
- *                         content:
- *                           type: string
- *                         gift:
- *                           type: string
- *                         repliesCount:
- *                           type: integer
- *                         createdAt:
- *                           type: string
- *                         imageUrl:
- *                           type: string
- *                         username:
- *                           type: string
- *                   createdAt:
- *                     type: string
- *                   imageUrl:
- *                     type: string
- *                   username:
- *                     type: string
- *       400:
- *         description: Bad request
- *       404:
- *         description: Video not found
- */
-router.get("/:videoId/comments", getCommentsUsingPagination);
-
-/**
- * @swagger
  * /api/video/{videoId}/creator-comments:
  *   get:
  *     tags:
@@ -515,6 +427,8 @@ router.get("/:videoId/comments", getCommentsUsingPagination);
  *                     type: string
  *                   username:
  *                     type: string
+ *                   isVerified:
+ *                     type: boolean
  *       400:
  *         description: Bad request
  *       404:
@@ -737,7 +651,6 @@ router.post("/view", viewVideo);
  */
 router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
 
-
 /**
  * @swagger
  * /api/video/search?descriptio=&offset=0:
@@ -883,5 +796,187 @@ router.get("/autocomplete", autocompleteVideos);
  *               $ref: '#/definitions/Error'
  */
 router.delete("/delete/:videoId", deleteVideo);
+
+/**
+ * @swagger
+ * /api/video/creator-comments/{videoId}:
+ *   get:
+ *     tags:
+ *      - Videos
+ *     summary: Get verified comments for a video with pagination
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: videoId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the video to get verified comments for
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: x-api-key
+ *       - name: offset
+ *         in: query
+ *         type: integer
+ *         default: 0
+ *         description: Number of comments to skip
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *         content:
+ *          application/json:
+ *           schema:
+ *            type: object
+ *            properties:
+ *             comments:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   videoId:
+ *                     type: string
+ *                   userId:
+ *                     type: string
+ *                   content:
+ *                     type: string
+ *                   gift:
+ *                     type: string
+ *                   repliesCount:
+ *                     type: integer
+ *                   replies:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                         videoId:
+ *                           type: string
+ *                         userId:
+ *                           type: string
+ *                         content:
+ *                           type: string
+ *                         gift:
+ *                           type: string
+ *                         repliesCount:
+ *                           type: integer
+ *                         createdAt:
+ *                           type: string
+ *                         imageUrl:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                   createdAt:
+ *                     type: string
+ *                   imageUrl:
+ *                     type: string
+ *                   username:
+ *                     type: string
+ *                   isVerified:
+ *                     type: boolean
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Video not found
+ */
+router.get("/creator-comments/:videoId", getCreatorComments);
+
+
+/**
+ * @swagger
+ * /api/video/comments/{videoId}:
+ *   get:
+ *     tags:
+ *      - Videos
+ *     summary: Get normal comments for a video with pagination
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: videoId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the video to get normal comments for
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: x-api-key
+ *       - name: offset
+ *         in: query
+ *         type: integer
+ *         default: 0
+ *         description: Number of comments to skip
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *         content:
+ *          application/json:
+ *           schema:
+ *            type: object
+ *            properties:
+ *             comments:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   videoId:
+ *                     type: string
+ *                   userId:
+ *                     type: string
+ *                   content:
+ *                     type: string
+ *                   gift:
+ *                     type: string
+ *                   repliesCount:
+ *                     type: integer
+ *                   replies:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                         videoId:
+ *                           type: string
+ *                         userId:
+ *                           type: string
+ *                         content:
+ *                           type: string
+ *                         gift:
+ *                           type: string
+ *                         repliesCount:
+ *                           type: integer
+ *                         createdAt:
+ *                           type: string
+ *                         imageUrl:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                   createdAt:
+ *                     type: string
+ *                   imageUrl:
+ *                     type: string
+ *                   username:
+ *                     type: string
+ *                   isVerified:
+ *                     type: boolean
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Video not found
+ */
+router.get("/comments/:videoId", getCommentsUsingPagination);
+
 
 module.exports = router;

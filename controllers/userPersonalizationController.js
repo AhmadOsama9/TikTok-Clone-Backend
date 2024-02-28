@@ -3,6 +3,7 @@ const Video = require("../config/db").Video;
 const Rate = require("../config/db").Rate;
 const WatchedVideo = require("../config/db").WatchedVideo;
 const VideoCategory = require("../config/db").VideoCategory;
+const VideoMetadata = require("../config/db").VideoMetadata;
 const sequelize = require("../config/db").sequelize;
 const { Op } = require("sequelize");
 const { getSignedUrl } = require("../controllers/profileController");
@@ -26,7 +27,7 @@ const createUserPersonalization = async (req, res) => {
 
         const video = await Video.findOne({ 
             where: { id: videoId },
-            attributes: ['category']
+            attributes: ['id']
         });
 
         if (!video)
@@ -70,19 +71,19 @@ const createUserPersonalization = async (req, res) => {
             if (rating) {
                 switch (true) {
                     case (rating.rate >= 1 && rating.rate < 2):
-                        interactionCount += 5;
+                        interactionCount -= 5;
                         break;
                     case (rating.rate >= 2 && rating.rate < 3):
-                        interactionCount += 10;
+                        interactionCount -= 10;
                         break;
                     case (rating.rate >= 3 && rating.rate < 4):
                         interactionCount += 15;
                         break;
                     case (rating.rate >= 4 && rating.rate < 5):
-                        interactionCount += 20;
+                        interactionCount += 30;
                         break;
                     case (rating.rate == 5):
-                        interactionCount += 25;
+                        interactionCount += 40;
                         break;
                     default:
                         interactionCount--;
@@ -109,10 +110,13 @@ const createUserPersonalization = async (req, res) => {
                 interactionCount += boost;
             }
 
+            //also will be higher if we use the gift comment  
             interactionCount = Math.min((interactionCount / 105) * 5, 5);
 
             userPersonalization.totalInteractions += 1;
-            userPersonalization.currentInterest = (userPersonalization.currentInterest * (userPersonalization.totalInteractions - 1) + interactionCount) / userPersonalization.totalInteractions;
+            userPersonalization.currentInterest = Math.round((userPersonalization.currentInterest * (userPersonalization.totalInteractions - 1) + interactionCount) / userPersonalization.totalInteractions);
+
+            //I think I should find a better way than the rouding down
 
             if (userPersonalization.currentInterest > userPersonalization.peakInterest) {
                 userPersonalization.peakInterest = userPersonalization.currentInterest;
@@ -123,7 +127,7 @@ const createUserPersonalization = async (req, res) => {
                 order: [['createdAt', 'ASC']],
             }, { transaction });
             
-            if (watchedVideos.length > 50) {
+            if (watchedVideos.length > 30) {
                 await watchedVideos[0].destroy({ transaction });
             }
 
@@ -168,49 +172,65 @@ const fetchUserPersonalizations = async (userId) => {
 
 // Fetch popular videos
 const fetchPopularVideos = async (category, limit, watchedVideoIds) => {
+    console.log("Fetching the popular videos for the category", category)
+    const includeOptions = [
+        { 
+            model: VideoMetadata, 
+            as: 'metadata',
+            order: [['popularityScore', 'DESC']],
+        }
+    ];
+
+    if (category) {
+        includeOptions.push({
+            model: VideoCategory,
+            as: 'categories', 
+            where: { name: category }
+        });
+    }
+
     return await Video.findAll({
-        include: [
-            { 
-                model: VideoMetadata, 
-                as: 'metadata',
-                order: [['popularityScore', 'DESC']],
-                limit,
-            },
-            { 
-                model: VideoCategory, 
-                where: { name: category }
-            }
-        ],
+        include: includeOptions,
         where: { 
-            videoId: { [Op.notIn]: watchedVideoIds }
+            id: { [Op.notIn]: watchedVideoIds }
         },
+        limit,
     });
 };
 
 // Fetch new videos
 const fetchNewVideos = async (category, limit, watchedVideoIds) => {
+    console.log("Fetching the new videos for the category", category)
+    const includeOptions = [
+        { 
+            model: VideoMetadata, 
+            as: 'metadata',
+            order: [['createdAt', 'DESC']],
+        }
+    ];
+
+    if (category) {
+        includeOptions.push({
+            model: VideoCategory,
+            as: 'categories', 
+            where: { name: category }
+        });
+    }
+
     return await Video.findAll({
-        include: [
-            { 
-                model: VideoMetadata, 
-                as: 'metadata',
-                order: [['createdAt', 'DESC']],
-                limit,
-            },
-            { 
-                model: VideoCategory, 
-                where: { name: category }
-            }
-        ],
+        include: includeOptions,
         where: { 
-            videoId: { [Op.notIn]: watchedVideoIds }
+            id: { [Op.notIn]: watchedVideoIds }
         },
+        limit,
     });
 };
 
 const fetchVideos = async (category, popularLimit, newLimit, watchedVideosIds) => {
+    console.log("Fetching the popular and new videos for the category", category)
     const popularVideos = await fetchPopularVideos(category, popularLimit, watchedVideosIds);
     const newVideos = await fetchNewVideos(category, newLimit, watchedVideosIds);
+    console.log("Fetched the popular and new videos for the category", category)
     return [...popularVideos, ...newVideos];
 };
 
@@ -221,6 +241,7 @@ const fetchRecommendedVideos = async (userPersonalizations, totalInterest, remai
         let popularLimit = Math.round(limit * 0.6); // 60% popular
         let newLimit = limit - popularLimit; // 40% new
 
+        console.log("Fetching teh videos for the category", personalization.category);
         const videos = await fetchVideos(personalization.category, popularLimit, newLimit, watchedVideosIds);
         recommendedVideos.push(...videos);
         remainingVideos -= videos.length; // Update the number of remaining videos
@@ -247,7 +268,8 @@ const fetchNonInteractedVideos = async (nonInteractedCategories, remainingVideos
         let popularLimit = Math.round(remainingVideos * 0.6); // 60% popular
         let newLimit = remainingVideos - popularLimit; // 40% new
 
-        const videos = await fetchVideos(category.name, popularLimit, newLimit, watchedVideosIds);
+        console.log("It enters here in the nonInteractedVideos, fetching the videos for the category", category);
+        const videos = await fetchVideos(category, popularLimit, newLimit, watchedVideosIds);
         recommendedVideos.push(...videos);
         remainingVideos -= videos.length; // Update the number of remaining videos
 
@@ -300,6 +322,8 @@ const getRecommendedVideos = async (req, res) => {
         let userPersonalizations = await fetchUserPersonalizations(userId);
         let totalInterest = userPersonalizations.reduce((total, personalization) => total + personalization.currentInterest, 0);
 
+        console.log("after fetching the userPersonalization");
+
         let remainingVideos = process.env.RECOMMENDED_VIDEOS_LIMIT || 10;
 
         const watchedVideos = await WatchedVideo.findAll({
@@ -308,16 +332,24 @@ const getRecommendedVideos = async (req, res) => {
         });
         let watchedVideosIds = watchedVideos.map(video => video.videoId);
 
+        console.log("WatchedVideosIds", watchedVideosIds);
         // Fetch popular and new videos
         let result = await fetchRecommendedVideos(userPersonalizations, totalInterest, remainingVideos, watchedVideosIds);
         remainingVideos = result.remainingVideos;
         let recommendedVideos = result.recommendedVideos;
+
+        console.log("After fetching the recommendedVideos");
 
         // If there are no more unwatched videos in the categories the user has interacted with, fetch videos from other categories
         if (remainingVideos > 0) {
             const allPossibleCategories = UserPersonalization.rawAttributes.category.validate.isIn.args[0];
             const interactedCategories = userPersonalizations.map(personalization => personalization.category);
             const nonInteractedCategories = allPossibleCategories.filter(category => !interactedCategories.includes(category));
+
+            console.log("Fetching the nonInteractedVideos")
+            console.log("NonInteractedCategories", nonInteractedCategories);
+            console.log("allPossibleCategories", allPossibleCategories);
+            console.log("interactedCategories", interactedCategories);
 
             const result = await fetchNonInteractedVideos(nonInteractedCategories, remainingVideos, watchedVideosIds);
             recommendedVideos.push(...result.recommendedVideos);

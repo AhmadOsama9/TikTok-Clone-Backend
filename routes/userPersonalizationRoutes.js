@@ -8,7 +8,7 @@ const {
 
 /**
  * @swagger
- * /api/user/user-personalization/create-user-personalization:
+ * /api/user-personalization/create-user-personalization:
  *   post:
  *     tags:
  *      - UserPersonalization
@@ -64,7 +64,7 @@ router.post("/create-user-personalization", createUserPersonalization);
 
 /**
  * @swagger
- * /api/user/user-personalization/recommend-videos:
+ * /api/user-personalization/recommend-videos:
  *   get:
  *     tags:
  *      - UserPersonalization

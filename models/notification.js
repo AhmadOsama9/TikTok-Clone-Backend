@@ -49,3 +49,9 @@ module.exports = (sequelize, DataTypes) => {
         isRead: DataTypes.BOOLEAN,
     });
 };
+
+//1 like
+//2 comment
+//3 follower
+//4 mention
+//5 gift comment

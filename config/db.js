@@ -17,6 +17,7 @@ const videoCategoryModel = require('../models/videoCategory');
 const watchedVideoModel = require("../models/watchedVideo");
 const rateModel = require("../models/rate");
 const commentModel = require('../models/comment');
+const commentLikeModel = require("../models/commentLike");
 
 
 const chatModel = require("../models/chat");
@@ -40,7 +41,7 @@ const reportModel = require("../models/report");
 // //dialect://username:password@host:port/database
 
 
-const sequelize = new Sequelize('postgresql://ahmedahmedhamedahmed0:aTz8debUZcJ1@ep-royal-breeze-a54m0erd.us-east-2.aws.neon.tech/db?sslmode=require');
+const sequelize = new Sequelize('postgresql://ahmedosamaa975:tekbn8rfMu3w@ep-morning-mode-a5elkccd.us-east-2.aws.neon.tech/StoryAppDB?sslmode=require');
 
 const User = userModel(sequelize, DataTypes);
 const UserStatus = userStatusModel(sequelize, DataTypes);
@@ -58,6 +59,7 @@ const VideoCategory = videoCategoryModel(sequelize, DataTypes);
 const WatchedVideo = watchedVideoModel(sequelize, DataTypes);
 const Rate = rateModel(sequelize, DataTypes);
 const Comment = commentModel(sequelize, DataTypes);
+const CommentLike = commentLikeModel(sequelize, DataTypes);
 
 const Chat = chatModel(sequelize, DataTypes);
 const Message = messageModel(sequelize, DataTypes);
@@ -74,102 +76,147 @@ const Report = reportModel(sequelize, DataTypes);
 User.hasOne(Profile, {
     foreignKey: 'userId',
     as: 'profile',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(Comment, {
     foreignKey: 'userId',
     as: 'comments',
+    onDelete: 'CASCADE',
 });
   
 User.hasMany(Video, {
     foreignKey: 'userId',
     as: 'videos',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(Follow, {
     foreignKey: 'followerId',
     as: 'following',
+    onDelete: 'CASCADE',
 });
   
 User.hasMany(Follow, {
     foreignKey: 'followingId',
     as: 'followers',
+    onDelete: 'CASCADE',
 });
 
 User.belongsToMany(Video, { 
     through: SavedVideo,
     foreignKey:'userId' , 
-    as: 'savedVideos' 
+    as: 'savedVideos',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(Video, { 
     foreignKey: 'creatorId', 
-    as: 'createdVideos' 
+    as: 'createdVideos',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(Report, {
     foreignKey: 'userId',
     as: 'reports',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(Chat, { 
     foreignKey: 'user1Id',
-     as: 'user1Chats' 
+     as: 'user1Chats',
+     onDelete: 'CASCADE',
 });
 User.hasMany(Chat, { 
     foreignKey: 'user2Id', 
-    as: 'user2Chats'
+    as: 'user2Chats',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(Message, {
     foreignKey: 'senderId',
     as: 'messages',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(Rate, {
     foreignKey: 'userId',
     as: 'ratings',
+    onDelete: 'CASCADE',
 });
 
 
 User.hasOne(UserPopularity, {
     foreignKey: 'userId',
     as: 'popularity',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(WatchedVideo, {
     foreignKey: 'userId',
     as: 'watchedVideos',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(UserPersonalization, {
     foreignKey: 'userId',
     as: 'personalizations',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(VideoLike, {
     foreignKey: 'userId',
     as: 'videoLikes',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(Notification, {
     foreignKey: 'userId',
     as: 'notifications',
+    onDelete: 'CASCADE',
 });
 
 User.hasOne(UserStatus, { 
     foreignKey: 'userId', 
-    as: 'userStatus' 
+    as: 'userStatus',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(UserAuth, { 
     foreignKey: 'userId', 
-    as: 'authMethods' 
+    as: 'authMethods',
+    onDelete: 'CASCADE',
 });
 
 User.hasMany(VideoView, { 
     foreignKey: 'userId', 
-    as: 'videoViews' 
+    as: 'videoViews',
+    onDelete: 'CASCADE',
+});
+
+User.hasMany(Transaction, {
+    as: 'sentTransactions', 
+    foreignKey: 'senderId',
+    onDelete: 'CASCADE',
+});
+
+User.hasMany(Transaction, { 
+    as: 'receivedTransactions', 
+    foreignKey: 'receiverId',
+    onDelete: 'CASCADE',
+});
+
+//Transaction Relations
+Transaction.belongsTo(User, { 
+    as: 'sender', 
+    foreignKey: 'senderId',
+    onDelete: 'CASCADE',
+});
+
+Transaction.belongsTo(User, { 
+    as: 'receiver', 
+    foreignKey: 'receiverId',
+    onDelete: 'CASCADE',
 });
 
 
@@ -177,31 +224,36 @@ User.hasMany(VideoView, {
 UserPersonalization.belongsTo(Video, {
     foreignKey: 'videoId',
     as: 'video',
+    onDelete: 'CASCADE',
 });
 
 UserPersonalization.belongsTo(User, {
     foreignKey: 'userId',
     as: 'user',
+    onDelete: 'CASCADE',
 });
 
 
 //UserPopularity Relations
 UserPopularity.belongsTo(User, {
     foreignKey: 'userId',
+    onDelete: 'CASCADE',
 });
 
 
 //UserStatus Relations
 UserStatus.belongsTo(User, { 
     foreignKey: 'userId', 
-    as: 'user' 
+    as: 'user',
+    onDelete: 'CASCADE',
 });
 
 
 //UserAuth Relations
 UserAuth.belongsTo(User, { 
     foreignKey: 'userId', 
-    as: 'user' 
+    as: 'user',
+    onDelete: 'CASCADE',
 });
 
 
@@ -209,6 +261,7 @@ UserAuth.belongsTo(User, {
 Follow.belongsTo(User, {
     foreignKey: 'followingId',
     as: 'followers',
+    onDelete: 'CASCADE',
 });
 
 
@@ -216,6 +269,7 @@ Follow.belongsTo(User, {
 Notification.belongsTo(User, {
     foreignKey: 'userId',
     as: 'user',
+    onDelete: 'CASCADE',
 });
 
 
@@ -228,11 +282,13 @@ Message.belongsTo(Message, {
 Message.belongsTo(Chat, {
     foreignKey: 'chatId',
     as: 'chat',
+    onDelete: 'CASCADE',
 });
   
 Message.belongsTo(User, {
     foreignKey: 'senderId',
     as: 'sender',
+    onDelete: 'CASCADE',
 });
 
 
@@ -250,6 +306,7 @@ Chat.belongsTo(User, {
 Chat.hasMany(Message, {
     foreignKey: 'chatId',
     as: 'messages',
+    onDelete: 'CASCADE',
 });
 
 
@@ -268,6 +325,30 @@ Comment.hasMany(Comment, {
 Comment.belongsTo(User, {
     foreignKey: 'userId',
     as: 'user',
+    onDelete: 'CASCADE',
+});
+
+Comment.hasMany(CommentLike, {
+    foreignKey: 'commentId',
+    as: 'likes',
+    onDelete: 'CASCADE',
+});
+
+CommentLike.belongsTo(Comment, {
+    foreignKey: 'commentId',
+    as: 'comment',
+    onDelete: 'CASCADE',
+});
+
+//CommentLike Relations
+CommentLike.belongsTo(User, { 
+    foreignKey: 'userId', 
+    onDelete: 'CASCADE' 
+});
+
+CommentLike.belongsTo(Comment, { 
+    foreignKey: 'commentId', 
+    onDelete: 'CASCADE' 
 });
 
 
@@ -275,16 +356,19 @@ Comment.belongsTo(User, {
 Report.belongsTo(User, {
     foreignKey: 'userId',
     as: 'user',
+    onDelete: 'CASCADE',
 });
 
 
 //SavedVideos Relations
 SavedVideo.belongsTo(User, { 
-    foreignKey: 'userId' 
+    foreignKey: 'userId',
+    onDelete: 'CASCADE',
 });
 
 SavedVideo.belongsTo(Video, { 
-    foreignKey: 'videoId' 
+    foreignKey: 'videoId',
+    onDelete: 'CASCADE',
 });
 
 
@@ -293,11 +377,13 @@ SavedVideo.belongsTo(Video, {
 WatchedVideo.belongsTo(Video, {
     foreignKey: 'videoId',
     as: 'video',
+    onDelete: 'CASCADE',
 });
 
 WatchedVideo.belongsTo(User, {
     foreignKey: 'userId',
     as: 'user',
+    onDelete: 'CASCADE',
 });
 
 
@@ -305,11 +391,13 @@ WatchedVideo.belongsTo(User, {
 VideoLike.belongsTo(Video, {
     foreignKey: 'videoId',
     as: 'video',
+    onDelete: 'CASCADE',
 });
 
 VideoLike.belongsTo(User, {
     foreignKey: 'userId',
     as: 'user',
+    onDelete: 'CASCADE',
 });
 
 
@@ -317,14 +405,16 @@ VideoLike.belongsTo(User, {
 //VideoMetadata Relations
 VideoMetadata.belongsTo(Video, { 
     foreignKey: 'videoId', 
-    as: 'video' 
+    as: 'video',
+    onDelete: 'CASCADE',
 });
 
 
 //VideoCategory Relations
 VideoCategory.belongsTo(Video, { 
     foreignKey: 'videoId', 
-    as: 'video' 
+    as: 'video',
+    onDelete: 'CASCADE',
 });
 
 
@@ -332,18 +422,27 @@ VideoCategory.belongsTo(Video, {
 Rate.belongsTo(Video, {
     foreignKey: 'videoId',
     as: 'video',
+    onDelete: 'CASCADE',
 });
 
 Rate.belongsTo(User, {
     foreignKey: 'userId',
     as: 'user',
+    onDelete: 'CASCADE',
 });
 
 
 //VideoView Relations
 VideoView.belongsTo(User, { 
     foreignKey: 'userId', 
-    as: 'user' 
+    as: 'user',
+    onDelete: 'CASCADE',
+});
+
+VideoView.belongsTo(Video, { 
+    foreignKey: 'videoId', 
+    as: 'video',
+    onDelete: 'CASCADE',
 });
 
 
@@ -352,59 +451,63 @@ VideoView.belongsTo(User, {
 Video.belongsToMany(User, {
     through: SavedVideo,
     foreignKey: 'videoId' ,
-    as: 'savedByUsers' 
+    as: 'savedByUsers',
+    onDelete: 'CASCADE',
 });
 
 Video.belongsTo(User, { 
     foreignKey: 'creatorId', 
-    as: 'creator' 
+    as: 'creator',
+    onDelete: 'CASCADE',
 });
 
 Video.hasMany(Rate, {
     foreignKey: 'videoId',
     as: 'ratings',
+    onDelete: 'CASCADE',
 });
 
 Video.hasMany(UserPersonalization, {
     foreignKey: 'videoId',
     as: 'personalizations',
+    onDelete: 'CASCADE',
 });
 
 Video.hasMany(WatchedVideo, {
     foreignKey: 'videoId',
     as: 'watchedInstances',
+    onDelete: 'CASCADE',
 });
 
 Video.hasMany(VideoLike, {
     foreignKey: 'videoId',
     as: 'videoLikes',
+    onDelete: 'CASCADE',
 });
 
 Video.hasOne(VideoMetadata, { 
     foreignKey: 'videoId', 
-    as: 'metadata' 
-});
-
-VideoView.belongsTo(Video, { 
-    foreignKey: 'videoId', 
-    as: 'video' 
+    as: 'metadata',
+    onDelete: 'CASCADE',
 });
 
 Video.hasMany(VideoView, { 
     foreignKey: 'videoId', 
-    as: 'viewInstances' 
+    as: 'viewInstances',
+    onDelete: 'CASCADE',
 });
 
 Video.hasMany(VideoCategory, { 
     foreignKey: 'videoId', 
-    as: 'categories' 
+    as: 'categories',
+    onDelete: 'CASCADE',
 });
 
 Video.hasMany(Comment, {
     foreignKey: 'videoId',
     as: 'comments',
+    onDelete: 'CASCADE',
 });
-  
 
 
 async function syncModels() {
@@ -426,7 +529,7 @@ async function syncModels() {
     await WatchedVideo.sync({alter: true});
     await Rate.sync({alter: true});
     await Comment.sync({alter: true});
-
+    await CommentLike.sync({alter: true});
 
     await Chat.sync({alter: true});
     await Message.sync({alter: true});
@@ -463,6 +566,7 @@ async function dropModels() {
     await SavedVideo.drop();
     await Report.drop();
 
+    await CommentLike.drop();
     await Comment.drop();
     await Video.drop();
     await User.drop();
@@ -539,6 +643,7 @@ module.exports = {
     WatchedVideo,
     Rate,
     Comment,
+    CommentLike,
 
     Chat,
     Message,

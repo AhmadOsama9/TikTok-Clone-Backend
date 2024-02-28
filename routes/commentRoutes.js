@@ -8,6 +8,7 @@ const {
     addGiftComment,
     updateComment,
     getCommentUsingId,
+    likeAndUnlikeComment,
 } = require("../controllers/commentController");
 
 /**
@@ -391,5 +392,61 @@ router.put("/update/:id", updateComment);
  */
 router.get("/get-comment/:id", getCommentUsingId);
 
+/**
+ * @swagger
+ * /api/comment/like-unlike/{commentId}:
+ *   post:
+ *     tags:
+ *       - Comments
+ *     summary: Like or unlike a comment
+ *     operationId: likeAndUnlikeComment
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        required: true
+ *        schema:
+ *          type: string
+ *        description: x-api-key.
+ *      - in: path
+ *        name: commentId
+ *        required: true
+ *        schema:
+ *          type: integer
+ *        description: The ID of the comment to like or unlike.
+ *     responses:
+ *       200:
+ *         description: The updated comment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Comment'
+ *       400:
+ *         description: Bad request. Comment id is required.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Authorization information is missing or invalid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Comment not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: An error occurred.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post("/like-unlike/:commentId", likeAndUnlikeComment);
 
 module.exports = router;

@@ -34,10 +34,11 @@ const updateUserPopularityScores = async () => {
                 include: [{
                     model: VideoMetadata,
                     as: 'metadata',
-                    attributes: ['likeCount', 'shareCount']
+                    attributes: ['likeCount', 'shareCount', 'viewCount']
                 }]
             });
 
+            const totalViews = videos.reduce((sum, video) => sum + video.metadata.viewCount, 0);
             const totalLikes = videos.reduce((sum, video) => sum + video.metadata.likeCount, 0);
             const totalShares = videos.reduce((sum, video) => sum + video.metadata.shareCount, 0);
             const totalComments = await Comment.count({ where: { videoId: { [Op.in]: videos.map(video => video.id) } } });
@@ -48,7 +49,8 @@ const updateUserPopularityScores = async () => {
                 score += 100; // Give a boost for verified users
             }
             score += videos.length * 5; // 10 points for each video
-            score += totalLikes; // 1 point for each like
+            score += totalViews; // 1 point for each view
+            score += totalLikes * 2; // 1 point for each like
             score += totalComments * 2; // 2 points for each comment
             score += totalShares * 3; // 3 points for each share
             score += followersCount * 5; // 5 points for each follower
@@ -59,6 +61,10 @@ const updateUserPopularityScores = async () => {
         console.error("Error updating popularity scores:", error);
     }
 };
+
+//In the context of databases, most databases can handle large integers. 
+//For example, in MySQL, the BIGINT type can store integers up to 9223372036854775807.
+//So yeah I won't scale it down
 
 cron.schedule("0 4 */2 * *", updateUserPopularityScores);
 

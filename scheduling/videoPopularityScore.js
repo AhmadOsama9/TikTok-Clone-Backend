@@ -12,7 +12,7 @@ const updateVideoPopularityScore = async () => {
             include: [{
                 model: VideoMetadata,
                 as: 'metadata',
-                attributes: ['viewCount', 'likeCount', 'shareCount', 'averageRating', 'popularityScore', 'highestPopularityScore']
+                attributes: ['id', 'viewCount', 'likeCount', 'shareCount', 'averageRating', 'popularityScore', 'highestPopularityScore']
             }]
         });
 

@@ -1,4 +1,5 @@
 const Comment = require("../config/db").Comment;
+const CommentLike = require("../config/db").CommentLike;
 const Video = require("../config/db").Video;
 const User = require("../config/db").User;
 const UserStatus = require("../config/db").UserStatus;
@@ -8,6 +9,7 @@ const { addNotification } = require("./notificationsController");
 
 
 const addComment = async (req, res) => {
+    const transaction = await sequelize.transaction();
     try {
         const { videoId, content } = req.body;
         const { userId } = req.user;
@@ -20,13 +22,18 @@ const addComment = async (req, res) => {
         if (!content || content.trim() === '')
             return res.status(400).json({ message: 'Content is required' });
 
+        const userStatus = await UserStatus.findOne({ where: { userId: userId } });
+        const isUserVerified = userStatus ? userStatus.isVerified : false;
+
         const comment = await Comment.create({
             videoId,
             content,
-            userId
-        });
+            userId, 
+            isUserVerified
+        }, { transaction });
 
-        await addNotification(video.creatorId, videoId, comment.id, userId, 2, 'New Comment');
+        await addNotification(video.creatorId, videoId, comment.id, userId, 2, 'New Comment', transaction);
+        console.log("After the addNotification for the comment");
 
         const mentionRegex = /@(\w+)/g;
         let match;
@@ -35,12 +42,15 @@ const addComment = async (req, res) => {
             const mentionedUser = await User.findOne({ where: { username: mentionedUsername } });
             if (mentionedUser) {
                 // Add a notification for the mentioned user
-                await addNotification(mentionedUser.id, videoId, comment.id, userId, 4, 'Mentioned in Comment');
+                await addNotification(mentionedUser.id, videoId, comment.id, userId, 4, 'Mentioned in Comment', transaction);
             }
         }
 
+        await transaction.commit();
+
         return res.status(200).json(comment);
     } catch (err) {
+        await transaction.rollback();
         return res.status(500).json({ message: err.message });
     }
 };
@@ -83,11 +93,15 @@ const addGiftComment = async (req, res) => {
         user.balance -= giftPrice;
         await user.save({ transaction });
 
+        const userStatus = await UserStatus.findOne({ where: { userId: userId } });
+        const isUserVerified = userStatus ? userStatus.isVerified : false;
+
         const comment = await Comment.create({
             videoId,
             content,
             userId,
             giftType,
+            isUserVerified
         }, { transaction });
 
         await addNotification(video.creatorId, videoId, comment.id, userId, 5, 'New Gift Comment', transaction);
@@ -116,8 +130,6 @@ const addGiftComment = async (req, res) => {
             amount: giftPrice,
             senderId: userId,
             receiverId,
-            senderUsername: user.username,
-            receiverUsername: receiver.username,
         }, { transaction });
 
         await transaction.commit();
@@ -131,6 +143,7 @@ const addGiftComment = async (req, res) => {
 
 
 const replyToComment = async (req, res) => {
+    const transaction = await sequelize.transaction();
     try {
         const { content } = req.body;
         const { userId } = req.user;
@@ -146,19 +159,36 @@ const replyToComment = async (req, res) => {
         if (!comment)
             return res.status(500).json({ message: 'Comment not found' });
 
+        const userStatus = await UserStatus.findOne({ where: { userId: userId } });
+        const isUserVerified = userStatus ? userStatus.isVerified : false;
+
         const reply = await Comment.create({
             parentId: commentId,
             videoId: comment.videoId,
             content,
-            userId
-        });
+            userId,
+            isUserVerified,
+        }, { transaction });
+
+        const mentionRegex = /@(\w+)/g;
+        let match;
+        while ((match = mentionRegex.exec(content)) !== null) {
+            const mentionedUsername = match[1];
+            const mentionedUser = await User.findOne({ where: { username: mentionedUsername } });
+            if (mentionedUser) {
+                // Add a notification for the mentioned user
+                await addNotification(mentionedUser.id, comment.videoId, reply.id, userId, 4, 'Mentioned in Comment', transaction);
+            }
+        }
+
+        await transaction.commit();
 
         return res.status(200).json(reply);
     } catch (err) {
+        await transaction.rollback();
         return res.status(500).json({ message: err.message });
     }
 };
-
 
 
 
@@ -201,10 +231,9 @@ const getCommentUsingId = async (req, res) => {
         if (!commentId)
             return res.status(400).json({ message: 'Comment id is required' });
 
-        const userStatus = UserStatus.findByPk(userId);
+        const userStatus = await UserStatus.findByPk(userId);
         if (!userStatus || !userStatus.isAdmin)
             return res.status(403).json({ message: 'You are not authorized to view this comment' });
-
 
         const comment = await Comment.findByPk(commentId);
         if (!comment) {
@@ -251,6 +280,43 @@ const deleteComment = async (req, res) => {
     }
 };
 
+const likeAndUnlikeComment = async (req, res) => {
+    let transaction;
+    try {
+        const { userId } = req.user;
+        const { commentId } = req.params;
+
+        if (!commentId)
+            return res.status(400).json({ message: 'Comment id is required' });
+
+        const comment = await Comment.findByPk(commentId);
+        if (!comment)
+            return res.status(404).json({ message: 'Comment not found' });
+
+        transaction = await sequelize.transaction();
+
+        const existingLike = await CommentLike.findOne({ where: { userId, commentId } });
+        if (existingLike) {
+            await existingLike.destroy({ transaction });
+            await comment.decrement('likeCount', { transaction });
+        } else {
+            await CommentLike.create({ userId, commentId }, { transaction });
+            await comment.increment('likeCount', { transaction });
+        }
+
+        await transaction.commit();
+
+        // Reload the comment instance to get the updated likeCount
+        await comment.reload();
+
+        return res.status(200).json(comment);
+
+    } catch (error) {
+        if (transaction) await transaction.rollback();
+        return res.status(500).json({ message: error.message });
+    }
+}
+
 
 module.exports = {
     addComment,
@@ -259,4 +325,5 @@ module.exports = {
     addGiftComment,
     updateComment,
     getCommentUsingId,
+    likeAndUnlikeComment,
 }

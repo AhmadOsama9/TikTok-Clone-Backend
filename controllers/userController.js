@@ -438,8 +438,8 @@ const referredUser = async (req, res) => {
 
         referredUser.referred = true;
         await referredUser.save({ transaction });
-        referralUser.referrals += 1;
-        await referralUser.save({ transaction });
+        
+        await referralUser.increment('referrals', { transaction });
 
         await transaction.commit();
 
@@ -602,23 +602,28 @@ const unbanUser = async (req, res) => {
 const getUserInfo = async (req, res) => {
     try {
         const { userId } = req.user;
-
-        const user = await User.findByPk(userId);
-        if (!user)
-            return res.status(400).json({ error: 'User with this id does not exist' });
+        const otherUserId = req.params.otherUserId;
 
         const userStatus = await UserStatus.findOne({ where: { userId } });
-        if (!userStatus)
+        if (!userStatus || !userStatus.isAdmin)
+            return res.status(403).json({ error: 'You are not an admin' });
+
+        const otherUser = await User.findByPk(otherUserId);
+        if (!otherUser)
+            return res.status(400).json({ error: 'User with this id does not exist' });
+
+        const otherUserStatus = await UserStatus.findOne({ where: { userId: otherUserId } });
+        if (!otherUserStatus)
             return res.status(400).json({ error: 'User status for this id does not exist' });
 
         return res.status(200).json({
-            uid: user.id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            isverified: userStatus.isVerified,
-            referralCode: user.referralCode,
-            userName: user.userName
+            uid: otherUser.id,
+            name: otherUser.name,
+            email: otherUser.email,
+            phone: otherUser.phone,
+            isverified: otherUserStatus.isVerified,
+            referralCode: otherUser.referralCode,
+            userName: otherUser.userName
         });
 
     } catch (error) {

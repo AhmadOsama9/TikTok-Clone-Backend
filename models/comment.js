@@ -36,5 +36,19 @@ module.exports = (sequelize, DataTypes) => {
           }
         }
       },
+      likeCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      },
+      isUserVerified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     });
 };
+
+//1 5$
+//2 20$
+//3 50$
+//4 100$
+//5 1000$

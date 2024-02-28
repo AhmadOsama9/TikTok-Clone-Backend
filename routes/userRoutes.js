@@ -507,11 +507,12 @@ router.put("/verify/:toBeVerifiedUserId", setUserIsVerified);
 
 /**
  * @swagger
- * /api/user/info:
+ * /api/user/info/{otherUserId}:
  *   get:
  *     tags:
  *       - Users
- *     summary: Get user information
+ *     summary: Get information of a different user
+ *     description: An admin can use this endpoint to get the information of a different user specified by otherUserId.
  *     operationId: getUserInfo
  *     security:
  *      - bearerAuth: []
@@ -522,6 +523,12 @@ router.put("/verify/:toBeVerifiedUserId", setUserIsVerified);
  *        schema:
  *          type: string
  *        description: The API key.
+ *      - in: path
+ *        name: otherUserId
+ *        required: true
+ *        schema:
+ *          type: integer
+ *        description: The ID of the user to fetch the information for.
  *     responses:
  *       200:
  *         description: The user information was fetched successfully
@@ -557,7 +564,7 @@ router.put("/verify/:toBeVerifiedUserId", setUserIsVerified);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/info", getUserInfo);
+router.get("/info/:otherUserId", getUserInfo);
 
 /**
  * @swagger

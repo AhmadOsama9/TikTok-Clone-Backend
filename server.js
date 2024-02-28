@@ -63,7 +63,10 @@ app.use((req, res, next) => {
             }
             const {userId } = req.user;
             const userStatus = await UserStatus.findOne({ where: { userId } });
-            if (!userStatus || userStatus.isBanned)
+            if (!userStatus)
+                return res.status(403).json({ error: "User status not found" });
+
+            if (userStatus.isBanned)
                 return res.status(403).json({ error: "You are banned" });
 
             next();
