@@ -41,7 +41,10 @@ const reportModel = require("../models/report");
 // //dialect://username:password@host:port/database
 
 
-const sequelize = new Sequelize('postgresql://ahmedosamaa975:tekbn8rfMu3w@ep-morning-mode-a5elkccd.us-east-2.aws.neon.tech/StoryAppDB?sslmode=require');
+const sequelize = new Sequelize('postgresql://ahmedosamaa975:tekbn8rfMu3w@ep-morning-mode-a5elkccd.us-east-2.aws.neon.tech/StoryAppDB?sslmode=require', {
+    logging: console.log,
+    
+});
 
 const User = userModel(sequelize, DataTypes);
 const UserStatus = userStatusModel(sequelize, DataTypes);
@@ -626,6 +629,7 @@ sequelize.authenticate()
     .then(() => console.log('Database connection has been established successfully.'))
     .catch(error => console.error('Unable to connect to the database:', error));
 
+    
 module.exports = {
     User,
     UserStatus,

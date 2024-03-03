@@ -99,9 +99,6 @@ router.get("/get-balance-and-transactions", getBalanceAndTransactions);
  *           schema:
  *             type: object
  *             properties:
- *               balance:
- *                 type: integer
- *                 description: ID of the receiver user
  *               cardCode:
  *                  type: string
  *                  description: Card code

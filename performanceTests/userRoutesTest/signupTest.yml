@@ -1,0 +1,26 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 20
+  payload:
+    fields:
+      - "name"
+      - "phone"
+      - "email"
+      - "password"
+      - "username"
+    path: "path/to/your/data.csv"
+scenarios:
+  - name: "User Signup"
+    flow:
+    - post:
+        url: "/api/user/signup"
+        headers:
+          X-API-KEY: "your-api-key"
+        json:
+          name: "{{ name }}"
+          phone: "{{ phone }}"
+          email: "{{ email }}"
+          password: "{{ password }}"
+          username: "{{ username }}"

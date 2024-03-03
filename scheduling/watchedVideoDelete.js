@@ -1,6 +1,9 @@
 const cron = require('node-cron');
 const { Op } = require('sequelize');
 const WatchedVideo = require('../config/db').WatchedVideo;
+//I don't think that I will need this here
+//since I only store up to the last 30, so yeah mostly I remove this
+
 
 const watchedVideoDelete = async function() {
     try {

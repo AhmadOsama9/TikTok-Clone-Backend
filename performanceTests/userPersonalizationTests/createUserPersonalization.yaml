@@ -1,0 +1,29 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 833
+  payload:
+    fields:
+      - "videoId"
+      - "liked"
+      - "viewed"
+      - "shared"
+      - "commented"
+      - "rated"
+    path: "./createUserPersonalizationData.csv"
+scenarios:
+  - name: "Create User Personalization"
+    flow:
+    - post:
+        url: "/api/user-personalization/create-user-personalization"
+        headers:
+          X-API-KEY: "VZ0|yN#v0*BDx>~%&v{psTMD"
+          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlhdCI6MTcwOTAxNzU0Mn0.08f7xwmwtnzEXTZ9gqfSsrbAV1i0q3hFkmgoUIdCEec"
+        json:
+          videoId: "{{ videoId }}"
+          liked: "{{ liked }}"
+          viewed: "{{ viewed }}"
+          shared: "{{ shared }}"
+          commented: "{{ commented }}"
+          rated: "{{ rated }}"

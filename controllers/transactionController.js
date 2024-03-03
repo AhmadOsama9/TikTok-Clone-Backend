@@ -2,6 +2,7 @@ const User = require("../config/db").User;
 const Transaction = require("../config/db").Transaction;
 const { Op } = require('sequelize');
 const sequelize = require("../config/db").sequelize;
+const rechargeBalance = require("../helper/checkFirebaseForCardCode");
 
 
 
@@ -61,19 +62,22 @@ const addBalance = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { userId } = req.user;
-        const { cardCode, balance } = req.body;
+        const { cardCode } = req.body;
 
-        if (!balance)
-            return res.status(400).send({ message: "Balance is required" });
-
-        if (balance <= 0) {
-            return res.status(400).send({ message: "Invalid balance" });
-        }
+        if (!cardCode)
+            return res.status(400).send({ message: "Card code is required" });
 
         const user = await User.findOne({ where: { id: userId } });
-        if (!user) {
+        if (!user)
             return res.status(404).send({ message: "User not found" });
-        }
+
+        const balance = await rechargeBalance({ code: cardCode, userId: userId });
+
+        if (!balance)
+            return res.status(400).send({ message: "Invalid card code" });
+
+        if (balance < 0 || isNaN(balance))
+            return res.status(400).send({ message: "Invalid card code" });
 
         user.balance += balance;
         await user.save({ transaction });

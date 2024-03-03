@@ -27,7 +27,7 @@ const { generalLimiter, videoUploadLimiter, imageUploadLimiter } = require('./mi
 //routes
 const userRoutes = require("./routes/userRoutes");
 const profileRoutes = require("./routes/profileRoutes");
-const facebookRoutes = require("./routes/facebookRoutes");
+const facebookRoutes = require("./auth/facebookRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const videoRoutes = require("./routes/videoRoutes");
 const reportRoutes = require("./routes/reportRoutes");
