@@ -18,17 +18,19 @@ const addRate = async (req, res) => {
             return res.status(400).json({ message: "Rating should be between 1 and 5" });
         }
 
-        const video = await Video.findOne({ where: { id: videoId } }, { transaction: t });
-        if (!video)
+        const videoMetadata = await VideoMetadata.findByPk(videoId, {
+            attributes: ["totalRatings", "totalRating", "averageRating"],
+            transaction: t
+        });
+        if (!videoMetadata)
             return res.status(404).json({ message: "Video not found" });
-
+        
         const rate = await Rate.findOne({ where: { userId, videoId } }, { transaction: t });
         if (rate)
             return res.status(400).json({ message: "You already rated this video" });
 
         await Rate.create({ userId, videoId, rating }, { transaction: t });
 
-        const videoMetadata = await VideoMetadata.findOne({ where: { videoId: videoId } });
         const newTotalRatings = videoMetadata.totalRatings + 1;
         const newTotalRating = videoMetadata.totalRating + rating;
         const newAverageRating = newTotalRating / newTotalRatings;
@@ -47,6 +49,7 @@ const addRate = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 }
+
 
 module.exports = {
     addRate,

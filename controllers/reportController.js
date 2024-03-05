@@ -19,31 +19,34 @@ const createReport = async (req, res) => {
         }
 
         let referencedItem;
+        let referencedItemId;
+
         switch (referenceType) {
             case 1:
-                referencedItem = await User.findByPk(referenceId);
+                referencedItem = await User.findByPk(referenceId, { attributes: ['id'] });
+                referencedItemId = referencedItem?.id;
                 break;
             case 2:
-                referencedItem = await Comment.findByPk(referenceId);
+                referencedItem = await Comment.findByPk(referenceId, { attributes: ['userId'] });
+                referencedItemId = referencedItem?.userId;
                 break;
             case 3:
-                referencedItem = await Video.findByPk(referenceId);
+                referencedItem = await Video.findByPk(referenceId, { attributes: ['creatorId'] });
+                referencedItemId = referencedItem?.creatorId;
                 break;
             case 4:
-                referencedItem = await Message.findByPk(referenceId);
+                referencedItem = await Message.findByPk(referenceId, { attributes: ['senderId'] });
+                referencedItemId = referencedItem?.senderId;
                 break;
             default:
                 break;
         }
-        
-        if (!referencedItem) {
+
+        if (!referencedItemId) {
             return res.status(400).json({ message: "Referenced item not found" });
         }
-        
-        if ((referenceType === 1 && userId === referencedItem.id) ||
-            (referenceType === 2 && userId === referencedItem.userId) ||
-            (referenceType === 3 && userId == referencedItem.creatorId) ||
-            (referenceType === 4 && userId == referencedItem.senderId)) {
+
+        if (userId === referencedItemId) {
             return res.status(400).json({ message: "You can't report yourself" });
         }
 
@@ -67,7 +70,10 @@ const createReport = async (req, res) => {
 const getReportById = async (req, res) => {
     try {
         const { userId } = req.user;
-        const userStatus = await UserStatus.findOne({ where: { userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId },
+            attributes: ['isAdmin'],
+        });
         if (!userStatus || !userStatus.isAdmin)
             return res.status(400).json({ message: "Unauthorized" });
 
@@ -159,7 +165,10 @@ const deleteReport = async (req, res) => {
             return res.status(404).json({ message: 'Report not found' });
         }
 
-        const userStatus = await UserStatus.findOne({ where: { userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId },
+            attributes: ['isAdmin'],
+        });
 
         if (userId !== report.userId && (!userStatus || !userStatus.isAdmin)) {
             return res.status(403).json({ message: 'You are not authorized to perform this action' });
@@ -176,7 +185,10 @@ const deleteReport = async (req, res) => {
 const setReportIsViewed = async (req, res) => {
     try {
         const { userId } = req.user;
-        const userStatus = await UserStatus.findOne({ where: { userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId },
+            attributes: ['isAdmin'],
+        });
         if (!userStatus || !userStatus.isAdmin)
             return res.status(400).json({ message: "Unauthorized" });
 
