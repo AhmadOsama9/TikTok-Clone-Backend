@@ -10,7 +10,10 @@ async function makeAdmin (userId) {
         if (!user)
             throw Error('User not found');
 
-        const userStatus = await UserStatus.findOne({ where: { userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId },
+            attributes: ['id', 'isAdmin']
+        });
         if (!userStatus)
             throw Error('User status not found');
 
@@ -21,6 +24,7 @@ async function makeAdmin (userId) {
 
     } catch (error) {
         console.log("Error in making a user an admin ", error);
+        throw new Error(error.message);
     }
 };
 

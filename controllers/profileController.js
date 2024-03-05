@@ -269,7 +269,6 @@ const getOtherUserProfile = async (req, res) => {
 }
 
 
-
 const getUserProfileImage = async (req, res) => {
     try {
 

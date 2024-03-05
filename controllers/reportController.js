@@ -109,6 +109,7 @@ const getAllReports = async (req, res) => {
     }
 };
 
+
 const getUnviewedReports = async (req, res) => {
     try {
         const { userId } = req.user;
