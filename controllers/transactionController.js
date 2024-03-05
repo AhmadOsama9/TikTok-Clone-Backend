@@ -6,18 +6,14 @@ const rechargeBalance = require("../helper/checkFirebaseForCardCode");
 
 
 
-/*
-1- Get Balance
-            Description: This api is used to get the balance of the user (JWT token).
-            It will return:
-                - Balance
-                - Transactions list
-*/
 const getBalanceAndTransactions = async (req, res) => {
     try {
         const { userId } = req.user;
 
-        const user = await User.findOne({ where: { id: userId } });
+        const user = await User.findOne({ 
+            where: { id: userId },
+            attributes: ['balance']
+        });
         if (!user) {
             return res.status(404).send({ message: "User not found" });
         }
@@ -50,14 +46,9 @@ const getBalanceAndTransactions = async (req, res) => {
     }
 }
 
-/*
-2- Add Balance
-            Description: This api is used to add balance to the user (JWT token).
-            The user must send the code of the card.
-            Parameters:
-                - card code
-//make it take the balance that we want to add for now
-*/
+
+//here should I use the update
+//instead of the save ?
 const addBalance = async (req, res) => { 
     const transaction = await sequelize.transaction();
     try {
@@ -67,7 +58,10 @@ const addBalance = async (req, res) => {
         if (!cardCode)
             return res.status(400).send({ message: "Card code is required" });
 
-        const user = await User.findOne({ where: { id: userId } });
+        const user = await User.findOne({ 
+            where: { id: userId },
+            attributes: ['id', 'balance']
+        });
         if (!user)
             return res.status(404).send({ message: "User not found" });
 
@@ -107,12 +101,18 @@ const sendGift = async (req, res) => {
             return res.status(400).send({ message: "Invalid balance" });
         }
 
-        const sender = await User.findOne({ where: { id: userId } });
+        const sender = await User.findOne({ 
+            where: { id: userId },
+            attributes: ['id', 'balance']
+        });
         if (!sender) {
             return res.status(404).send({ message: "User not found" });
         }
 
-        const receiver = await User.findOne({ where: { id: receiverId } });
+        const receiver = await User.findOne({ 
+            where: { id: receiverId },
+            attributes: ['id', 'balance']
+        });
         if (!receiver) {
             return res.status(404).send({ message: "Receiver not found" });
         }

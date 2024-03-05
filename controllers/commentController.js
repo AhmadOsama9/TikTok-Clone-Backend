@@ -14,7 +14,9 @@ const addComment = async (req, res) => {
         const { videoId, content } = req.body;
         const { userId } = req.user;
 
-        const video = await Video.findByPk(videoId);
+        const video = await Video.findByPk(videoId, {
+            attributes: ['id']
+        });
         if (!video) {
             return res.status(404).json({ message: 'Video not found' });
         }
@@ -22,7 +24,10 @@ const addComment = async (req, res) => {
         if (!content || content.trim() === '')
             return res.status(400).json({ message: 'Content is required' });
 
-        const userStatus = await UserStatus.findOne({ where: { userId: userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId: userId },
+            attributes: ['isVerified'] 
+        });
         const isUserVerified = userStatus ? userStatus.isVerified : false;
 
         const comment = await Comment.create({
@@ -39,7 +44,10 @@ const addComment = async (req, res) => {
         let match;
         while ((match = mentionRegex.exec(content)) !== null) {
             const mentionedUsername = match[1];
-            const mentionedUser = await User.findOne({ where: { username: mentionedUsername } });
+            const mentionedUser = await User.findOne({ 
+                where: { username: mentionedUsername },
+                attributes: ['id']
+            });
             if (mentionedUser) {
                 // Add a notification for the mentioned user
                 await addNotification(mentionedUser.id, videoId, comment.id, userId, 4, 'Mentioned in Comment', transaction);
@@ -64,12 +72,16 @@ const addGiftComment = async (req, res) => {
         if (!videoId || !giftType)
             return res.status(500).json({ message: "Invalid data" });
 
-        const video = await Video.findByPk(videoId);
+        const video = await Video.findByPk(videoId, {
+            attributes: ['id']
+        });
         if (!video) {
             return res.status(404).json({ message: 'Video not found' });
         }
 
-        const user = await User.findByPk(userId);
+        const user = await User.findByPk(userId, {
+            attributes: ['id', 'balance']
+        });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -93,7 +105,10 @@ const addGiftComment = async (req, res) => {
         user.balance -= giftPrice;
         await user.save({ transaction });
 
-        const userStatus = await UserStatus.findOne({ where: { userId: userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId: userId },
+            attributes: ['id', 'isVerified'] 
+        });
         const isUserVerified = userStatus ? userStatus.isVerified : false;
 
         const comment = await Comment.create({
@@ -111,7 +126,10 @@ const addGiftComment = async (req, res) => {
         while ((match = mentionRegex.exec(content)) !== null) {
             const mentionedUsername = match[1];
             console.log("enters the mentioning while loop");
-            const mentionedUser = await User.findOne({ where: { username: mentionedUsername } });
+            const mentionedUser = await User.findOne({ 
+                where: { username: mentionedUsername },
+                attributes: ['id']
+            });
             if (mentionedUser) {
                 console.log("found the mentionedUser");
                 await addNotification(mentionedUser.id, videoId, comment.id, userId, 4, 'Mentioned in Comment', transaction);
@@ -119,7 +137,9 @@ const addGiftComment = async (req, res) => {
         }
 
         const receiverId = video.creatorId;
-        const receiver = await User.findByPk(receiverId, { transaction });
+        const receiver = await User.findByPk(receiverId,
+            { attributes: ['id', 'balance']},
+            { transaction });
         if (!receiver)
             return res.status(404).json({ message: "Receiver not found" });
 
@@ -155,11 +175,16 @@ const replyToComment = async (req, res) => {
         if (!commentId)
             return res.status(400).json({ message: 'Comment id is required' });
 
-        const comment = await Comment.findByPk(commentId);
+        const comment = await Comment.findByPk(commentId, {
+            attributes: ['id']
+        });
         if (!comment)
             return res.status(500).json({ message: 'Comment not found' });
 
-        const userStatus = await UserStatus.findOne({ where: { userId: userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId: userId },
+            attributes: ['isVerified'] 
+        });
         const isUserVerified = userStatus ? userStatus.isVerified : false;
 
         const reply = await Comment.create({
@@ -174,7 +199,10 @@ const replyToComment = async (req, res) => {
         let match;
         while ((match = mentionRegex.exec(content)) !== null) {
             const mentionedUsername = match[1];
-            const mentionedUser = await User.findOne({ where: { username: mentionedUsername } });
+            const mentionedUser = await User.findOne({ 
+                where: { username: mentionedUsername },
+                attributes: ['id']
+            });
             if (mentionedUser) {
                 // Add a notification for the mentioned user
                 await addNotification(mentionedUser.id, comment.videoId, reply.id, userId, 4, 'Mentioned in Comment', transaction);
@@ -198,7 +226,9 @@ const updateComment = async (req, res) => {
         const { content } = req.body;
         const { userId } = req.user;
         
-        const comment = await Comment.findByPk(commentId);
+        const comment = await Comment.findByPk(commentId, {
+            attributes: ['id', 'content']
+        });
         if (!comment) {
             return res.status(404).json({ message: 'Comment not found' });
         }
@@ -231,7 +261,9 @@ const getCommentUsingId = async (req, res) => {
         if (!commentId)
             return res.status(400).json({ message: 'Comment id is required' });
 
-        const userStatus = await UserStatus.findByPk(userId);
+        const userStatus = await UserStatus.findByPk(userId, {
+            attributes: ['isAdmin']
+        });
         if (!userStatus || !userStatus.isAdmin)
             return res.status(403).json({ message: 'You are not authorized to view this comment' });
 
@@ -254,7 +286,9 @@ const deleteComment = async (req, res) => {
         if (!commentId)
             return res.status(400).json({ message: 'Comment id is required' });
 
-        const userStatus = await UserStatus.findByPk(userId);
+        const userStatus = await UserStatus.findByPk(userId, {
+            attributes: ['isAdmin']
+        });
         if (!userStatus) {
             return res.status(404).json({ message: 'UserStatus not found' });
         }
@@ -289,13 +323,18 @@ const likeAndUnlikeComment = async (req, res) => {
         if (!commentId)
             return res.status(400).json({ message: 'Comment id is required' });
 
-        const comment = await Comment.findByPk(commentId);
+        const comment = await Comment.findByPk(commentId, {
+            attributes: ['id', 'likeCount']
+        });
         if (!comment)
             return res.status(404).json({ message: 'Comment not found' });
 
         transaction = await sequelize.transaction();
 
-        const existingLike = await CommentLike.findOne({ where: { userId, commentId } });
+        const existingLike = await CommentLike.findOne({ 
+            where: { userId, commentId },
+            attributes: ['id'] 
+        });
         if (existingLike) {
             await existingLike.destroy({ transaction });
             await comment.decrement('likeCount', { transaction });

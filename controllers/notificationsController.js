@@ -2,6 +2,7 @@ const Notification = require("../config/db").Notification;
 const User = require("../config/db").User;
 const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
+const Sequelize = require("sequelize");
 
 
 async function addNotification (userId, videoId, commentId, otherUserId, notificationType, title, transaction ) {
@@ -35,17 +36,6 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
                 throw new Error('User not found');
         }
 
-        const notificationsCount = await Notification.count({ where: { userId } });
-        if (notificationsCount >= 20) {
-            const oldestNotification = await Notification.findOne({
-                where: { userId },
-                order: [['createdAt', 'ASC']]
-            });
-            if (oldestNotification) {
-                await oldestNotification.destroy({ transaction });
-            }
-        }
-
         const similarNotification = await Notification.findOne({
             where: { 
                 userId, 
@@ -55,27 +45,31 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
         });
 
         if (similarNotification) {
-            similarNotification.count += 1;
+            await Notification.update(
+                { count: Sequelize.literal('count + 1') },
+                { where: { id: similarNotification.id }, transaction }
+            );
 
+            let body;
             switch (notificationType) {
                 case 1:
-                    similarNotification.body = `Your video has been liked ${similarNotification.count} times.`;
+                    body = `Your video has been liked ${similarNotification.count + 1} times.`;
                     break;
                 case 2:
-                    similarNotification.body = `Your video has received ${similarNotification.count} comments.`;
+                    body = `Your video has received ${similarNotification.count + 1} comments.`;
                     break;
                 case 3:
-                    similarNotification.body = `You have ${similarNotification.count} new followers.`;
+                    body = `You have ${similarNotification.count + 1} new followers.`;
                     break;
                 case 4:
-                    similarNotification.body = `You have been mentioned ${similarNotification.count} times.`;
+                    body = `You have been mentioned ${similarNotification.count + 1} times.`;
                     break;
                 case 5:
-                    similarNotification.body = `Your video has received ${similarNotification.count} gift comments.`;
+                    body = `Your video has received ${similarNotification.count + 1} gift comments.`;
                     break;
             }
 
-            await similarNotification.save({ transaction });
+            await similarNotification.update({ body }, { transaction });
         } else {
             let body;
             switch (notificationType) {
@@ -105,6 +99,7 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
 }
 
 
+
 const getNotifications = async (req, res) => { 
     try {
         const { userId } = req.user;
@@ -128,7 +123,8 @@ const markNotificationAsRead = async (req, res) => {
             where: { 
                 id: notificationId,
                 userId: userId
-            }
+            },
+            attributes: ['id', 'isRead']
         });
         if (!notification) {
             return res.status(400).json({ error: "Notification not found" });
@@ -167,7 +163,8 @@ const deleteNotification = async (req, res) => {
             where: {
                 id: notificationId,
                 userId: userId
-            }
+            },
+            attributes: ['id']
         });
         if (!notification) {
             return res.status(400).json({ error: "Notification not found" });

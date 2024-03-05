@@ -93,7 +93,10 @@ const getAllReports = async (req, res) => {
     try {
         const { userId } = req.user;
 
-        const userStatus = await UserStatus.findOne({ where: { userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId },
+            attributes: ['isAdmin']
+        });
 
         if (!userStatus || !userStatus.isAdmin) {
             return res.status(403).json({ message: 'You are not authorized to perform this action' });
@@ -109,7 +112,10 @@ const getAllReports = async (req, res) => {
 const getUnviewedReports = async (req, res) => {
     try {
         const { userId } = req.user;
-        const userStatus = await UserStatus.findOne({ where: { userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId },
+            attributes: ['isAdmin']
+        });
 
         if (!userStatus || !userStatus.isAdmin) {
             return res.status(403).json({ message: 'You are not authorized to perform this action' });
@@ -126,6 +132,9 @@ const getUnviewedReports = async (req, res) => {
 };
 
 
+//here will it work
+//cause I don't select the title and description
+//will the update still works ?
 const updateReport = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -134,7 +143,9 @@ const updateReport = async (req, res) => {
         if (!title && !description)
             return res.status(400).json({ message: "At least one field is required" });
 
-        const report = await Report.findByPk(reportId);
+        const report = await Report.findByPk(reportId, {
+            attributes: ['id']
+        });
         if (!report)
             return res.status(404).json({ message: "Report not found" });
             
@@ -159,7 +170,9 @@ const deleteReport = async (req, res) => {
     const reportId = req.params.id;
 
     try {
-        const report = await Report.findByPk(reportId);
+        const report = await Report.findByPk(reportId, {
+            attributes: ['id']
+        });
 
         if (!report) {
             return res.status(404).json({ message: 'Report not found' });
@@ -182,6 +195,8 @@ const deleteReport = async (req, res) => {
     }
 };
 
+
+//I think I should use the upate here instead of the save
 const setReportIsViewed = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -193,7 +208,9 @@ const setReportIsViewed = async (req, res) => {
             return res.status(400).json({ message: "Unauthorized" });
 
         const reportId = req.params.id;
-        const report = await Report.findByPk(reportId);
+        const report = await Report.findByPk(reportId, {
+            attributes: ['id', 'isViewed']
+        });
         if (!report) {
             return res.status(404).json({ message: "Report not found" });
         }
