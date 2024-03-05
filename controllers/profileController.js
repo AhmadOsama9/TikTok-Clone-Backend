@@ -1,5 +1,6 @@
 const User = require("../config/db").User;
 const UserAuth = require("../config/db").UserAuth;
+const UserStatus = require("../config/db").UserStatus;
 const Profile = require("../config/db").Profile;
 const Follow = require("../config/db").Follow;
 const Video = require("../config/db").Video;
@@ -161,7 +162,7 @@ async function getVideosUsingPagination(userId, offset = 0) {
     console.log("userId: ", userId);
     const videos = await Video.findAll({ 
         where: { creatorId: userId },
-        limit: 5,
+        limit: process.env.PROFILE_VIDEOS_LIMIT || 5,
         offset: offset,
         attributes: ['id']
     });
@@ -182,6 +183,11 @@ const getUserProfile = async (req, res) => {
             where: { id: userId },
             include: [
                 { model: Profile, as: 'profile' },
+                { 
+                    model: UserStatus, 
+                    as: 'userStatus',
+                    attributes: ['isVerified']
+                }
             ],
             attributes: ['id']
         });
@@ -204,7 +210,7 @@ const getUserProfile = async (req, res) => {
             videos: videoData,
             photoUrl: imageUrl,
             numberOfVideos: videoData.length,
-            isverified: user.isVerified,
+            isverified: user.userStatus.isVerified,
             referrals: user.referrals || 0, 
             totalLikes
         };
@@ -228,6 +234,11 @@ const getOtherUserProfile = async (req, res) => {
             where: { id: otherUserId },
             include: [
                 { model: Profile, as: 'profile' },
+                { 
+                    model: UserStatus, 
+                    as: 'userStatus',
+                    attributes: ['isVerified']
+                }
             ],
             attributes: ['id']
         });
@@ -248,7 +259,7 @@ const getOtherUserProfile = async (req, res) => {
             videos: videoData,
             photoUrl: imageUrl,
             numberOfVideos: videoData.length,
-            isverified: user.isVerified
+            isverified: user.userStatus.isVerified
         };
 
         res.status(200).json(userProfile);
@@ -342,7 +353,7 @@ const classifyImage = async (buffer) => {
 
 };
 
-const uploadImageToCloudStorage = async (buffer, fileType, userId, profile) => {
+const uploadImageToCloudStorage = async (buffer, userId, profile) => {
     const bucket = storage.bucket(bucketName);
     const fileName = `profileImages/${userId}/${Date.now()}.jpeg`;
     const file = bucket.file(fileName);
@@ -396,15 +407,18 @@ const changeProfileImage = async (req, res) => {
 
         const buffer = req.file.buffer;
 
-        const { fileType, compressedBuffer } = await validateAndCompressImage(buffer);
+        const { compressedBuffer } = await validateAndCompressImage(buffer);
         await classifyImage(compressedBuffer);
 
-        const profile = await Profile.findOne({ where: { userId } });
+        const profile = await Profile.findOne({ 
+            where: { userId },
+            attributes: ['id', 'imageFileName'] 
+        });
         if (!profile) {
             return res.status(404).json({ error: "Profile not found" });
         }
 
-        const fileName = await uploadImageToCloudStorage(compressedBuffer, fileType, userId, profile);
+        const fileName = await uploadImageToCloudStorage(compressedBuffer, userId, profile);
 
         res.status(200).json({ 
             message1: "Profile picture changed successfully", 
@@ -416,14 +430,6 @@ const changeProfileImage = async (req, res) => {
     }
 };
 
-/*
-2- Change Profile Password
-        Description: This api is used to change the profile password of the user.
-        The user must send the old password and the new password.
-        Parameters:
-            - old password
-            - new password
-*/
 
 const changeProfilePassword = async (req, res) => {
     try {
@@ -434,7 +440,10 @@ const changeProfilePassword = async (req, res) => {
             return res.status(400).json({ error: "they are the same password"});
 
 
-        const user = await User.findOne({ where: { id: userId } });
+        const user = await User.findOne({ 
+            where: { id: userId }, 
+            attributes: ['id', 'password']
+        });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
@@ -455,12 +464,6 @@ const changeProfilePassword = async (req, res) => {
     }
 }
 
-/* 3- Change Profile Name
-        Description: This api is used to change the profile name of the user.
-        The user must send the new name.
-        Parameters:
-            - new name */
-
 const changeProfileName = async (req, res) => { 
     try {
         const { userId } = req.user;
@@ -468,7 +471,10 @@ const changeProfileName = async (req, res) => {
         
         newName = newName.toLowerCase();
 
-        const user = await User.findOne({ where: { id: userId } });
+        const user = await User.findOne({ 
+            where: { id: userId },
+            attributes: ['id', 'name']
+        });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
@@ -484,18 +490,6 @@ const changeProfileName = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }   
-
-
-/*
-4- Change Profile Email
-        Description: This api is used to change the profile email of the user.
-        The user must send the new email. An email verification will be sent to the new email. The user must verify the new email to complete the process.
-        Parameters:
-            - new email
-
-        1-send verification newEmail
-        2-verification and the newEmail
-*/
 
 const sendVerificationToNewEmail = async (req, res) => { 
     try {
@@ -609,17 +603,6 @@ const verificationAndSetNewEmail = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }
-
-
-
-
-/*
-5- Change Profile Phone
-        Description: This api is used to change the profile phone of the user.
-        The user must send the new phone.
-        Parameters:
-            - new phone
-*/
 
 
 
@@ -773,6 +756,7 @@ const getSavedVideosUsingPagination = async (req, res) => {
             }],
             limit: process.env.SAVED_VIDEOS_LIMIT || 5,
             offset: offset, 
+            attributes: ['id']
         });
 
         const formattedVideos = await Promise.all(savedVideos.map(async savedVideo => {
