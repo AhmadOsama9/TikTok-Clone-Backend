@@ -17,7 +17,6 @@ const { Op } = require("sequelize");
 const { getSignedUrl } = require("./profileController");
 
 
-
 const signup = async (req, res) => {
     let transaction;
     try {
@@ -34,7 +33,6 @@ const signup = async (req, res) => {
         if (!validator.isEmail(email)) {
             return res.status(400).json({ error: 'Invalid email address' });
         }
-        
 
         const existingUser = await User.findOne({
             where: {
@@ -67,7 +65,7 @@ const signup = async (req, res) => {
             charset: 'numeric',
         });
 
-        await UserAuth.update({ authCode: verificationCode, authCodeExpiry: Date.now() + 600000 }, { where: { userId: user.id }, transaction });
+        await UserAuth.update({ authCode: verificationCode, authCodeExpiry: Date.now() + Number(process.env.AUTH_CODE_EXPIRY) }, { where: { userId: user.id }, transaction });
     
         const transporter = nodemailer.createTransport({
             service: 'Gmail',
@@ -91,10 +89,6 @@ const signup = async (req, res) => {
                 <p>The Story App Team</p>
             `,
         };
-
-        user.verificationCode = verificationCode;
-        user.verificationCodeExpiry = Date.now() + 600000;
-        await user.save({ transaction });
 
         const sendMail = await transporter.sendMail(mailOptions);
         if (!sendMail) {
@@ -188,27 +182,29 @@ const verifyEmailCode = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
+
 const login = async (req, res) => {
     try {
         let { email, password } = req.body;
 
         email = email.toLowerCase();
 
-        const [user, userStatus, userAuth] = await Promise.all([
-            User.findOne({ 
-                where: { email },
-                attributes: ['id', 'name', 'email', 'password', 'phone', 'referralCode', 'username'],
-            }),
+        const user = await User.findOne({ 
+            where: { email },
+            attributes: ['id', 'name', 'email', 'password', 'phone', 'referralCode', 'username'],
+        });
+
+        if (!user) {
+            return res.status(400).json({ error: 'User with this email does not exist' });
+        }
+
+        const [userStatus, userAuth] = await Promise.all([
             UserStatus.findOne({ 
                 where: { userId: user.id },
                 attributes: ['isBanned', 'isVerified'] 
             }),
             UserAuth.findOne({ where: { userId: user.id, authType: 1 } }),
         ]);
-
-        if (!user) {
-            return res.status(400).json({ error: 'User with this email does not exist' });
-        }
 
         if (userStatus.isBanned) {
             return res.status(400).json({ error: 'This user is banned' });
@@ -242,19 +238,6 @@ const login = async (req, res) => {
 };
 
 
-/*
-8-  Profile Password
-        Description: This api is used to reset the profile password of the user.
-        An email verification will be sent to the email. The user must verify the email to complete the process. The system will redirect the user to change the password.
-        Parameters:
-            - email
-        A new request needed to get the OTP. If the OTP is correct, the user will be redirected to change the password.
-
-        1-send otp to the email
-        2-verify otp and set New password 
-*/
-
-
 //1-send otp to the email
 const sendOtp = async (req, res) => {
     try {
@@ -275,7 +258,7 @@ const sendOtp = async (req, res) => {
                 attributes: ['id', 'authCode', 'authCodeExpiry'],
                 required: true,
             }],
-            attributes: ['id', 'email'], // Select only the id and email attributes from the User model
+            attributes: ['id', 'email'],
         });
 
         if (!user) {
@@ -284,13 +267,17 @@ const sendOtp = async (req, res) => {
 
         const userAuth = user.userAuth;
 
+        if (userAuth.authCode && Date.now() < userAuth.authCodeExpiry) {
+            return res.status(200).json({ message: 'An OTP has already been sent. Please check your email.' });
+        }
+
         const otp = randomstring.generate({
             length: 6,
             charset: 'numeric',
         });
 
         userAuth.authCode = otp;
-        userAuth.authCodeExpiry = Date.now() + 3600000; // 3600000 milliseconds = 1 hour
+        userAuth.authCodeExpiry = Date.now() + Number(process.env.AUTH_CODE_EXPIRY);
         await userAuth.save();
 
         const transporter = nodemailer.createTransport({
@@ -385,13 +372,17 @@ const sendVerificationCode = async (req, res) => {
             return res.status(400).json({ error: 'Email already verified' });
         }
 
+        if (userAuth.authCode && Date.now() < userAuth.authCodeExpiry) {
+            return res.status(200).json({ message: 'A Verification code has already been sent. Please check your email.' });
+        }
+
         const verificationCode = randomstring.generate({
             length: 6,
             charset: 'numeric',
         });
 
         userAuth.authCode = verificationCode;
-        userAuth.authCodeExpiry = Date.now() + 600000; // 600000 milliseconds = 10 minutes
+        userAuth.authCodeExpiry = Date.now() + Number(process.env.AUTH_CODE_EXPIRY);
         await userAuth.save();
 
         const transporter = nodemailer.createTransport({
@@ -659,7 +650,7 @@ const getUserInfo = async (req, res) => {
         }
 
         const otherUser = await User.findByPk(otherUserId, {
-            attributes: ['id', 'name', 'email', 'phone', 'referralCode', 'userName'],
+            attributes: ['id', 'name', 'email', 'phone', 'referralCode', 'username'],
         });
         if (!otherUser) {
             return res.status(400).json({ error: 'User with this id does not exist' });
@@ -699,9 +690,13 @@ const setUserIsVerified = async (req, res) => {
             return res.status(403).json({ error: 'You are not an admin' });
         }
 
-        const toBeVerifiedUserStatus = await UserStatus.findOne({ where: { userId: toBeVerifiedUserId }, attributes: ['isVerified'] });
+        const toBeVerifiedUserStatus = await UserStatus.findOne({ where: { userId: toBeVerifiedUserId }, attributes: ['id', 'isVerified'] });
         if (!toBeVerifiedUserStatus) {
             return res.status(400).json({ error: 'User status for this id does not exist' });
+        }
+
+        if (toBeVerifiedUserStatus.isVerified) {
+            return res.status(400).json({ error: 'User is already verified' });
         }
 
         toBeVerifiedUserStatus.isVerified = true;

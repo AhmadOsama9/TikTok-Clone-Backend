@@ -95,9 +95,11 @@ app.use((req, res, next) => {
 const { initializeModel } = require("./helper/initializeAndGetModel");
 
 
-initializeModel().catch(error => {
-    console.error('Failed to initialize model:', error);
-});
+initializeModel().then(() => {
+    console.log("Initialized model");
+}).catch((error) => {
+    console.error("Failed to initialize model:", error);
+})
 
 // function sanitizeInput(req, res, next) {
 //     for (let key in req.body) {
@@ -137,8 +139,6 @@ app.use("/api/user-personalization/", UserPersonalizationRoutes);
 
 
 const makeAdmin = require("./controllers/adminController");
-const { initialize } = require("passport");
-const initializeModel = require("./helper/initializeAndGetModel");
 //makeAdmin(1);
 
 
