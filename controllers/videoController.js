@@ -30,14 +30,7 @@ const deleteFromCloudStorage = require("../cloudFunctions/deleteFiles");
 const fetchVideoData = require("../helper/fetchVideoData");
 const mapCommentsData = require("../helper/mapCommentsData");
 
-//I plan on finding the best algorithm
-//for the detection of the inappropriate content
-//like checking multiple repetative frames and if they 
-//have the same or soo near ratio then mostly true
-//also I need to the best way for the getting the frames
-//Also I need to check the audio if there's anything free
-//like NSFW audio or something like that
-
+const { getModel } = require("../helper/initializeAndGetModel");
 
 
 
@@ -59,6 +52,15 @@ const getVideoInfo = (videoPath) => {
     });
 };
 
+const BITRATE_FACTORS = {
+    '2500000': parseFloat(process.env.BITRATE_FACTOR_2500000 || '0.55'),
+    '2000000': parseFloat(process.env.BITRATE_FACTOR_2000000 || '0.6'),
+    '1500000': parseFloat(process.env.BITRATE_FACTOR_1500000 || '0.65'),
+    '1000000': parseFloat(process.env.BITRATE_FACTOR_1000000 || '0.7'),
+    '500000': parseFloat(process.env.BITRATE_FACTOR_500000 || '0.75'),
+    'default': parseFloat(process.env.BITRATE_FACTOR_DEFAULT || '0.8'),
+};
+
 const compressVideo = (req, videoPath, { bitrate, fps, resolution }) => {
     return new Promise((resolve, reject) => {
         let targetBitrate = null;
@@ -70,15 +72,6 @@ const compressVideo = (req, videoPath, { bitrate, fps, resolution }) => {
             name: path.basename(videoPath, path.extname(videoPath)),
             ext: '.tmp' + path.extname(videoPath)
         });
-
-        const BITRATE_FACTORS = {
-            '2500000': parseFloat(process.env.BITRATE_FACTOR_2500000 || '0.55'),
-            '2000000': parseFloat(process.env.BITRATE_FACTOR_2000000 || '0.6'),
-            '1500000': parseFloat(process.env.BITRATE_FACTOR_1500000 || '0.65'),
-            '1000000': parseFloat(process.env.BITRATE_FACTOR_1000000 || '0.7'),
-            '500000': parseFloat(process.env.BITRATE_FACTOR_500000 || '0.75'),
-            'default': parseFloat(process.env.BITRATE_FACTOR_DEFAULT || '0.8'),
-        };
 
         if (bitrate > 2500000) { 
             targetBitrate = bitrate * BITRATE_FACTORS['2500000'];
@@ -158,14 +151,17 @@ const extractFramesFromVideo = (videoPath) => {
     });
 };
 
+const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
+const sexyThreshold = process.env.SEXY_THRESHOLD || 0.85;
+const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
+
+
+
+
 const checkVideoContent = async (videoPath ,res) => {
     try {
         console.log("checkVideoContent function called")
-        const model = await nsfwjs.load();
-
-        const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
-        const sexyThreshold = process.env.SEXY_THRESHOLD || 0.85;
-        const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
+        const model = getModel();
 
         console.log("Before extracting frames from video");
         const framesStream = await extractFramesFromVideo(videoPath);
@@ -228,12 +224,9 @@ const validateAndCompressThumbnail = async (imagePath) => {
         const buffer = await fs.promises.readFile(imagePath);
         const imageTensor = tf.node.decodeImage(buffer);
 
-        const model = await nsfwjs.load();
-        const predictions = await model.classify(imageTensor);
+        const model = getModel();
 
-        const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
-        const sexyThreshold = process.env.SEXY_THRESHOLD || 0.85;
-        const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
+        const predictions = await model.classify(imageTensor);
 
         const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
         const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
@@ -521,7 +514,7 @@ const updateVideoDescription = async (req, res) => {
     try {
         const { userId } = req.user;
 
-        const videoId = req.params.id;
+        const videoId = req.params.videoId;
 
         if (!req.body.description) {
             return res.status(400).json({ message: "Description is required" });
@@ -547,13 +540,16 @@ const updateVideoDescription = async (req, res) => {
 }
 
 const likeVideo = async (userId, videoId, transaction) => {
-    const video = await Video.findByPk(videoId);
+    const video = await Video.findByPk(videoId, { attributes: ['id', 'creatorId'] });
     if (!video)
         throw new Error('Video not found');
 
     await VideoLike.create({ userId, videoId }, { transaction });
 
-    const videoMetadata = await VideoMetadata.findOne({ where: { videoId } });
+    const videoMetadata = await VideoMetadata.findOne({ 
+        where: { videoId },
+        attributes: ['likeCount'],
+    });
     // Increment the likeCount atomically
     await videoMetadata.increment('likeCount', { transaction });
 
@@ -561,7 +557,7 @@ const likeVideo = async (userId, videoId, transaction) => {
 };
 
 const unlikeVideo = async (userId, videoId, transaction) => {
-    const video = await Video.findByPk(videoId);
+    const video = await Video.findByPk(videoId, { attributes: ['id'] });
     if (!video)
         throw new Error('Video not found');
 
@@ -569,7 +565,10 @@ const unlikeVideo = async (userId, videoId, transaction) => {
     if (like) {
         await like.destroy({ transaction });
 
-        const videoMetadata = await VideoMetadata.findOne({ where: { videoId } });
+        const videoMetadata = await VideoMetadata.findOne({ 
+            where: { videoId },
+            attributes: ['likeCount'],
+        });
         // Decrement the likeCount atomically
         await videoMetadata.decrement('likeCount', { transaction });
     }
@@ -611,11 +610,10 @@ const shareVideo = async (req, res) => {
             return res.status(400).json({ message: "Video ID is required" });
         }
 
-        const video = await Video.findOne({ where: { id: videoId } });
-        if (!video)
-            return res.status(404).json({ message: "Video not found" });
-
-        const videoMetadata = await VideoMetadata.findOne({ where: { videoId } });
+        const videoMetadata = await VideoMetadata.findOne({ 
+            where: { videoId },
+            attributes: ['id'],
+        });
         if (!videoMetadata)
             return res.status(404).json({ message: "Video metadata not found" });
 
@@ -748,13 +746,9 @@ const viewVideo = async (req, res) => {
     let transaction;
     try {
         const { userId } = req.user;
-        const { videoId } = req.body;
-        let { viewStrength } = req.body;
+        const { videoId, viewStrength } = req.body;
 
-        if (!viewStrength)
-            return res.status(400).json({ message: "View strength is required" });
-
-        if (viewStrength < 1 || viewStrength > 4)
+        if (!viewStrength || viewStrength < 1 || viewStrength > 4)
             return res.status(400).json({ message: "Invalid view strength" });
 
         if (!videoId)
@@ -764,17 +758,20 @@ const viewVideo = async (req, res) => {
         if (!video)
             return res.status(404).json({ message: "Video not found" });
 
-        const videoMetadata = await VideoMetadata.findOne({ where: { videoId } });
+        transaction = await sequelize.transaction();
+
+        const videoMetadata = await VideoMetadata.findOne({ 
+            where: { videoId },
+            attributes: ['id'],
+            transaction,
+        });
         if (!videoMetadata)
             return res.status(404).json({ message: "Video metadata not found" });
-
-        transaction = await sequelize.transaction();
 
         await videoMetadata.increment('viewCount', { transaction });
 
         const existingView = await VideoView.findOne({ where: { userId, videoId }, transaction });
 
-        // To update the viewStrength
         if (existingView) {
             if (existingView.viewStrength < 4) {
                 await existingView.increment('viewStrength', { by: 1, transaction });
@@ -790,7 +787,7 @@ const viewVideo = async (req, res) => {
         if (transaction) await transaction.rollback();
         return res.status(500).json({ error: error.message });
     }
-}
+};
 
 
 const getVideo = async (req, res) => {
@@ -826,16 +823,19 @@ const getFollowingsVideos = async (req, res) => {
         order: [[{ model: VideoMetadata, as: 'metadata' }, 'popularityScore', 'DESC']],
       });
   
-      const videoResponses = await Promise.all(videos.map(video => fetchVideoData(video.id, userId)));
+      const videoIds = videos.map(video => video.id);
+      const videosData = await fetchVideoData(videoIds, userId);
   
-      return res.status(200).json({ videos: videoResponses });        
+      return res.status(200).json({ videos: videosData });        
        
     } catch (error) {
       return res.status(500).json({ error: error.message});
     }
-  }
+}
+
+
   
-  const getFollowersVideos = async (req, res) => {
+const getFollowersVideos = async (req, res) => {
     try {
       const { userId } = req.user;
       const { offset = 0 } = req.query;
@@ -854,9 +854,11 @@ const getFollowingsVideos = async (req, res) => {
         order: [[{ model: VideoMetadata, as: 'metadata' }, 'popularityScore', 'DESC']],
       });
   
-      const videoResponses = await Promise.all(videos.map(video => fetchVideoData(video.id, userId)));
+      const videoIds = videos.map(video => video.id);
+      const videosData = await fetchVideoData(videoIds, userId);
+
   
-      return res.status(200).json({ videos: videoResponses });        
+      return res.status(200).json({ videos: videosData });        
        
     } catch (error) {
       return res.status(500).json({ error: error.message});

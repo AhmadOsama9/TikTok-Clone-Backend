@@ -1,4 +1,5 @@
 const User = require("../config/db").User;
+const UserAuth = require("../config/db").UserAuth;
 const Profile = require("../config/db").Profile;
 const Follow = require("../config/db").Follow;
 const Video = require("../config/db").Video;
@@ -10,12 +11,17 @@ const randomstring = require('randomstring');
 const bcrypt = require("bcrypt");
 const Jimp = require("jimp");
 const { Op } = require('sequelize');
+const validator = require('validator');
 
 const nsfwjs = require("nsfwjs");
 const tf = require("@tensorflow/tfjs-node");
 
 const storage = require("../config/cloudStorage");
 const bucketName = process.env.IMAGE_BUCKET_NAME || "kn_story_app";
+
+const fetchVideoData = require("../helper/fetchVideoData");
+const { getModel } = require("../helper/initializeAndGetModel");
+
 
 async function listFiles() {
     const [files] = await storage.bucket(bucketName).getFiles();
@@ -157,46 +163,13 @@ async function getVideosUsingPagination(userId, offset = 0) {
         where: { creatorId: userId },
         limit: 5,
         offset: offset,
+        attributes: ['id']
     });
 
     console.log("videos", videos);
     const videoIds = videos.map(video => video.id);
 
-    // Fetch all comments for the fetched videos in a single query
-    const comments = await Comment.findAll({ where: { videoId: { [Op.in]: videoIds } } });
-
-    // Group comments by videoId
-    const commentsByVideoId = comments.reduce((groupedComments, comment) => {
-        (groupedComments[comment.videoId] = groupedComments[comment.videoId] || []).push(comment);
-        return groupedComments;
-    }, {});
-
-    const videoData = await Promise.all(videos.map(async video => {
-    const commentsCount = await Comment.count({ where: { videoId: video.id } });
-
-    if (!video.thumbnailFileName)
-        console.log("Video thumbnail file not found");
-
-    if (!video.fileName)
-        console.log("Video file not found")
-
-    let thumbnailUrl = null, videoUrl = null;
-    if (video.thumbnailFileName) 
-        thumbnailUrl = await getSignedUrl(video.thumbnailFileName);
-    if (video.fileName)
-        videoUrl = await getSignedUrl(video.fileName);
-
-    return {
-        id: video.id,
-        videoUrl: videoUrl,
-        thumbnailUrl: thumbnailUrl,
-        likes: video.likes,
-        commentsCount,
-        sharesCount: video.shareCount,
-        views: video.viewsCount,
-        rating: video.averageRating 
-    };
-}));
+    const videoData = await fetchVideoData(videoIds, userId);
 
     return videoData;
 }
@@ -209,7 +182,8 @@ const getUserProfile = async (req, res) => {
             where: { id: userId },
             include: [
                 { model: Profile, as: 'profile' },
-            ]
+            ],
+            attributes: ['id']
         });
 
         let imageUrl = null;
@@ -254,7 +228,8 @@ const getOtherUserProfile = async (req, res) => {
             where: { id: otherUserId },
             include: [
                 { model: Profile, as: 'profile' },
-            ]
+            ],
+            attributes: ['id']
         });
 
         let imageUrl = null;
@@ -331,7 +306,7 @@ const getOtherUserProfileImage = async (req, res) => {
 }
 
 const validateAndCompressImage = async (buffer) => {
-    if (buffer.length > 0.2 * 1024 * 1024) {
+    if (buffer.length > process.env.MAX_IMAGE_SIZE) {
         throw new Error("Image size should be less than 200KB");
     }
 
@@ -349,7 +324,8 @@ const validateAndCompressImage = async (buffer) => {
 
 const classifyImage = async (buffer) => {
     const imageTensor = tf.node.decodeImage(buffer);
-    const model = await nsfwjs.load();
+    const model = getModel();
+
     const predictions = await model.classify(imageTensor);
 
     const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
@@ -454,6 +430,10 @@ const changeProfilePassword = async (req, res) => {
         const { userId } = req.user;
         const { oldPassword, newPassword } = req.body;
 
+        if (oldPassword === newPassword)
+            return res.status(400).json({ error: "they are the same password"});
+
+
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
@@ -493,6 +473,9 @@ const changeProfileName = async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
+        if (user.name === newName)
+            return res.statsu(400).json({ error: "they are the same name"});
+
         user.name = newName;
         await user.save();
 
@@ -514,14 +497,28 @@ const changeProfileName = async (req, res) => {
         2-verification and the newEmail
 */
 
-//send verification to the newEmail
 const sendVerificationToNewEmail = async (req, res) => { 
     try {
         const { userId } = req.user;
         let { newEmail, password } = req.body;
         newEmail = newEmail.toLowerCase();
 
-        const user = await User.findOne({ where: { id: userId } });
+        if (!validator.isEmail(newEmail)) {
+            return res.status(400).json({ error: 'Invalid email address' });
+        }
+
+        const userAuth = await UserAuth.findOne({ 
+            where: { userId },
+            attributes: ['id', 'authCode', 'authCodeExpiry']
+        });
+        if (!userAuth) {
+            return res.status(404).json({ error: "User authentication not found" });
+        }
+
+        const user = await User.findOne({ 
+            where: { id: userId },
+            attributes: ['id', 'email', 'password'] 
+        });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
@@ -531,21 +528,19 @@ const sendVerificationToNewEmail = async (req, res) => {
             return res.status(400).json({ error: "Invalid password" });
         }
 
-        const emailExists = await User.findOne({ where: { email: newEmail } });
+        const emailExists = await User.findOne({ 
+            where: { email: newEmail },
+            attributes: ['id']
+        });
         if (emailExists) {
             return res.status(400).json({ error: "Email already exists" });
-        }
-
-        const newEmailRegex = /^[\w-]+(\.[\w-]+)*@(gmail\.com|yahoo\.com|outlook\.com)$/;
-        if (!newEmailRegex.test(newEmail)) {
-            return res.status(400).json({ error: 'Invalid email format' });
         }
 
         const verificationCode = randomstring.generate({
             length: 6,
             charset: 'numeric',
         });
-    
+
         const transporter = nodemailer.createTransport({
             service: 'Gmail',
             auth: {
@@ -573,9 +568,9 @@ const sendVerificationToNewEmail = async (req, res) => {
             throw Error("Couldn't send the code to the email");
         }
 
-        user.verificationCode = verificationCode;
-        user.verificationCodeExpiry = Date.now() + 600000;
-        await user.save();
+        userAuth.authCode = verificationCode;
+        userAuth.authCodeExpiry = new Date(Date.now() + 600000);
+        await userAuth.save();
 
         return res.status(200).json({ message: "Verification code sent successfully" });
 
@@ -584,32 +579,29 @@ const sendVerificationToNewEmail = async (req, res) => {
     }
 }
 
-//verification and set the newEmail
 const verificationAndSetNewEmail = async (req, res) => { 
     try {
         const { userId } = req.user;
-        const { verificationCode } = req.body;
-        let { newEmail } = req.body;
-        newEmail = newEmail.toLowerCase();
+        const { verificationCode, newEmail } = req.body;
+        let lowercasedEmail = newEmail.toLowerCase();
 
+        const userAuth = await UserAuth.findOne({ where: { userId }, attributes: ['id', 'authCode', 'authCodeExpiry'] });
+        const user = await User.findOne({ where: { id: userId }, attributes: ['id', 'email'] });
 
-        const user = await User.findOne({ where: { id: userId } });
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
+        if (!userAuth || !user) {
+            return res.status(404).json({ error: "User or authentication not found" });
         }
 
-        if (user.verificationCode !== verificationCode) {
-            return res.status(400).json({ error: "Invalid verification code" });
+        if (userAuth.authCode !== verificationCode || userAuth.authCodeExpiry < Date.now()) {
+            return res.status(400).json({ error: "Invalid verification code or expired" });
         }
 
-        if (user.verificationCodeExpiry < Date.now()) {
-            return res.status(400).json({ error: "Verification code expired" });
-        }
-
-        user.email = newEmail;
-        user.verificationCode = null;
-        user.verificationCodeExpiry = null;
+        user.email = lowercasedEmail;
         await user.save();
+
+        userAuth.authCode = null;
+        userAuth.authCodeExpiry = null;
+        await userAuth.save();
 
         res.status(200).json({ message: "Email changed successfully" });
 
@@ -617,6 +609,7 @@ const verificationAndSetNewEmail = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }
+
 
 
 
@@ -635,18 +628,20 @@ const changeProfilePhone = async (req, res) => {
         const { userId } = req.user;
         const { newPhone } = req.body;
 
-        const user = await User.findOne({ where: { id: userId } });
-        if (!user) {
-            res.status(404).json({ error: "User not found" });
-        }
+        const user = await User.findOne({
+            where: { id: userId },
+            attributes: ['id', 'phone']
+        });
 
-        const phoneExists = await User.findOne({ where: { phone: newPhone } });
+        const phoneExists = await User.findOne({ 
+            where: { phone: newPhone },
+            attributes: ['id'] 
+        });
         if (phoneExists) { 
             return res.status(400).json({ error: "Phone already exists" });
         }
 
-        user.phone = newPhone;
-        await user.save();
+        await User.update({ phone: newPhone }, { where: { id: userId } });
 
         return res.status(200).json({ message: "Phone changed successfully" });
 
@@ -655,14 +650,6 @@ const changeProfilePhone = async (req, res) => {
     }
 }
 
-/* 
-6- Change Profile Username
-        Description: This api is used to change the profile username of the user.
-        The user must send the new username. The username must be unique.
-        Parameters:
-            - new userName
-*/
-
 const changeProfileUsername = async (req, res) => { 
     try {
         const { userId } = req.user;
@@ -670,20 +657,25 @@ const changeProfileUsername = async (req, res) => {
 
         newUsername = newUsername.toLowerCase();
 
-        const user = await User.findOne({ where: { id: userId } });
+        const user = await User.findOne({ 
+            where: { id: userId },
+            attributes: ['id', 'username']
+        });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
 
         newUsername = newUsername.toLowerCase();
 
-        const usernameExists = await User.findOne({ where: { username: newUsername } });
+        const usernameExists = await User.findOne({ 
+            where: { username: newUsername },
+            attributes: ['id']
+        });
         if (usernameExists) {
             return res.status(400).json({ error: "Username already exists" });
         }
 
-        user.username = newUsername;
-        await user.save();
+        await User.update({ username: newUsername }, { where: { id: userId } });
 
         return res.status(200).json({ message: "Username changed successfully" });
 
@@ -692,27 +684,20 @@ const changeProfileUsername = async (req, res) => {
     }
 }
 
-
-/*
-7- Change Profile Bio
-        Description: This api is used to change the profile bio of the user.
-        The user must send the new bio.
-        Parameters:
-            - new bio
-*/
-
 const changeProfileBio = async (req, res) => { 
     try {
         const { userId } = req.user;
         const { newBio } = req.body;
 
-        const profile = await Profile.findOne({ where: { userId } });
+        const profile = await Profile.findOne({ 
+            where: { userId }, 
+            attributes: ['id', 'bio']
+        });
         if (!profile) {
             return res.status(404).json({ error: "Profile not found" });
         }
 
-        profile.bio = newBio;
-        await profile.save();
+        await Profile.update({ bio: newBio }, { where: { userId } });
 
         res.status(200).json({ message: "Profile bio changed successfully" });
     } catch (error) {
@@ -739,8 +724,6 @@ const saveVideo = async (req, res) => {
             return res.status(400).json({ error: "Video already saved" });
         }
 
-        console.log("userId: ", userId);
-        console.log("videoId: ", videoId);
         await SavedVideo.create({ userId, videoId });
         res.status(200).json({ message: "Video saved successfully" });
 
@@ -770,20 +753,26 @@ const unsaveVideo = async (req, res) => {
     }
 }
 
+
 const getSavedVideosUsingPagination = async (req, res) => {
     try {
         const { userId } = req.user;
         const { offset = 0} = req.query;
 
         const savedVideos = await SavedVideo.findAll({
-            where: { userId: userId },
+            where: { userId },
             include: [{
                 model: Video,
                 as: 'Video',
-                attributes: ['id', 'thumbnailFileName', 'viewsCount']
+                attributes: ['id', 'thumbnailFileName'],
+                include: [{
+                    model: VideoMetadata,
+                    as: 'metadata',
+                    attributes: ['viewCount']
+                }]
             }],
             limit: process.env.SAVED_VIDEOS_LIMIT || 5,
-            offset: offset
+            offset: offset, 
         });
 
         const formattedVideos = await Promise.all(savedVideos.map(async savedVideo => {
@@ -791,7 +780,7 @@ const getSavedVideosUsingPagination = async (req, res) => {
             return {
                 videoId: savedVideo.Video.id,
                 thumbnailUrl: signedUrl,
-                views: savedVideo.Video.viewsCount
+                views: savedVideo.Video.metadata.viewCount
             };
         }));
 

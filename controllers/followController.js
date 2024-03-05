@@ -22,10 +22,8 @@ const followUser = async (req, res) => {
 
         const follow = await Follow.findOne({ 
             where: { 
-                [Op.or]: [
-                    { followerId: userId, followingId: followId },
-                    { followerId: followId, followingId: userId }
-                ]
+                followerId: userId, 
+                followingId: followId
             } 
         });
         if (follow)

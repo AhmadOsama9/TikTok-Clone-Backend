@@ -45,7 +45,8 @@ const createUserPersonalization = async (req, res) => {
             where: {
                 userId: userId,
                 videoId: videoId
-            }
+            }, 
+            attributes: ['rate']
         });
 
         for (let i = 0; i < videoCategories.length; i++) {
@@ -125,6 +126,7 @@ const createUserPersonalization = async (req, res) => {
             const watchedVideos = await WatchedVideo.findAll({
                 where: { userId },
                 order: [['createdAt', 'ASC']],
+                attributes: ['videoId']
             }, { transaction });
             
             if (watchedVideos.length > 30) {
@@ -363,7 +365,8 @@ const getRecommendedVideos = async (req, res) => {
             recommendedVideos.push(...watchedVideos);
         }
 
-        const recommendedVideosData = await Promise.all(recommendedVideos.map(video => fetchVideoData(video.id, userId)));
+        const videoIds = recommendedVideos.map(video => video.id);
+        const recommendedVideosData = await fetchVideoData(videoIds, userId);
 
         return res.status(200).json({ recommendedVideosData });
     } catch (error) {

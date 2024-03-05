@@ -185,9 +185,9 @@ User.hasOne(UserStatus, {
     onDelete: 'CASCADE',
 });
 
-User.hasMany(UserAuth, { 
+User.hasOne(UserAuth, { 
     foreignKey: 'userId', 
-    as: 'authMethods',
+    as: 'userAuth',
     onDelete: 'CASCADE',
 });
 
@@ -511,6 +511,12 @@ Video.hasMany(Comment, {
     as: 'comments',
     onDelete: 'CASCADE',
 });
+
+Video.hasMany(Notification, {
+    foreignKey: 'videoId',
+    as: 'notifications',
+    onDelete: 'CASCADE',
+})
 
 
 async function syncModels() {

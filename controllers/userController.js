@@ -35,19 +35,19 @@ const signup = async (req, res) => {
             return res.status(400).json({ error: 'Invalid email address' });
         }
         
-        const existingEmailUser = await User.findOne({ where: { email } });
-        if (existingEmailUser) {
-            return res.status(400).json({ error: 'User with this email already exists' });
-        }
 
-        const existingPhoneUser = await User.findOne({ where: { phone } });
-        if (existingPhoneUser) {
-            return res.status(400).json({ error: 'User with this phone number already exists' });
-        }
-
-        const existingUsernameUser = await User.findOne({ where: { username } });
-        if (existingUsernameUser) {
-            return res.status(400).json({ error: 'User with this username already exists' });
+        const existingUser = await User.findOne({
+            where: {
+                [Op.or]: [
+                    { email },
+                    { phone },
+                    { username }
+                ]
+            }
+        });
+        
+        if (existingUser) {
+            return res.status(400).json({ error: 'User with this email, phone number, or username already exists' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -123,13 +123,20 @@ const verifyEmailCode = async (req, res) => {
             return res.status(400).json({ error: 'Invalid email address' });
         }
 
-        const user = await User.findOne({ where: { email } }, { transaction });
+        const user = await User.findOne({ 
+            where: { email },
+            attributes: ['id', 'name', 'email', 'phone', 'referralCode', 'username']}, 
+            { transaction },
+        );
         if (!user) {
             await transaction.rollback();
             return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
-        const userAuth = await UserAuth.findOne({ where: { userId: user.id, authType: 1 } }, { transaction });
+        const userAuth = await UserAuth.findOne({ 
+            where: { userId: user.id, authType: 1 },
+            attributes: ['id', 'authCode', 'authCodeExpiry', 'authVerified'],},
+            { transaction });
         if (!userAuth || !userAuth.authCode) {
             await transaction.rollback();
             return res.status(400).json({ error: 'No verification code sent' });
@@ -181,24 +188,32 @@ const verifyEmailCode = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
-
 const login = async (req, res) => {
     try {
         let { email, password } = req.body;
 
         email = email.toLowerCase();
 
-        const user = await User.findOne({ where: { email } });
+        const [user, userStatus, userAuth] = await Promise.all([
+            User.findOne({ 
+                where: { email },
+                attributes: ['id', 'name', 'email', 'password', 'phone', 'referralCode', 'username'],
+            }),
+            UserStatus.findOne({ 
+                where: { userId: user.id },
+                attributes: ['isBanned', 'isVerified'] 
+            }),
+            UserAuth.findOne({ where: { userId: user.id, authType: 1 } }),
+        ]);
+
         if (!user) {
             return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
-        const userStatus = await UserStatus.findOne({ where: { userId: user.id } });
         if (userStatus.isBanned) {
             return res.status(400).json({ error: 'This user is banned' });
         }
 
-        const userAuth = await UserAuth.findOne({ where: { userId: user.id, authType: 1 } });
         if (!userAuth.authVerified) {
             return res.status(400).json({ error: 'Email not verified' });
         }
@@ -226,6 +241,7 @@ const login = async (req, res) => {
     }
 };
 
+
 /*
 8-  Profile Password
         Description: This api is used to reset the profile password of the user.
@@ -250,17 +266,29 @@ const sendOtp = async (req, res) => {
             return res.status(400).json({ error: 'Invalid email address' });
         }
 
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ 
+            where: { email },
+            include: [{ 
+                model: UserAuth, 
+                as: 'userAuth', 
+                where: { authType: 1 },
+                attributes: ['id', 'authCode', 'authCodeExpiry'],
+                required: true,
+            }],
+            attributes: ['id', 'email'], // Select only the id and email attributes from the User model
+        });
+
         if (!user) {
             return res.status(400).json({ error: 'User with this email does not exist' });
         }
+
+        const userAuth = user.userAuth;
 
         const otp = randomstring.generate({
             length: 6,
             charset: 'numeric',
         });
 
-        const userAuth = await UserAuth.findOne({ where: { userId: user.id, authType: 1 } });
         userAuth.authCode = otp;
         userAuth.authCodeExpiry = Date.now() + 3600000; // 3600000 milliseconds = 1 hour
         await userAuth.save();
@@ -295,12 +323,18 @@ const verifyOtpAndSetNewPassword = async (req, res) => {
     try {
         const { email, otp, newPassword } = req.body;
 
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ 
+            where: { email },
+            attributes: ['id', 'password'], 
+        });
         if (!user) {
             return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
-        const userAuth = await UserAuth.findOne({ where: { userId: user.id, authType: 1 } });
+        const userAuth = await UserAuth.findOne({ 
+            where: { userId: user.id, authType: 1 },
+            attributes: ['id', 'authCode', 'authCodeExpiry'], 
+        });
         if (!userAuth || userAuth.authCode !== otp) {
             return res.status(400).json({ error: 'Invalid OTP' });
         }
@@ -332,12 +366,21 @@ const sendVerificationCode = async (req, res) => {
     try {
         const { email } = req.body;
 
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ 
+            where: { email },
+            attributes: ['id'], 
+        });
         if (!user) {
             return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
-        const userAuth = await UserAuth.findOne({ where: { userId: user.id, authType: 1 } });
+        const userAuth = await UserAuth.findOne({ 
+            where: { userId: user.id, authType: 1 },
+            attributes: ['id', 'authCode', 'authCodeExpiry'],
+        });
+        if (!userAuth) {
+            return res.status(400).json({ error: 'User authentication record not found' });
+        }
         if (userAuth.authVerified) {
             return res.status(400).json({ error: 'Email already verified' });
         }
@@ -346,6 +389,10 @@ const sendVerificationCode = async (req, res) => {
             length: 6,
             charset: 'numeric',
         });
+
+        userAuth.authCode = verificationCode;
+        userAuth.authCodeExpiry = Date.now() + 600000; // 600000 milliseconds = 10 minutes
+        await userAuth.save();
 
         const transporter = nodemailer.createTransport({
             service: 'Gmail',
@@ -370,13 +417,7 @@ const sendVerificationCode = async (req, res) => {
             `,
         };
 
-
-        userAuth.authCode = verificationCode;
-        userAuth.authCodeExpiry = Date.now() + 600000; // 600000 milliseconds = 10 minutes
-        await userAuth.save();
-
         await transporter.sendMail(mailOptions);
-
 
         return res.status(200).json({ message: 'Verification code sent to your email' });
 
@@ -385,6 +426,7 @@ const sendVerificationCode = async (req, res) => {
     }
 };
 
+
 const checkBanStatus = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -392,7 +434,10 @@ const checkBanStatus = async (req, res) => {
         if (!userId) 
             return res.status(400).json({ error: 'User id is required' });
 
-        const userStatus = await UserStatus.findOne({ where: { userId } });
+        const userStatus = await UserStatus.findOne({ 
+            where: { userId },
+            attributes: ['isBanned'],
+        });
         if (!userStatus) {
             return res.status(400).json({ error: 'User status for this id does not exist' });
         }
@@ -414,43 +459,50 @@ const referredUser = async (req, res) => {
         const { userId } = req.user;
         const { referralCode } = req.body;
 
-        if (!referralCode)
+        if (!referralCode) {
             return res.status(400).json({ error: 'Referral code is required' });
+        }
 
         const referredUser = await User.findByPk(userId);
-        if (!referredUser)
+        if (!referredUser) {
             return res.status(400).json({ error: 'User with this id does not exist' });
+        }
 
         const referralUser = await User.findOne({ where: { referralCode } });
-        if (!referralUser)
+        if (!referralUser) {
             return res.status(400).json({ error: 'User with this referral code does not exist' });
+        }
 
-        if (referralUser.id === userId)
+        if (referralUser.id === userId) {
             return res.status(400).json({ error: 'You cannot refer yourself' });
+        }
 
-        if (referralUser.id > referredUser.id)
+        if (referralUser.id > referredUser.id) {
             return res.status(400).json({ error: 'You cannot refer a user who has a lower id than you' });
+        }
 
-        if (referredUser.referred)
+        if (referredUser.referred) {
             return res.status(400).json({ error: 'You have already been referred' });
+        }
 
         transaction = await sequelize.transaction();
 
-        referredUser.referred = true;
-        await referredUser.save({ transaction });
-        
-        await referralUser.increment('referrals', { transaction });
+        await User.update({ referred: true }, { where: { id: userId }, transaction });
+
+        await User.increment('referrals', { where: { id: referralUser.id }, transaction });
 
         await transaction.commit();
 
-        return res.status(200).json({ message: "You have been referred successfully" });
+        return res.status(200).json({ message: 'You have been referred successfully' });
 
     } catch (error) {
-        if (transaction) await transaction.rollback();
+        if (transaction) {
+            await transaction.rollback();
+        }
         return res.status(500).json({ error: error.message });
     }
 };
- 
+
 
 const searchUsersUsingPagination = async (req, res) => {
     try {
@@ -545,58 +597,55 @@ const banUser = async (req, res) => {
         const { userId } = req.user;
         const toBeBannedUserId = req.params.toBeBannedUserId;
 
-        if (!toBeBannedUserId)
+        if (!toBeBannedUserId) {
             return res.status(400).json({ error: 'User id is required' });
+        }
 
-        if (userId === toBeBannedUserId)
+        if (userId === toBeBannedUserId) {
             return res.status(400).json({ error: 'You cannot ban yourself' });
+        }
 
-        const userStatus = await UserStatus.findOne({ where: { userId } });
-        if (!userStatus || !userStatus.isAdmin)
+        const userStatus = await UserStatus.findOne({ where: { userId, isAdmin: true } });
+        if (!userStatus) {
             return res.status(403).json({ error: 'You are not an admin' });
+        }
 
-        const toBeBannedUserStatus = await UserStatus.findOne({ where: { userId: toBeBannedUserId } });
-        if (!toBeBannedUserStatus)
-            return res.status(400).json({ error: 'User status for this id does not exist' });
-
-        toBeBannedUserStatus.isBanned = true;
-        await toBeBannedUserStatus.save();
+        await UserStatus.update({ isBanned: true }, { where: { userId: toBeBannedUserId } });
 
         return res.status(200).json({ message: "User has been banned successfully" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
+};
 
 const unbanUser = async (req, res) => {
     try {
         const { userId } = req.user;
         const toBeUnbannedUserId = req.params.toBeUnbannedUserId;
 
-        if (!toBeUnbannedUserId)
+        if (!toBeUnbannedUserId) {
             return res.status(400).json({ error: 'User id is required' });
+        }
 
-        if (userId === toBeUnbannedUserId)
+        if (userId === toBeUnbannedUserId) {
             return res.status(400).json({ error: 'You cannot unban yourself' });
+        }
 
-        const userStatus = await UserStatus.findOne({ where: { userId } });
-        if (!userStatus || !userStatus.isAdmin)
+        const userStatus = await UserStatus.findOne({ where: { userId, isAdmin: true } });
+        if (!userStatus) {
             return res.status(403).json({ error: 'You are not an admin' });
+        }
 
-        const toBeUnbannedUserStatus = await UserStatus.findOne({ where: { userId: toBeUnbannedUserId } });
-        if (!toBeUnbannedUserStatus)
-            return res.status(400).json({ error: 'User status for this id does not exist' });
-
-        toBeUnbannedUserStatus.isBanned = false;
-        await toBeUnbannedUserStatus.save();
+        await UserStatus.update({ isBanned: false }, { where: { userId: toBeUnbannedUserId } });
 
         return res.status(200).json({ message: "User has been unbanned successfully" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
+};
+
 
 
 const getUserInfo = async (req, res) => {
@@ -604,17 +653,22 @@ const getUserInfo = async (req, res) => {
         const { userId } = req.user;
         const otherUserId = req.params.otherUserId;
 
-        const userStatus = await UserStatus.findOne({ where: { userId } });
-        if (!userStatus || !userStatus.isAdmin)
+        const userStatus = await UserStatus.findOne({ where: { userId }, attributes: ['isAdmin'] });
+        if (!userStatus || !userStatus.isAdmin) {
             return res.status(403).json({ error: 'You are not an admin' });
+        }
 
-        const otherUser = await User.findByPk(otherUserId);
-        if (!otherUser)
+        const otherUser = await User.findByPk(otherUserId, {
+            attributes: ['id', 'name', 'email', 'phone', 'referralCode', 'userName'],
+        });
+        if (!otherUser) {
             return res.status(400).json({ error: 'User with this id does not exist' });
+        }
 
-        const otherUserStatus = await UserStatus.findOne({ where: { userId: otherUserId } });
-        if (!otherUserStatus)
+        const otherUserStatus = await UserStatus.findOne({ where: { userId: otherUserId }, attributes: ['isVerified'] });
+        if (!otherUserStatus) {
             return res.status(400).json({ error: 'User status for this id does not exist' });
+        }
 
         return res.status(200).json({
             uid: otherUser.id,
@@ -627,7 +681,7 @@ const getUserInfo = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ error: error.message});
+        return res.status(500).json({ error: error.message });
     }
 };
 
@@ -636,16 +690,19 @@ const setUserIsVerified = async (req, res) => {
         const { userId } = req.user;
         const toBeVerifiedUserId = req.params.toBeVerifiedUserId;
 
-        if (!toBeVerifiedUserId)
+        if (!toBeVerifiedUserId) {
             return res.status(400).json({ error: 'User id is required' });
+        }
 
-        const userStatus = await UserStatus.findOne({ where: { userId } });
-        if (!userStatus || !userStatus.isAdmin)
+        const userStatus = await UserStatus.findOne({ where: { userId }, attributes: ['isAdmin'] });
+        if (!userStatus || !userStatus.isAdmin) {
             return res.status(403).json({ error: 'You are not an admin' });
+        }
 
-        const toBeVerifiedUserStatus = await UserStatus.findOne({ where: { userId: toBeVerifiedUserId } });
-        if (!toBeVerifiedUserStatus)
+        const toBeVerifiedUserStatus = await UserStatus.findOne({ where: { userId: toBeVerifiedUserId }, attributes: ['isVerified'] });
+        if (!toBeVerifiedUserStatus) {
             return res.status(400).json({ error: 'User status for this id does not exist' });
+        }
 
         toBeVerifiedUserStatus.isVerified = true;
         await toBeVerifiedUserStatus.save();
@@ -654,7 +711,8 @@ const setUserIsVerified = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
+};
+
 
 module.exports = {
     signup,
