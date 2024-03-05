@@ -15,7 +15,9 @@ const sendMessageUsingChatId = async (req, res) => {
         const { userId } = req.user;
 
         if (replyTo) {
-            const replyMessage = await Message.findByPk(replyTo);
+            const replyMessage = await Message.findByPk(replyTo, {
+                attributes: ['id'],
+            });
             if (!replyMessage)
                 return res.status(404).json({ message: "Message not found" });
         }
@@ -31,6 +33,7 @@ const sendMessageUsingChatId = async (req, res) => {
                 id: chatId,
                 [Op.or]: [{ user1Id: userId }, { user2Id: userId }],
             },
+            attributes: ['id'],
         });
 
         if (!chat) {
@@ -58,11 +61,12 @@ const sendMessageUsingReceiverId = async (req, res) => {
     const { userId } = req.user;
 
     if (replyTo) {
-
         if (!Number.isInteger(replyTo)) 
             return res.status(400).json({ message: "Invalid input: replyTo should be an integer" });
 
-        const replyMessage = await Message.findByPk(replyTo);
+        const replyMessage = await Message.findByPk(replyTo, {
+            attributes: ['id']
+        });
         if (!replyMessage)
             return res.status(404).json({ message: "Message not found" });
     }
@@ -71,30 +75,28 @@ const sendMessageUsingReceiverId = async (req, res) => {
         return res.status(400).json({ message: "All Fields must be sent" });
 
     if (!message || message.trim() === '')
-    return res.status(400).json({ message: 'Content is required' });
+        return res.status(400).json({ message: 'Content is required' });
 
     if (userId === receiverId)
         return res.status(400).json({ message: "You can't send a message to yourself" });
 
     const transaction = await sequelize.transaction();
-  
+
     try {
-        let chat = await Chat.findOne({
+        let [chat, created] = await Chat.findOrCreate({
             where: {
                 [Op.or]: [
                     { user1Id: userId, user2Id: receiverId },
                     { user1Id: receiverId, user2Id: userId }
                 ],
             },
+            defaults: {
+                user1Id: userId,
+                user2Id: receiverId
+            },
+            transaction
         });
 
-        if (!chat) {
-            chat = await Chat.create({
-                user1Id: userId,
-                user2Id: receiverId,
-            }, { transaction });
-        }
-  
         const newMessage = await Message.create({
             chatId: chat.id,
             senderId: userId,
@@ -102,9 +104,9 @@ const sendMessageUsingReceiverId = async (req, res) => {
             state: 'sent',
             replyTo,
         }, { transaction });
-    
+
         await transaction.commit();
-  
+
         return res.status(200).json({ messageId: newMessage.id });
     } catch (error) {
         await transaction.rollback();
@@ -112,64 +114,66 @@ const sendMessageUsingReceiverId = async (req, res) => {
     }
 }
 
+
+const getMessages = async (req, res, chatId, userId) => {
+    const offset = req.query.offset ? parseInt(req.query.offset) : 0;
+
+    const chat = await Chat.findOne({
+        where: {
+            id: chatId,
+            [Op.or]: [{ user1Id: userId }, { user2Id: userId }],
+        },
+        attributes: ['id'],
+    });
+
+    if (!chat) {
+        return res.status(404).json({ message: "Chat not found" });
+    }
+
+    const messages = await Message.findAll({
+        where: { chatId },
+        offset,
+        limit: process.env.MESSAGES_LIMIT || 10,
+        order: [["createdAt", "DESC"]],
+        attributes: ['id', 'senderId', 'content', 'state', 'reaction', 'replyTo', 'createdAt'],
+        include: [{
+            model: Message,
+            as: 'replyToMessage',
+            attributes: ['content'],
+        }],
+    });
+
+    let updatePromises = messages.map(message => {
+        if (message.state === 'sent' && message.senderId !== userId) {
+            message.state = 'seen';
+            return message.save();
+        }
+    });
+
+    await Promise.all(updatePromises);
+
+    return messages.map(message => ({
+        messageId: message.id,
+        content: message.content,
+        senderId: message.senderId,
+        isSeen: message.state === 'seen' ? 0 : 1,
+        reaction: message.reaction,
+        replyMessageContent: message.replyToMessage ? message.replyToMessage.content : null,
+        createdAt: message.createdAt,
+    }));
+}
+
 const getMessagesUsingPagination = async (req, res) => {
     try {
         const { chatId } = req.params;
-        let { offset } = req.query;
         const { userId } = req.user;
-
-        offset = offset || 0;
-
-        console.log("ChatId is: ", chatId);
 
         if (!chatId)
             return res.status(400).json({ message: "Invalid request" });
 
-        const chat = await Chat.findOne({
-            where: {
-                id: chatId,
-                [Op.or]: [{ user1Id: userId }, { user2Id: userId }],
-            },
-        });
+        const messages = await getMessages(req, res, chatId, userId);
 
-        if (!chat) {
-            return res.status(404).json({ message: "Chat not found" });
-        }
-
-        const messages = await Message.findAll({
-            where: {
-                chatId,
-            },
-            offset: parseInt(offset),
-            limit: process.env.MESSAGES_LIMIT || 10,
-            order: [["createdAt", "DESC"]],
-            attributes: ['id', 'senderId', 'content', 'state', 'reaction', 'replyTo', 'createdAt'],  // Add this line
-            include: [{
-                model: Message,
-                as: 'replyToMessage',
-                attributes: ['content'],
-            }],
-        });
-
-        let updatePromises = messages.map(message => {
-            if (message.state === 'sent' && message.senderId !== userId) {
-                message.state = 'seen';
-                return message.save();
-            }
-        });
-
-        await Promise.all(updatePromises);
-
-        return res.status(200).json(messages.map(message => ({
-            messageId: message.id,
-            content: message.content,
-            senderId: message.senderId,
-            isSeen: message.state === 'seen' ? 0 : 1,
-            reaction: message.reaction,
-            replyMessageContent: message.replyToMessage ? message.replyToMessage.content : null,
-            createdAt: message.createdAt,
-        })));
-        
+        return res.status(200).json(messages);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
@@ -178,10 +182,7 @@ const getMessagesUsingPagination = async (req, res) => {
 const getMessagesBetweenUsersUsingPagination = async (req, res) => {
     try {
         const { user2Id } = req.params;
-        let { offset } = req.query;
         const { userId } = req.user;
-
-        offset = offset || 0;
 
         if (!user2Id)
             return res.status(400).json({ message: "Invalid request" });
@@ -193,56 +194,45 @@ const getMessagesBetweenUsersUsingPagination = async (req, res) => {
                     { user1Id: user2Id, user2Id: userId }
                 ],
             },
+            attributes: ['id'],
         });
 
         if (!chat) {
             return res.status(404).json({ message: "Chat not found" });
         }
 
-        const messages = await Message.findAll({
-            where: {
-                chatId: chat.id,
-            },
-            offset: parseInt(offset),
-            limit: process.env.MESSAGES_LIMIT || 10,
-            order: [["createdAt", "DESC"]],
-            attributes: ['id', 'senderId', 'content', 'state', 'reaction', 'replyTo', 'createdAt'],  // Add this line
-            include: [{
-                model: Message,
-                as: 'replyToMessage',
-                attributes: ['content'],
-            }],
-        });
+        const messages = await getMessages(req, res, chat.id, userId);
 
-
-        let updatePromises = messages.map(message => {
-            if (message.state === 'sent' && message.senderId !== userId) {
-                message.state = 'seen';
-                return message.save();
-            }
-        });
-
-        await Promise.all(updatePromises);
-
-        return res.status(200).json(messages.map(message => ({
-            messageId: message.id,
-            content: message.content,
-            senderId: message.senderId,
-            isSeen: message.state === 'seen' ? 0 : 1,
-            reaction: message.reaction,
-            replyMessageContent: message.replyToMessage ? message.replyToMessage.content : null,
-            createdAt: message.createdAt,
-        })));
-        
+        return res.status(200).json(messages);
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 }
 
+
 const getUserChats = async (req, res) => {
     try {
         const { userId } = req.user;
         const { offset = 0 } = req.query;
+
+        const generateUserInclude = () => ({
+            model: User,
+            attributes: ['id', 'username', 'email', 'phone', 'referralCode', 'referrals', 'referred'],
+            where: { id: { [Op.ne]: userId } },
+            required: false,
+            include: [
+                {
+                    model: Profile,
+                    as: 'profile',
+                    attributes: ['imageFileName', 'bio'],
+                },
+                {
+                    model: UserStatus,
+                    as: 'userStatus',
+                    attributes: ['isBanned', 'isAdmin', 'isVerified'],
+                },
+            ],
+        });
 
         const chats = await Chat.findAll({
             where: {
@@ -260,66 +250,21 @@ const getUserChats = async (req, res) => {
                     attributes: ['id', 'content', 'createdAt', 'state', 'senderId'],
                 },
                 {
-                    model: User,
+                    ...generateUserInclude(),
                     as: 'user1',
-                    attributes: ['id', 'username', 'email', 'phone', 'referralCode', 'referrals', 'referred'],
-                    where: { id: { [Op.ne]: userId } },
-                    required: false,
-                    include: [
-                        {
-                            model: Profile,
-                            as: 'profile',
-                            attributes: ['imageFileName', 'bio'],
-                        },
-                        {
-                            model: UserStatus,
-                            as: 'userStatus',
-                            attributes: ['isBanned', 'isAdmin', 'isVerified'],
-                        },
-                        {
-                            model: UserAuth,
-                            as: 'authMethods',
-                            attributes: ['authType', 'authVerified', 'authCode', 'authCodeExpiry'],
-                        },
-                    ],
                 },
                 {
-                    model: User,
+                    ...generateUserInclude(),
                     as: 'user2',
-                    attributes: ['id', 'username', 'email', 'phone', 'referralCode', 'referrals', 'referred'],
-                    where: { id: { [Op.ne]: userId } },
-                    required: false,
-                    include: [
-                        {
-                            model: Profile,
-                            as: 'profile',
-                            attributes: ['imageFileName', 'bio'],
-                        },
-                        {
-                            model: UserStatus,
-                            as: 'userStatus',
-                            attributes: ['isBanned', 'isAdmin', 'isVerified'],
-                        },
-                        {
-                            model: UserAuth,
-                            as: 'authMethods',
-                            attributes: ['authType', 'authVerified', 'authCode', 'authCodeExpiry'],
-                        },
-                    ],
                 },
             ],
             limit: process.env.CHATS_LIMIT || 10,
             offset: parseInt(offset),
             order: [['updatedAt', 'DESC']],
+            attributes: ['id', 'updatedAt']
         });
 
-        for (let chat of chats) {
-            if (chat.user1 && chat.user1.id === userId) {
-                chat.user1 = null;
-            } else if (chat.user2 && chat.user2.id === userId) {
-                chat.user2 = null;
-            }
-
+        await Promise.all(chats.map(async chat => {
             if (chat.user1 && chat.user1.profile && chat.user1.profile.imageFileName) {
                 chat.user1.profile.imageFileName = await getSignedUrl(chat.user1.profile.imageFileName);
             }
@@ -327,7 +272,7 @@ const getUserChats = async (req, res) => {
             if (chat.user2 && chat.user2.profile && chat.user2.profile.imageFileName) {
                 chat.user2.profile.imageFileName = await getSignedUrl(chat.user2.profile.imageFileName);
             }
-        }
+        }));
 
         return res.status(200).json(chats);
 
@@ -336,6 +281,25 @@ const getUserChats = async (req, res) => {
     }
 }
 
+
+//I should search more does the update will be faster
+//cause we have the message already either way
+
+const validateMessageAndChat = async (messageId, chatId, userId) => {
+    const message = await Message.findByPk(messageId, {
+        attributes: ['id', 'senderId', 'reaction'],
+    });
+    if (!message)
+        throw new Error("Message not found");
+
+    const chat = await Chat.findByPk(chatId, {
+        attributes: ['id', 'user1Id', 'user2Id'],
+    });
+    if (!chat || (chat.user1Id !== userId && chat.user2Id !== userId))
+        throw new Error("You are not a participant in this chat");
+
+    return { message, chat };
+};
 
 const addReactionToMessage = async (req, res) => {
     try {
@@ -347,13 +311,7 @@ const addReactionToMessage = async (req, res) => {
             return res.status(400).json({ message: "Invalid request" });
         }
 
-        const message = await Message.findByPk(messageId);
-        if (!message)
-            return res.status(404).json({ message: "Message not found" });
-
-        const chat = await Chat.findByPk(chatId);
-        if (!chat || (chat.user1Id !== userId && chat.user2Id !== userId))
-            return res.status(403).json({ message: "You are not a participant in this chat" });
+        const { message, chat } = await validateMessageAndChat(messageId, chatId, userId);
 
         if (message.senderId === userId)
             return res.status(403).json({ message: "You can't react to your own message" });
@@ -369,12 +327,12 @@ const addReactionToMessage = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
+};
 
 const deleteReaction = async (req, res) => {
     try {
-        const { chatId } = req.params;
         const { messageId } = req.query;
+        const { chatId } = req.params;
         const { userId } = req.user;
 
         if (!messageId || !chatId) {
@@ -382,13 +340,7 @@ const deleteReaction = async (req, res) => {
             return res.status(400).json({ message: "Invalid request" });
         }
 
-        const message = await Message.findByPk(messageId);
-        if (!message)
-            return res.status(404).json({ message: "Message not found" });
-
-        const chat = await Chat.findByPk(chatId);
-        if (!chat || (chat.user1Id !== userId && chat.user2Id !== userId))
-            return res.status(403).json({ message: "You are not a participant in this chat" });
+        const { message, chat } = await validateMessageAndChat(messageId, chatId, userId);
 
         if (message.senderId === userId)
             return res.status(403).json({ message: "You can't delete a react on your own message" });
@@ -405,7 +357,7 @@ const deleteReaction = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
+};
 
 const deleteMessage = async (req, res) => {
     try {
@@ -415,7 +367,9 @@ const deleteMessage = async (req, res) => {
         if (!messageId)
             return res.status(400).json({ message: "Invalid request" });
 
-        const message = await Message.findByPk(messageId);
+        const message = await Message.findByPk(messageId, {
+            attributes: ['id', 'senderId'],
+        });
         if (!message)
             return res.status(404).json({ message: "Message not found" });
 
@@ -440,7 +394,9 @@ const getMessageUsingId = async (req, res) => {
         if (!messageId)
             return res.status(400).json({ message: "Invalid request" });
 
-        const userStatus = await UserStatus.findByPk(userId);
+        const userStatus = await UserStatus.findByPk(userId, {
+            attributes: ['isAdmin'],
+        });
         if (!userStatus || !userStatus.isAdmin)
             return res.status(403).json({ message: "You are not authorized to perform this action" });
 

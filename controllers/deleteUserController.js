@@ -13,7 +13,9 @@ const deleteUserController = async (req, res) => {
         const { userId } = req.user;
         const userToBeDeletedId = req.params.userToBeDeletedId;
 
-        const userStatus = await UserStatus.findByPk(userId);
+        const userStatus = await UserStatus.findByPk(userId, {
+            attributes: ['isAdmin'],
+        });
         if (!userStatus || !userStatus.isAdmin)
             return res.status(403).json({ message: 'You are not authorized to perform this action' });
 
@@ -23,12 +25,14 @@ const deleteUserController = async (req, res) => {
             where: {
                 userId: userToBeDeletedId,
             },
+            attributes: ['imageName'],
         });
 
         const videos = await Video.findAll({
             where: {
                 userId: userToBeDeletedId,
             },
+            attributes: ['id', 'fileName', 'thumbnailName'],
         });
 
         // Delete the user and all associated records

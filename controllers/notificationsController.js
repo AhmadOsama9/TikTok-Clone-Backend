@@ -5,7 +5,10 @@ const Comment = require("../config/db").Comment;
 const Sequelize = require("sequelize");
 
 
-async function addNotification (userId, videoId, commentId, otherUserId, notificationType, title, transaction ) {
+//I'm thinking of removing the checking for the vidoe, comment and otherUser
+//I mean since my code is the one responsible for that I think making sure in the other functions is better
+//thinking about it, I'm not really sure I think the time will be the near but yeah it can be considered
+async function addNotification (userId, videoId, commentId, otherUserId, notificationType, title, transaction) {
     try {
         if (userId === otherUserId) {
             console.log("You can't notify yourself");
@@ -19,92 +22,77 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
             throw new Error('Invalid notification type');
 
         if (videoId) {
-            const video = await Video.findByPk(videoId);
+            const video = await Video.findByPk(videoId, {
+                attributes: ['id']
+            });
             if (!video)
                 throw new Error('Video not found');
         }
 
         if (commentId) {
-            const comment = await Comment.findByPk(commentId, { transaction });
+            const comment = await Comment.findByPk(commentId, {
+                attributes: ['id']
+            });
             if (!comment)
                 throw new Error('Comment not found');
         }
 
         if (otherUserId) {
-            const user = await User.findByPk(otherUserId);
+            const user = await User.findByPk(otherUserId, {
+                attributes: ['id']
+            });
             if (!user)
                 throw new Error('User not found');
         }
 
         const similarNotification = await Notification.findOne({
-            where: { 
-                userId, 
+            where: {
+                userId,
                 notificationType,
-                ...(notificationType === 3 || notificationType === 2 || notificationType === 5 || notificationType === 4 ? { videoId } : { videoId, commentId, otherUserId })
+                [Op.or]: [
+                    { videoId: videoId, commentId: commentId, otherUserId: otherUserId },
+                    { [Op.and]: [{ videoId: videoId }, { commentId: null, otherUserId: null }] }
+                ]
             }
         });
 
+        let body;
+        switch (notificationType) {
+            case 1:
+                body = 'Your video has been liked.';
+                break;
+            case 2:
+                body = 'Your video has received a comment.';
+                break;
+            case 3:
+                body = 'You have a new follower.';
+                break;
+            case 4:
+                body = 'You have been mentioned.';
+                break;
+            case 5:
+                body = 'Your video has received a gift comment.';
+                break;
+        }
+
         if (similarNotification) {
             await Notification.update(
-                { count: Sequelize.literal('count + 1') },
+                { count: Sequelize.literal('count + 1'), body },
                 { where: { id: similarNotification.id }, transaction }
             );
-
-            let body;
-            switch (notificationType) {
-                case 1:
-                    body = `Your video has been liked ${similarNotification.count + 1} times.`;
-                    break;
-                case 2:
-                    body = `Your video has received ${similarNotification.count + 1} comments.`;
-                    break;
-                case 3:
-                    body = `You have ${similarNotification.count + 1} new followers.`;
-                    break;
-                case 4:
-                    body = `You have been mentioned ${similarNotification.count + 1} times.`;
-                    break;
-                case 5:
-                    body = `Your video has received ${similarNotification.count + 1} gift comments.`;
-                    break;
-            }
-
-            await similarNotification.update({ body }, { transaction });
         } else {
-            let body;
-            switch (notificationType) {
-                case 1:
-                    body = 'Your video has been liked.';
-                    break;
-                case 2:
-                    body = 'Your video has received a comment.';
-                    break;
-                case 3:
-                    body = 'You have a new follower.';
-                    break;
-                case 4:
-                    body = 'You have been mentioned.';
-                    break;
-                case 5:
-                    body = 'Your video has received a gift comment.';
-                    break;
-            }
-
             await Notification.create({ userId, videoId, commentId, otherUserId, notificationType, count: 1, title, body, isRead: false }, { transaction });
         }
 
     } catch (error) {
-        throw new Error(error);
+        throw error;
     }
 }
-
 
 
 const getNotifications = async (req, res) => { 
     try {
         const { userId } = req.user;
-        //return the creator username
-        //if the count is 1
 
         const notifications = await Notification.findAll({ where : { userId }, order: [['createdAt', 'DESC']] });
 
