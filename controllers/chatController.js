@@ -16,10 +16,10 @@ const sendMessageUsingChatId = async (req, res) => {
 
         if (replyTo) {
             const replyMessage = await Message.findByPk(replyTo, {
-                attributes: ['id'],
+                attributes: ['id', 'chatId'],
             });
-            if (!replyMessage)
-                return res.status(404).json({ message: "Message not found" });
+            if (!replyMessage || replyMessage.chatId !== chatId)
+                return res.status(404).json({ message: "Message not found or not in the same chat" });
         }
 
         if (!chatId || !message)
@@ -83,7 +83,7 @@ const sendMessageUsingReceiverId = async (req, res) => {
     const transaction = await sequelize.transaction();
 
     try {
-        let [chat, created] = await Chat.findOrCreate({
+        let [chat] = await Chat.findOrCreate({
             where: {
                 [Op.or]: [
                     { user1Id: userId, user2Id: receiverId },
@@ -96,6 +96,17 @@ const sendMessageUsingReceiverId = async (req, res) => {
             },
             transaction
         });
+
+        if (replyTo) {
+            if (!Number.isInteger(replyTo)) 
+                return res.status(400).json({ message: "Invalid input: replyTo should be an integer" });
+
+            const replyMessage = await Message.findByPk(replyTo, {
+                attributes: ['id', 'chatId']
+            });
+            if (!replyMessage || replyMessage.chatId !== chat.id)
+                return res.status(404).json({ message: "Message not found or not in the same chat" });
+        }
 
         const newMessage = await Message.create({
             chatId: chat.id,
@@ -280,10 +291,6 @@ const getUserChats = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 }
-
-
-//I should search more does the update will be faster
-//cause we have the message already either way
 
 const validateMessageAndChat = async (messageId, chatId, userId) => {
     const message = await Message.findByPk(messageId, {
