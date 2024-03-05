@@ -155,9 +155,6 @@ const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
 const sexyThreshold = process.env.SEXY_THRESHOLD || 0.85;
 const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
 
-
-
-
 const checkVideoContent = async (videoPath ,res) => {
     try {
         console.log("checkVideoContent function called")
@@ -434,12 +431,12 @@ const getCommentsUsingPagination = async (req, res) =>{
                 {
                     model: User,
                     as: 'user',
-                    attributes: ['username'], // Only fetch username from User
+                    attributes: ['username'], 
                     include: [
                         {
                             model: Profile,
                             as: 'profile',
-                            attributes: ['imageFileName'], // Only fetch imageFileName from Profile
+                            attributes: ['imageFileName'],
                         }
                     ]
                 },
@@ -520,7 +517,10 @@ const updateVideoDescription = async (req, res) => {
             return res.status(400).json({ message: "Description is required" });
         }
 
-        const video = await Video.findOne({ where: { id: videoId } });
+        const video = await Video.findOne({ 
+            where: { id: videoId },
+            attributes: ['id', 'creatorId', 'description'],
+        });
         if (!video) {
             return res.status(404).json({ message: "Video not found" });
         }
@@ -528,6 +528,9 @@ const updateVideoDescription = async (req, res) => {
         if (video.creatorId !== userId) {
             return res.status(403).json({ message: "You are not authorized to update this video" });
         }
+
+        if (video.description === req.body.description)
+            return res.status(200).json({ message: "Video description is already up to date" });
 
         await video.update({ description: req.body.description });
         
@@ -548,7 +551,7 @@ const likeVideo = async (userId, videoId, transaction) => {
 
     const videoMetadata = await VideoMetadata.findOne({ 
         where: { videoId },
-        attributes: ['likeCount'],
+        attributes: ['id'],
     });
     // Increment the likeCount atomically
     await videoMetadata.increment('likeCount', { transaction });
@@ -556,18 +559,21 @@ const likeVideo = async (userId, videoId, transaction) => {
     await addNotification(video.creatorId, videoId, null, userId, 1, 'New Like', transaction);
 };
 
-const unlikeVideo = async (userId, videoId, transaction) => {
+const unlikeVideo = async (userId, videoId, transaction, like = null) => {
     const video = await Video.findByPk(videoId, { attributes: ['id'] });
     if (!video)
         throw new Error('Video not found');
 
-    const like = await VideoLike.findOne({ where: { userId, videoId } });
+    if (!like) {
+        like = await VideoLike.findOne({ where: { userId, videoId } });
+    }
+
     if (like) {
         await like.destroy({ transaction });
 
         const videoMetadata = await VideoMetadata.findOne({ 
             where: { videoId },
-            attributes: ['likeCount'],
+            attributes: ['id'],
         });
         // Decrement the likeCount atomically
         await videoMetadata.decrement('likeCount', { transaction });
@@ -591,7 +597,7 @@ const likeAndUnlikeVideo = async (req, res) => {
             await transaction.commit();
             return res.status(200).json({ message: "Video unliked successfully" });
         } else {
-            await likeVideo(userId, videoId, transaction);
+            await likeVideo(userId, videoId, transaction, like);
             await transaction.commit();
             return res.status(200).json({ message: "Video liked successfully" });
         }
@@ -754,7 +760,9 @@ const viewVideo = async (req, res) => {
         if (!videoId)
             return res.status(400).json({ message: "Video ID is required" });
 
-        const video = await Video.findByPk(videoId);
+        const video = await Video.findByPk(videoId, {
+            attributes: ['id', 'creatorId']
+        });
         if (!video)
             return res.status(404).json({ message: "Video not found" });
 
@@ -820,20 +828,24 @@ const getFollowingsVideos = async (req, res) => {
         where: { creatorId: followingIds },
         limit: process.env.FOLLOWINGS_VIDEOS_LIMIT || 6,
         offset,
+        include: [
+            {
+                model: VideoMetadata,
+                as: 'metadata',
+                attributes: ['likeCount', 'shareCount', 'popularityScore', 'averageRating', 'viewCount'],
+            },
+        ],
         order: [[{ model: VideoMetadata, as: 'metadata' }, 'popularityScore', 'DESC']],
       });
   
-      const videoIds = videos.map(video => video.id);
-      const videosData = await fetchVideoData(videoIds, userId);
-  
+      const videosData = await Promise.all(videos.map(video => fetchVideoData(video.id, userId, video.metadata)));
+
       return res.status(200).json({ videos: videosData });        
        
     } catch (error) {
       return res.status(500).json({ error: error.message});
     }
 }
-
-
   
 const getFollowersVideos = async (req, res) => {
     try {
@@ -851,11 +863,18 @@ const getFollowersVideos = async (req, res) => {
         where: { creatorId: followersIds },
         limit: process.env.FOLLOWERS_VIDEOS_LIMIT || 6,
         offset,
+        include:
+        [
+            {
+                model: VideoMetadata,
+                as: 'metadata',
+                attributes: ['likeCount', 'shareCount', 'popularityScore'],
+            },
+        ],
         order: [[{ model: VideoMetadata, as: 'metadata' }, 'popularityScore', 'DESC']],
       });
   
-      const videoIds = videos.map(video => video.id);
-      const videosData = await fetchVideoData(videoIds, userId);
+      const videosData = await Promise.all(videos.map(video => fetchVideoData(video.id, userId, video.metadata)));
 
   
       return res.status(200).json({ videos: videosData });        

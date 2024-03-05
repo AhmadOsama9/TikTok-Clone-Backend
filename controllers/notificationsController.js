@@ -4,6 +4,8 @@ const Video = require("../config/db").Video;
 const Comment = require("../config/db").Comment;
 const Sequelize = require("sequelize");
 
+const { Op } = require("sequelize");
+
 
 //I'm thinking of removing the checking for the vidoe, comment and otherUser
 //I mean since my code is the one responsible for that I think making sure in the other functions is better

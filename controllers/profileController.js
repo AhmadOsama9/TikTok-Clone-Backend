@@ -4,6 +4,7 @@ const UserStatus = require("../config/db").UserStatus;
 const Profile = require("../config/db").Profile;
 const Follow = require("../config/db").Follow;
 const Video = require("../config/db").Video;
+const VideoMetadata = require("../config/db").VideoMetadata;
 const Comment = require("../config/db").Comment;
 const SavedVideo = require("../config/db").SavedVideo;
 
@@ -696,7 +697,9 @@ const saveVideo = async (req, res) => {
         if (!videoId)
             return res.status(400).json({ error: "Please provide a videoId" });
 
-        const video = await Video.findByPk(videoId);
+        const video = await Video.findByPk(videoId, {
+            attributes: ['id']
+        });
         if (!video) {
             return res.status(404).json({ error: "Video not found" });
         }
@@ -755,13 +758,13 @@ const getSavedVideosUsingPagination = async (req, res) => {
             }],
             limit: process.env.SAVED_VIDEOS_LIMIT || 5,
             offset: offset, 
-            attributes: ['id']
+            attributes: ['videoId']
         });
 
         const formattedVideos = await Promise.all(savedVideos.map(async savedVideo => {
             const signedUrl = await getSignedUrl(savedVideo.Video.thumbnailFileName);
             return {
-                videoId: savedVideo.Video.id,
+                videoId: savedVideo.videoId,
                 thumbnailUrl: signedUrl,
                 views: savedVideo.Video.metadata.viewCount
             };
