@@ -23,7 +23,7 @@ const bucketName = process.env.IMAGE_BUCKET_NAME || "kn_story_app";
 
 const fetchVideoData = require("../helper/fetchVideoData");
 const { getModel } = require("../helper/initializeAndGetModel");
-
+const getSignedUrl = require("../cloudFunctions/getSignedUrl");
 
 async function listFiles() {
     const [files] = await storage.bucket(bucketName).getFiles();
@@ -72,22 +72,6 @@ async function deleteAllFiles() {
 
 //listFiles();
 
-async function getSignedUrl(fileName) {
-    try {
-        const options = {
-            version: 'v4',
-            action: 'read',
-            expires: Date.now() + 40 * 60 * 1000,
-        };
-
-        const [url] = await storage.bucket(bucketName).file(fileName).getSignedUrl(options);
-
-        return url;
-    } catch (error) {
-        console.error(`Failed to get signed URL for file ${fileName}: ${error.message}`);
-        throw new Error(`Failed to get signed URL for file ${fileName}`);
-    }
-}
 
 
 async function getFollowersUsingPagination(userId, offset = 0) {
@@ -175,6 +159,7 @@ async function getVideosUsingPagination(userId, offset = 0) {
 
     return videoData;
 }
+
 
 const getUserProfile = async (req, res) => {
     try {
@@ -323,16 +308,22 @@ const getOtherUserProfileImage = async (req, res) => {
 }
 
 
+//I think it's not much of a duplication
+//even though I use it in the thumbnail
+//but the thumbnail is using files and not buffers
 const validateAndCompressImage = async (buffer) => {
     if (buffer.length > process.env.MAX_IMAGE_SIZE) {
         throw new Error("Image size should be less than 200KB");
     }
 
+    console.log("image buffer length before compression is: ", buffer.length);
+
     let compressedBuffer;
     try {
         const image = await Jimp.read(buffer);
-        image.quality(parseInt(process.env.JPEG_QUALITY || '70')); // set JPEG quality to 70
+        image.quality(parseInt(process.env.JPEG_QUALITY || '70', 10)); // set JPEG quality to 70
         compressedBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+        console.log("image buffer length after compression is: ", compressedBuffer.length);
     } catch (error) {
         throw new Error("Invalid image file");
     }
@@ -340,15 +331,16 @@ const validateAndCompressImage = async (buffer) => {
     return { compressedBuffer };
 };
 
+const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
+const sexyThreshold = process.env.SEXY_THRESHOLD || 0.85;
+const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
+
+
 const classifyImage = async (buffer) => {
     const imageTensor = tf.node.decodeImage(buffer);
     const model = getModel();
 
     const predictions = await model.classify(imageTensor);
-
-    const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
-    const sexyThreshold = process.env.SEXY_THRESHOLD || 0.85;
-    const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
 
     const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
     const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
@@ -359,6 +351,7 @@ const classifyImage = async (buffer) => {
     }
 
 };
+
 
 const uploadImageToCloudStorage = async (buffer, userId, profile) => {
     const bucket = storage.bucket(bucketName);
@@ -379,9 +372,12 @@ const uploadImageToCloudStorage = async (buffer, userId, profile) => {
         stream.on("finish", async () => { 
             if (profile.imageFileName) { 
                 const oldFile = bucket.file(profile.imageFileName);
-                oldFile.delete().catch(err => {
+                try {
+                    await oldFile.delete();
+                } catch (err) {
                     console.log("Failed to delete old image from cloud storage", err);
-                });
+                    throw new Error("Failed to delete old image from cloud storage");
+                }
             }
         
             profile.imageFileName = fileName;
@@ -803,5 +799,4 @@ module.exports = {
     saveVideo,
     unsaveVideo,
     getSavedVideosUsingPagination,
-    getSignedUrl,
 }

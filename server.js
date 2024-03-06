@@ -11,8 +11,8 @@ port = process.env.PORT || 3000;
 //scheduling
 require("./scheduling/userPopularityUpdate");
 require("./scheduling/videoPopularityScore");
-require("./scheduling/watchedVideoDelete");
 require("./scheduling/decayUserPersonalization");
+
 
 //configs
 const swaggerOptions = require("./config/swaggerConfig");
