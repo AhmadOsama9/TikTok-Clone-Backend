@@ -275,7 +275,10 @@ const getUserProfileImage = async (req, res) => {
 
         const { userId  } = req.user;
 
-        const userProfile = await Profile.findOne({ where: { userId: userId } });
+        const userProfile = await Profile.findOne({ 
+            where: { userId: userId },
+            attributes: ['imageFileName']
+        });
         if (!userProfile) {
             return res.status(404).json({ error: "Profile not found" });
         }
@@ -299,7 +302,10 @@ const getOtherUserProfileImage = async (req, res) => {
 
         const { otherUserId  } = req.params;
 
-        const otherUserProfile = await Profile.findOne({ where: { userId: otherUserId } });
+        const otherUserProfile = await Profile.findOne({ 
+            where: { userId: otherUserId },
+            attributes: ['imageFileName']
+        });
         if (!otherUserProfile) {
             return res.status(404).json({ error: "Profile not found" });
         }
@@ -315,6 +321,7 @@ const getOtherUserProfileImage = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 }
+
 
 const validateAndCompressImage = async (buffer) => {
     if (buffer.length > process.env.MAX_IMAGE_SIZE) {
@@ -480,7 +487,7 @@ const changeProfileName = async (req, res) => {
         }
 
         if (user.name === newName)
-            return res.statsu(400).json({ error: "they are the same name"});
+            return res.status(400).json({ error: "they are the same name"});
 
         user.name = newName;
         await user.save();
@@ -603,7 +610,6 @@ const verificationAndSetNewEmail = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }
-
 
 
 const changeProfilePhone = async (req, res) => {
