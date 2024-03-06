@@ -311,20 +311,21 @@ const getOtherUserProfileImage = async (req, res) => {
 //I think it's not much of a duplication
 //even though I use it in the thumbnail
 //but the thumbnail is using files and not buffers
+//so I think it's okay
+const sharp = require('sharp');
+
 const validateAndCompressImage = async (buffer) => {
     if (buffer.length > process.env.MAX_IMAGE_SIZE) {
         throw new Error("Image size should be less than 200KB");
     }
 
-    console.log("image buffer length before compression is: ", buffer.length);
-
     let compressedBuffer;
     try {
-        const image = await Jimp.read(buffer);
-        image.quality(parseInt(process.env.JPEG_QUALITY || '70', 10)); // set JPEG quality to 70
-        compressedBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
-        console.log("image buffer length after compression is: ", compressedBuffer.length);
+        const metadata = await sharp(buffer).metadata();
+        const quality = parseInt(process.env.JPEG_QUALITY || '50', 10); // set JPEG quality to 50
+        compressedBuffer = await sharp(buffer).jpeg({ quality }).toBuffer();
     } catch (error) {
+        console.log("error", error);
         throw new Error("Invalid image file");
     }
 
