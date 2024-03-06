@@ -65,8 +65,6 @@ const createReport = async (req, res) => {
     }
 };
 
-
-
 const getReportById = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -133,9 +131,6 @@ const getUnviewedReports = async (req, res) => {
 };
 
 
-//here will it work
-//cause I don't select the title and description
-//will the update still works ?
 const updateReport = async (req, res) => {
     try {
         const { userId } = req.user;
@@ -145,7 +140,7 @@ const updateReport = async (req, res) => {
             return res.status(400).json({ message: "At least one field is required" });
 
         const report = await Report.findByPk(reportId, {
-            attributes: ['id']
+            attributes: ['id', 'userId']
         });
         if (!report)
             return res.status(404).json({ message: "Report not found" });

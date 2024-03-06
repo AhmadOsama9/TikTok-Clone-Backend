@@ -19,7 +19,7 @@ const addRate = async (req, res) => {
         }
 
         const videoMetadata = await VideoMetadata.findByPk(videoId, {
-            attributes: ["totalRatings", "totalRating", "averageRating"],
+            attributes: ['id', "totalRatings", "totalRating", "averageRating"],
             transaction: t
         });
         if (!videoMetadata)
