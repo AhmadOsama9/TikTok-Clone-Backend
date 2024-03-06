@@ -23,5 +23,5 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
     - run: npm test
-    -name: Start application
+    - name: Start application
       run: npm start
