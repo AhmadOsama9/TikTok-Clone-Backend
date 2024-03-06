@@ -19,5 +19,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false
     },
+  }, {
+    indexes: [
+      {
+        fields: ['userId', 'isBanned', 'isAdmin', 'isVerified']
+      }
+    ]
   });
 };

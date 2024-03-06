@@ -39,5 +39,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DOUBLE,
         defaultValue: 0,
       },
+    }, {
+      indexes: [
+        {
+          fields: ['videoId', 'viewCount', 'likeCount', 'shareCount', 'totalRating', 'totalRatings', 'averageRating', 'popularityScore', 'highestPopularityScore']
+        }
+      ]
     });
 };

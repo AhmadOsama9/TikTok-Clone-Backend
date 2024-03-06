@@ -32,5 +32,11 @@ module.exports = (sequelize, DataTypes) => {
     referralCode: DataTypes.STRING,
     referrals: DataTypes.INTEGER,
     referred: DataTypes.BOOLEAN,
+  }, {
+    indexes: [
+      {
+        fields: ['name', 'username', 'phone', 'email', 'balance']
+      }
+    ]
   });
 };

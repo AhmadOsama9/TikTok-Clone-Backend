@@ -14,5 +14,11 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       }
     },
+  }, {
+    indexes: [
+      {
+        fields: ['followerId', 'followingId'],
+      },
+    ],
   });
 };

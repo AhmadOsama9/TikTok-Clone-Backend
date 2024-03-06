@@ -11,6 +11,13 @@ module.exports = (sequelize, DataTypes) => {
       authVerified: DataTypes.BOOLEAN,
       authCode: DataTypes.STRING,
       authCodeExpiry: DataTypes.DATE,
+    }, {
+      indexes: [
+        {
+          fields: ['userId']
+        }
+      ]
+    
     });
   };
 

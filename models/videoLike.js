@@ -21,5 +21,11 @@ module.exports = (sequelize, DataTypes) => {
                 fields: ['userId', 'videoId']
             }
         ]
+    }, {
+        indexes: [
+            {
+                fields: ['userId', 'videoId']
+            }
+        ]
     });
 };

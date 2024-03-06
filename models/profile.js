@@ -9,5 +9,11 @@ module.exports = (sequelize, DataTypes) => {
       },
       imageFileName: DataTypes.STRING,
       bio: DataTypes.STRING,
+    }, {
+      indexes: [
+        {
+          fields: ['userId', 'bio', 'imageFileName']
+        }
+      ]
     });
 };

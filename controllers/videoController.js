@@ -204,20 +204,18 @@ const checkVideoContent = async (videoPath ,res) => {
 }
 
 const validateThumbnail = async (imagePath) => {
-    let buffer = await fs.readFile(imagePath);
-
-    if (buffer.length > process.env.MAX_IMAGE_SIZE) {
-        throw new Error("Image size should be less than 200KB");
-    }
-
+    let buffer;
     try {
-        await Jimp.read(buffer);
-    } catch (error) {
-        console.log("error", error);
-        throw new Error("Invalid image file");
-    }
+        let buffer = await fs.promises.readFile(imagePath);
+        if (!buffer)
+            throw new Error("Failed to read image file");
 
-    try {
+        const MAX_IMAGE_SIZE = parseFloat(process.env.MAX_IMAGE_SIZE);
+
+        if (buffer.length > MAX_IMAGE_SIZE) {
+            throw new Error(`Image size should be less than ${MAX_IMAGE_SIZE} bytes`);
+        }
+
         const imageTensor = tf.node.decodeImage(buffer);
 
         const model = getModel();
@@ -232,9 +230,11 @@ const validateThumbnail = async (imagePath) => {
             throw new Error("Inappropriate content");
         }
         return true;
+
     } catch (error) {
-        throw new Error(error);
-    }
+        console.log("error", error);
+        throw new Error("Failed to read image file");
+    }      
 };
 
 const validCategories = [
@@ -285,17 +285,15 @@ const uploadVideo = async (req, res) => {
             throw new Error("Failed to read video or image");
         }
 
-        const maxSize = process.env.MAX_VIDEO_SIZE || 60 * 1024 * 1024;
-        if (videoFile.size > maxSize) {
-            throw new Error("File size too large. Please upload a video less than 60MB.");
+        const MAX_VIDEO_SIZE = parseFloat(process.env.MAX_VIDEO_SIZE);
+        if (videoFile.size > MAX_VIDEO_SIZE) {
+            throw new Error(`File size too large. Please upload a video less than ${MAX_VIDEO_SIZE} bytes.`);
         }
 
-        const validMimeTypes = ["video/mp4"];
-        if (!validMimeTypes.includes(videoFile.mimetype)) {
-            throw new Error("Invalid file type. Please upload a video file.");
-        }
-
-        const user = await User.findOne({ where: { id: userId } });
+        const user = await User.findOne({ 
+            where: { id: userId },
+            attributes: ['id']
+        });
         if (!user) {
             throw new Error("User not found");
         }
@@ -320,15 +318,8 @@ const uploadVideo = async (req, res) => {
         console.log("After checking video content");
         console.log("Before compressing video, videoSize: ", videoFile.size, " videoInfo: ", videoInfo);
 
-        const compressionResult = await compressVideo(req, videoPath, videoInfo);
+        await compressVideo(req, videoPath, videoInfo);
 
-        console.log("Compression Result: ", compressionResult);
-        const newVideoInfo = await getVideoInfo(videoPath);
-        const stats = await fs.promises.stat(videoPath);
-        const newSize = stats.size;
-    
-        console.log("After compressing video, newSize: ", newSize, " newVideoInfo: ", newVideoInfo);
-    
         const fileName = await uploadToCloudStorage(videoPath, `videos/${userId}/${Date.now()}.mp4`);
 
         const thumbnailFileName = await uploadToCloudStorage(imagePath, `thumbnails/${userId}/${Date.now()}.jpg`);

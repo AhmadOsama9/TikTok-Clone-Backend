@@ -25,5 +25,11 @@ module.exports = (sequelize, DataTypes) => {
         },
         allowNull: false
       }
+    }, {
+      indexes: [
+        {
+          fields: ['amount', 'senderId', 'receiverId']
+        }
+      ]
     });
 };

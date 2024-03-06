@@ -14,5 +14,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 0
       }
+    }, {
+      indexes: [
+        {
+          fields: ['userId', 'popularityScore']
+        }
+      ]
     });
   };

@@ -44,5 +44,11 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       },
     },
+  }, {
+    indexes: [
+      {
+        fields: ['chatId', 'senderId'],
+      },
+    ]
   });
 };

@@ -24,6 +24,12 @@ module.exports = (sequelize, DataTypes) => {
           }
         }
       }
+    }, {
+      indexes: [
+        {
+          fields: ['videoId', 'name']
+        }
+      ]
     });
   };
   

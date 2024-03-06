@@ -18,5 +18,11 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
+  }, {
+    indexes: [
+      {
+        fields: ['creatorId', 'fileName', 'thumbnailFileName', 'description']
+      }
+    ]
   });
 };

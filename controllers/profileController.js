@@ -314,9 +314,12 @@ const getOtherUserProfileImage = async (req, res) => {
 //so I think it's okay
 
 const validateImage = async (buffer) => {
-    if (buffer.length > process.env.MAX_IMAGE_SIZE) {
-        throw new Error("Image size should be less than 200KB");
+    const MAX_IMAGE_SIZE = parseFloat(process.env.MAX_IMAGE_SIZE);
+
+    if (buffer.length > MAX_IMAGE_SIZE) {
+        throw new Error(`Image size should be less than ${MAX_IMAGE_SIZE} bytes`);
     }
+
 
     try {
         await Jimp.read(buffer);

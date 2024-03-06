@@ -47,6 +47,12 @@ module.exports = (sequelize, DataTypes) => {
         title: DataTypes.STRING,
         body: DataTypes.STRING,
         isRead: DataTypes.BOOLEAN,
+    }, {
+        indexes: [
+            {
+                fields: ['userId', 'videoId', 'commentId', 'otherUserId', 'notificationType']
+            }
+        ]
     });
 };
 

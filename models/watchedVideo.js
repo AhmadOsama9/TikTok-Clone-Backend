@@ -16,5 +16,12 @@ module.exports = (sequelize, DataTypes) => {
                 key: 'id',
             }
         },
+    }, {
+        indexes: [
+            {
+                unique: true,
+                fields: ['userId', 'videoId']
+            }
+        ]
     });
 };
