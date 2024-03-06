@@ -203,22 +203,21 @@ const checkVideoContent = async (videoPath ,res) => {
     }
 }
 
-const validateAndCompressThumbnail = async (imagePath) => {
-    const tempPath = `${imagePath}.tmp`;
-    const quality = parseInt(process.env.JPEG_QUALITY || '70', 10);
+const validateThumbnail = async (imagePath) => {
+    let buffer = await fs.readFile(imagePath);
 
-    try {
-        const image = await Jimp.read(imagePath);
-        image.quality(quality);
-        await image.writeAsync(tempPath);
-
-        await fs.promises.rename(tempPath, imagePath);
-    } catch (error) {
-        throw new Error(error);
+    if (buffer.length > process.env.MAX_IMAGE_SIZE) {
+        throw new Error("Image size should be less than 200KB");
     }
 
     try {
-        const buffer = await fs.promises.readFile(imagePath);
+        await Jimp.read(buffer);
+    } catch (error) {
+        console.log("error", error);
+        throw new Error("Invalid image file");
+    }
+
+    try {
         const imageTensor = tf.node.decodeImage(buffer);
 
         const model = getModel();
@@ -305,7 +304,7 @@ const uploadVideo = async (req, res) => {
         //or I might depend on ffmpeg cause I think it's considered as process the video
         //so if it was not a video it will through an error
 
-        const isThumbnailValid = await validateAndCompressThumbnail(imagePath);
+        const isThumbnailValid = await validateThumbnail(imagePath);
         if (!isThumbnailValid) {
             throw new Error("Invalid thumbnail");
         }

@@ -312,24 +312,18 @@ const getOtherUserProfileImage = async (req, res) => {
 //even though I use it in the thumbnail
 //but the thumbnail is using files and not buffers
 //so I think it's okay
-const sharp = require('sharp');
 
-const validateAndCompressImage = async (buffer) => {
+const validateImage = async (buffer) => {
     if (buffer.length > process.env.MAX_IMAGE_SIZE) {
         throw new Error("Image size should be less than 200KB");
     }
 
-    let compressedBuffer;
     try {
-        const metadata = await sharp(buffer).metadata();
-        const quality = parseInt(process.env.JPEG_QUALITY || '50', 10); // set JPEG quality to 50
-        compressedBuffer = await sharp(buffer).jpeg({ quality }).toBuffer();
+        await Jimp.read(buffer);
     } catch (error) {
         console.log("error", error);
         throw new Error("Invalid image file");
     }
-
-    return { compressedBuffer };
 };
 
 const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
@@ -411,8 +405,8 @@ const changeProfileImage = async (req, res) => {
 
         const buffer = req.file.buffer;
 
-        const { compressedBuffer } = await validateAndCompressImage(buffer);
-        await classifyImage(compressedBuffer);
+        await validateImage(buffer);
+        await classifyImage(buffer);
 
         const profile = await Profile.findOne({ 
             where: { userId },
@@ -422,7 +416,7 @@ const changeProfileImage = async (req, res) => {
             return res.status(404).json({ error: "Profile not found" });
         }
 
-        const fileName = await uploadImageToCloudStorage(compressedBuffer, userId, profile);
+        const fileName = await uploadImageToCloudStorage(buffer, userId, profile);
 
         res.status(200).json({ 
             message1: "Profile picture changed successfully", 
