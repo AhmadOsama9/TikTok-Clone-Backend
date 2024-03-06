@@ -33,7 +33,8 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
 
         if (commentId) {
             const comment = await Comment.findByPk(commentId, {
-                attributes: ['id']
+                attributes: ['id'],
+                transaction
             });
             if (!comment)
                 throw new Error('Comment not found');

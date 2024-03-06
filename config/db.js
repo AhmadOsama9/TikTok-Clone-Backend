@@ -512,9 +512,22 @@ Video.hasMany(Comment, {
     onDelete: 'CASCADE',
 });
 
+//related to notifications
 Video.hasMany(Notification, {
     foreignKey: 'videoId',
-    as: 'notifications',
+    as: 'videoNotifications',
+    onDelete: 'CASCADE',
+})
+
+User.hasMany(Notification, {
+    foreignKey: 'userId',
+    as: 'userNotifications',
+    onDelete: 'CASCADE',
+})
+
+Comment.hasMany(Notification, {
+    foreignKey: 'commentId',
+    as: 'commentNotifications',
     onDelete: 'CASCADE',
 })
 

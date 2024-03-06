@@ -109,8 +109,7 @@ const addGiftComment = async (req, res) => {
             return res.status(400).json({ message: "Insufficient balance" });
         }
 
-        user.balance -= giftPrice;
-        await user.save({ transaction });
+        await user.decrement('balance', { by: giftPrice, transaction });
 
         const userStatus = await UserStatus.findOne({ 
             where: { userId: userId },
@@ -148,9 +147,8 @@ const addGiftComment = async (req, res) => {
             return res.status(404).json({ message: "Receiver not found" });
         }
 
-        receiver.balance += giftPrice;
-        await receiver.save({ transaction });
-
+        await receiver.increment('balance', { by: giftPrice, transaction });
+        
         await Transaction.create({
             amount: giftPrice,
             senderId: userId,
@@ -293,7 +291,9 @@ const deleteComment = async (req, res) => {
         if (!commentId)
             return res.status(400).json({ message: 'Comment id is required' });
 
-        const comment = await Comment.findByPk(commentId);
+        const comment = await Comment.findByPk(commentId, {
+            attributes: ['id', 'videoId', 'userId']
+        });
         if (!comment)
             return res.status(404).json({ message: 'Comment not found' });
 
@@ -305,6 +305,7 @@ const deleteComment = async (req, res) => {
             where: { userId },
             attributes: ['isAdmin']
         });
+
         if (!userStatus)
             return res.status(404).json({ message: 'UserStatus not found' });
 
@@ -334,11 +335,13 @@ const likeAndUnlikeComment = async (req, res) => {
 
         transaction = await sequelize.transaction();
 
-        const [comment, created] = await Comment.findOrCreate({
-            where: { id: commentId },
-            defaults: { likeCount: 0 },
-            transaction,
+        const comment = await Comment.findByPk(commentId, {
+            attributes: ['id', 'likeCount']
         });
+        if (!comment) {
+            await transaction.rollback();
+            return res.status(404).json({ message: 'Comment not found' });
+        }
 
         const existingLike = await CommentLike.findOne({
             where: { userId, commentId },
