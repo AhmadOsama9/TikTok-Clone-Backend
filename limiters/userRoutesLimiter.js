@@ -46,16 +46,25 @@ const checkBanStatusLimiter = rateLimit({
       return req.user.userId;
     },
     message: "Too many ban status check requests, please try again after 15 minutes"
-  });
+});
   
-  const banUserLimiter = rateLimit({
+const banUserLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 10, // limit each user to 10 requests per windowMs
     keyGenerator: function(req, res) {
       return req.user.userId;
     },
     message: "Too many user ban requests, please try again after an hour"
-  });
+});
+
+const unbanUserLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // limit each IP to 10 requests per windowMs
+  keyGenerator: function(req, res) {
+    return req.user.userId;
+  },
+  message: "Too many unban requests from this IP, please try again after an hour"
+});
 
 //that means I'm also limiting the admin
 //lol whatever he should be doing his job
