@@ -7,6 +7,12 @@ const {
     getSavedVideosUsingPagination
 } = require("../controllers/profileController");
 
+const {
+    saveVideoLimiter,
+    unsaveVideoLimiter,
+    getSavedVideosUsingPaginationLimiter
+} = require("../limiters/savedVideosRoutesLimiter")
+
 /**
  * @swagger
  * /api/profile/videos/{videoId}/save:
@@ -39,7 +45,7 @@ const {
  *       '500':
  *         description: Internal server error
  */
-router.post('/videos/:videoId/save', saveVideo);
+router.post('/videos/:videoId/save', saveVideoLimiter , saveVideo);
 
 /**
  * @swagger
@@ -73,7 +79,7 @@ router.post('/videos/:videoId/save', saveVideo);
  *       '500':
  *         description: Internal server error
  */
-router.delete('/videos/:videoId/unsave', unsaveVideo);
+router.delete('/videos/:videoId/unsave', unsaveVideoLimiter , unsaveVideo);
 
 /**
  * @swagger
@@ -104,6 +110,6 @@ router.delete('/videos/:videoId/unsave', unsaveVideo);
  *       '500':
  *         description: Internal server error
  */
-router.get('/videos/saved', getSavedVideosUsingPagination);
+router.get('/videos/saved', getSavedVideosUsingPaginationLimiter , getSavedVideosUsingPagination);
 
 module.exports = router;

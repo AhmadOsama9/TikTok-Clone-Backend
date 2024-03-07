@@ -36,6 +36,23 @@ const {
     deleteVideo,
 } = require("../controllers/videoController");
 
+const { 
+    uploadVideoLimiter,
+    getVideoThumbnailLimiter,
+    getVideoLimiter,
+    getFollowingsVideosLimiter,
+    getFollowersVideosLimiter,
+    updateVideoDescriptionLimiter,
+    likeAndUnlikeVideoLimiter,
+    shareVideoLimiter,
+    viewVideoLimiter,
+    searchVideosLimiter,
+    autocompleteVideosLimiter,
+    deleteVideoLimiter,
+    getCreatorCommentsLimiter,
+    getCommentsUsingPaginationLimiter
+} = require("../limiters/videoRoutesLimiter")
+
 /**
  * @swagger
  * /api/video/upload:
@@ -84,7 +101,7 @@ const {
  *       500:
  *         description: Failed to read video or image, Internal Server Error
  */
-router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
+router.post("/upload-video", uploadVideoLimiter , upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
 
 /**
  * @swagger
@@ -123,7 +140,7 @@ router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { na
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/thumbnail/:videoId", getVideoThumbnail);
+router.get("/thumbnail/:videoId", getVideoThumbnailLimiter , getVideoThumbnail);
 
 /**
  * @swagger
@@ -199,7 +216,7 @@ router.get("/thumbnail/:videoId", getVideoThumbnail);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/get/:videoId", getVideo);
+router.get("/get/:videoId", getVideoLimiter , getVideo);
 
 /**
  * @swagger
@@ -274,7 +291,7 @@ router.get("/get/:videoId", getVideo);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/followings", getFollowingsVideos);
+router.get("/followings", getFollowingsVideosLimiter , getFollowingsVideos);
 
 /**
  * @swagger
@@ -349,7 +366,7 @@ router.get("/followings", getFollowingsVideos);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/followers", getFollowersVideos);
+router.get("/followers", getFollowersVideosLimiter , getFollowersVideos);
 
 
 /**
@@ -395,7 +412,7 @@ router.get("/followers", getFollowersVideos);
  *       '500':
  *         description: Internal server error
  */
-router.put("/:videoId/update-description", updateVideoDescription);
+router.put("/:videoId/update-description", updateVideoDescriptionLimiter , updateVideoDescription);
 
 /**
  * @swagger
@@ -434,7 +451,7 @@ router.put("/:videoId/update-description", updateVideoDescription);
  *       500:
  *         description: Internal server error
  */
-router.post("/like-and-unlike", likeAndUnlikeVideo);
+router.post("/like-and-unlike", likeAndUnlikeVideoLimiter , likeAndUnlikeVideo);
 
 /**
  * @swagger
@@ -473,7 +490,7 @@ router.post("/like-and-unlike", likeAndUnlikeVideo);
  *       500:
  *         description: Internal server error
  */
-router.post("/share", shareVideo);
+router.post("/share", shareVideoLimiter , shareVideo);
 
 /**
  * @swagger
@@ -515,7 +532,7 @@ router.post("/share", shareVideo);
  *       500:
  *         description: Internal server error
  */
-router.post("/view", viewVideo);
+router.post("/view", viewVideoLimiter , viewVideo);
 
 /**
  * @swagger
@@ -565,7 +582,7 @@ router.post("/view", viewVideo);
  *       500:
  *         description: Failed to read video or image, Internal Server Error
  */
-router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
+router.post("/upload-video", uploadVideoLimiter , upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
 
 /**
  * @swagger
@@ -636,7 +653,7 @@ router.post("/upload-video", upload.fields([{ name: 'video', maxCount: 1 }, { na
  *       500:
  *         description: Internal server error
  */
-router.get("/search", searchVideosUsingPagination);
+router.get("/search", searchVideosLimiter , searchVideosUsingPagination);
 
 /**
  * @swagger
@@ -668,7 +685,7 @@ router.get("/search", searchVideosUsingPagination);
  *       500:
  *         description: Internal server error
  */
-router.get("/autocomplete", autocompleteVideos);
+router.get("/autocomplete", autocompleteVideosLimiter , autocompleteVideos);
 
 /**
  * @swagger
@@ -711,7 +728,7 @@ router.get("/autocomplete", autocompleteVideos);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.delete("/delete/:videoId", deleteVideo);
+router.delete("/delete/:videoId", deleteVideoLimiter , deleteVideo);
 
 /**
  * @swagger
@@ -801,7 +818,7 @@ router.delete("/delete/:videoId", deleteVideo);
  *       404:
  *         description: Video not found
  */
-router.get("/creator-comments/:videoId", getCreatorComments);
+router.get("/creator-comments/:videoId", getCreatorCommentsLimiter , getCreatorComments);
 
 
 /**
@@ -892,7 +909,7 @@ router.get("/creator-comments/:videoId", getCreatorComments);
  *       404:
  *         description: Video not found
  */
-router.get("/comments/:videoId", getCommentsUsingPagination);
+router.get("/comments/:videoId", getCommentsUsingPaginationLimiter , getCommentsUsingPagination);
 
 
 module.exports = router;

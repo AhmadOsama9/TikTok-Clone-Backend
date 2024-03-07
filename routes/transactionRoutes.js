@@ -7,6 +7,12 @@ const {
     sendGift 
 } = require("../controllers/transactionController");
 
+const { 
+    getBalanceAndTransactionsLimiter,
+    addBalanceLimiter,
+    sendGiftLimiter
+} = require("../limiters/transactionRoutesLimiter")
+
 /**
  * @swagger
  * /api/transaction/get-balance-and-transactions:
@@ -70,7 +76,7 @@ const {
  *       receiverUsername:
  *         type: string
  */
-router.get("/get-balance-and-transactions", getBalanceAndTransactions);
+router.get("/get-balance-and-transactions", getBalanceAndTransactionsLimiter , getBalanceAndTransactions);
 
 
 /**
@@ -119,7 +125,7 @@ router.get("/get-balance-and-transactions", getBalanceAndTransactions);
  *       500:
  *         description: Internal Server Error
  */
-router.post("/add-balance", addBalance);
+router.post("/add-balance", addBalanceLimiter , addBalance);
 
 /**
  * @swagger
@@ -174,7 +180,7 @@ router.post("/add-balance", addBalance);
  *       500:
  *         description: Insufficient balance or Internal Server Error
  */
-router.post("/send-gift", sendGift);
+router.post("/send-gift", sendGiftLimiter , sendGift);
 
 
 module.exports = router;

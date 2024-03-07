@@ -11,6 +11,17 @@ const {
     setReportIsViewed,
 } = require("../controllers/reportController");
 
+const { 
+    createReportLimiter,
+    getReportByIdLimiter,
+    getUnviewedReportsLimiter,
+    getAllReportsLimiter,
+    updateReportLimiter,
+    deleteReportLimiter,
+    setReportIsViewedLimiter
+} = require("../limiters/reportRoutesLimiter")
+
+
 /**
  * @swagger
  * /api/report/create:
@@ -74,7 +85,7 @@ const {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/create", createReport);
+router.post("/create", createReportLimiter , createReport);
 
 /**
  * @swagger
@@ -137,7 +148,7 @@ router.post("/create", createReport);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/update/:id", updateReport);
+router.put("/update/:id", updateReportLimiter , updateReport);
 
 /**
  * @swagger
@@ -182,7 +193,7 @@ router.put("/update/:id", updateReport);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/get/:id", getReportById);
+router.get("/get/:id", getReportByIdLimiter , getReportById);
 
 /**
  * @swagger
@@ -225,7 +236,7 @@ router.get("/get/:id", getReportById);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/get-all", getAllReports);
+router.get("/get-all", getAllReportsLimiter , getAllReports);
 
 /**
  * @swagger
@@ -263,7 +274,7 @@ router.get("/get-all", getAllReports);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/get-unviewed", getUnviewedReports);
+router.get("/get-unviewed", getUnviewedReportsLimiter , getUnviewedReports);
 
 /**
  * @swagger
@@ -312,7 +323,7 @@ router.get("/get-unviewed", getUnviewedReports);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/set-viewed/:id", setReportIsViewed);
+router.put("/set-viewed/:id", setReportIsViewedLimiter , setReportIsViewed);
 
 /**
  * @swagger
@@ -361,6 +372,7 @@ router.put("/set-viewed/:id", setReportIsViewed);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete("/delete/:id", deleteReport);
+router.delete("/delete/:id", deleteReportLimiter , deleteReport);
+
 
 module.exports = router;

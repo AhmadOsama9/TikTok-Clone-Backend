@@ -6,6 +6,10 @@ const {
 } = require("../controllers/rateController");
 
 
+const {
+    addRateLimiter
+} = require("../limiters/rateRoutesLimiter")
+
 /**
  * @swagger
  * /api/rate/add:
@@ -63,7 +67,7 @@ const {
  *                 error:
  *                   type: string
  */
-router.post("/add", addRate);
+router.post("/add", addRateLimiter, addRate);
 
 //get the people who made the rate on that video, username, imageUrl, rate
 //also using pagination 10

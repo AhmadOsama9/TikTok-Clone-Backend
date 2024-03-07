@@ -19,6 +19,25 @@ const {
 
 } = require("../controllers/userController");
 
+
+const {
+    signupLimiter,
+    verifyEmailCodeLimiter,
+    loginLimiter,
+    sendOtpLimiter,
+    verifyOtpAndSetNewPasswordLimiter,
+    sendVerificationCodeLimiter,
+    checkBanStatusLimiter,
+    banUserLimiter,
+    unbanUserLimiter,
+    setUserIsVerifiedLimiter,
+    getUserInfoLimiter,
+    referredUserLimiter,
+    searchUsersUsingPaginationLimiter,
+    autocompleteLimiter
+
+} = require("../limiters/userRoutesLimiter")
+
 /**
  * @swagger
  * /api/user/signup:
@@ -68,7 +87,7 @@ const {
  *       500:
  *         description: Internal server error
  */
-router.post("/signup", signup);
+router.post("/signup", signupLimiter, signup);
 
 /**
  * @swagger
@@ -125,7 +144,7 @@ router.post("/signup", signup);
  *       500:
  *         description: Server error
  */
-router.post("/verify-email-code", verifyEmailCode);
+router.post("/verify-email-code", verifyEmailCodeLimiter, verifyEmailCode);
 
 /**
  * @swagger
@@ -184,7 +203,7 @@ router.post("/verify-email-code", verifyEmailCode);
  *       500:
  *         description: Server error
  */
-router.post("/login", login);
+router.post("/login", loginLimiter ,login);
 
 /**
  * @swagger
@@ -226,7 +245,7 @@ router.post("/login", login);
  *       500:
  *         description: Internal Server Error
  */
-router.post("/forgot-password/send-otp", sendOtp);
+router.post("/forgot-password/send-otp", sendOtpLimiter , sendOtp);
 
 /**
  * @swagger
@@ -267,7 +286,7 @@ router.post("/forgot-password/send-otp", sendOtp);
  *       500:
  *         description: Internal Server Error
  */
-router.post("/forgot-password/verify-otp-and-set-new-password", verifyOtpAndSetNewPassword);
+router.post("/forgot-password/verify-otp-and-set-new-password", verifyOtpAndSetNewPasswordLimiter , verifyOtpAndSetNewPassword);
 
 /**
  * @swagger
@@ -302,7 +321,7 @@ router.post("/forgot-password/verify-otp-and-set-new-password", verifyOtpAndSetN
  *       500:
  *         description: Internal Server Error
  */
-router.post("/send-verification-code", sendVerificationCode);
+router.post("/send-verification-code", sendVerificationCodeLimiter , sendVerificationCode);
 
 /**
  * @swagger
@@ -338,7 +357,7 @@ router.post("/send-verification-code", sendVerificationCode);
  *       500:
  *         description: Server error
  */
-router.get("/check-ban-status", checkBanStatus);
+router.get("/check-ban-status", checkBanStatusLimiter ,checkBanStatus);
 
 /**
  * @swagger
@@ -393,7 +412,7 @@ router.get("/check-ban-status", checkBanStatus);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/ban/:toBeBannedUserId", banUser);
+router.put("/ban/:toBeBannedUserId", banUserLimiter ,banUser);
 
 /**
  * @swagger
@@ -448,7 +467,7 @@ router.put("/ban/:toBeBannedUserId", banUser);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/unban/:toBeUnbannedUserId", unbanUser);
+router.put("/unban/:toBeUnbannedUserId", unbanUserLimiter , unbanUser);
 
 /**
  * @swagger
@@ -503,7 +522,7 @@ router.put("/unban/:toBeUnbannedUserId", unbanUser);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/verify/:toBeVerifiedUserId", setUserIsVerified);
+router.put("/verify/:toBeVerifiedUserId", setUserIsVerifiedLimiter ,setUserIsVerified);
 
 /**
  * @swagger
@@ -564,7 +583,7 @@ router.put("/verify/:toBeVerifiedUserId", setUserIsVerified);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/info/:otherUserId", getUserInfo);
+router.get("/info/:otherUserId", getUserInfoLimiter , getUserInfo);
 
 /**
  * @swagger
@@ -610,7 +629,7 @@ router.get("/info/:otherUserId", getUserInfo);
  *       500:
  *         description: Server error
  */
-router.post("/refer-user", referredUser);
+router.post("/refer-user", referredUserLimiter , referredUser);
 
 /**
  * @swagger
@@ -669,7 +688,7 @@ router.post("/refer-user", referredUser);
  *       500:
  *         description: Server error
  */
-router.get("/search", searchUsersUsingPagination);
+router.get("/search", searchUsersUsingPaginationLimiter , searchUsersUsingPagination);
 
 /**
  * @swagger
@@ -723,6 +742,6 @@ router.get("/search", searchUsersUsingPagination);
  *       500:
  *         description: Server error
  */
-router.get("/autocomplete", autocompleteUsers);
+router.get("/autocomplete", autocompleteLimiter , autocompleteUsers);
 
 module.exports = router;

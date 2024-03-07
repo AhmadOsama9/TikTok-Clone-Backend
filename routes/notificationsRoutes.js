@@ -10,6 +10,13 @@ const {
 
 } = require("../controllers/notificationsController");
 
+const {
+    getNotificationsLimiter,
+    markNotificationAsReadLimiter,
+    markAllNotificationsAsReadLimiter,
+    deleteNotificationLimiter,
+} = require("../limiters/notificationsRoutesLimiter")
+
 /**
  * @swagger
  * /api/notification:
@@ -72,7 +79,8 @@ const {
  *                 error:
  *                   type: string
  */
-router.get("/", getNotifications);
+router.get("/", getNotificationsLimiter , getNotifications);
+
 /**
  * @swagger
  * /api/notification/{notificationId}/mark-as-read:
@@ -126,7 +134,7 @@ router.get("/", getNotifications);
  *                 error:
  *                   type: string
  */
-router.put("/:notificationId/mark-as-read", markNotificationAsRead);
+router.put("/:notificationId/mark-as-read", markNotificationAsReadLimiter , markNotificationAsRead);
 
 /**
  * @swagger
@@ -165,7 +173,7 @@ router.put("/:notificationId/mark-as-read", markNotificationAsRead);
  *                 error:
  *                   type: string
  */
-router.put("/mark-all-as-read", markAllNotificationsAsRead);
+router.put("/mark-all-as-read", markAllNotificationsAsReadLimiter , markAllNotificationsAsRead);
 
 /**
  * @swagger
@@ -220,6 +228,6 @@ router.put("/mark-all-as-read", markAllNotificationsAsRead);
  *                 error:
  *                   type: string
  */
-router.delete("/delete/:notificationId", deleteNotification);
+router.delete("/delete/:notificationId", deleteNotificationLimiter , deleteNotification);
 
 module.exports = router;

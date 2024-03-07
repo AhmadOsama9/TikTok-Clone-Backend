@@ -11,6 +11,16 @@ const {
     likeAndUnlikeComment,
 } = require("../controllers/commentController");
 
+const {
+    addCommentLimiter,
+    deleteCommentLimiter,
+    replyToCommentLimiter,
+    addGiftCommentLimiter,
+    updateCommentLimiter,
+    getCommentUsingIdLimiter,
+    likeAndUnlikeCommentLimiter,
+} = require("../limiters/commentRoutesLimiter");
+
 /**
  * @swagger
  * /api/comment/add:
@@ -74,7 +84,7 @@ const {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/add", addComment);
+router.post("/add", addCommentLimiter, addComment);
 
 /**
  * @swagger
@@ -129,7 +139,7 @@ router.post("/add", addComment);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete("/delete/:id", deleteComment);
+router.delete("/delete/:id", deleteCommentLimiter, deleteComment);
 
 /**
  * @swagger
@@ -197,7 +207,7 @@ router.delete("/delete/:id", deleteComment);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/reply/:id", replyToComment);
+router.post("/reply/:id", replyToCommentLimiter, replyToComment);
 
 /**
  * @swagger
@@ -265,7 +275,7 @@ router.post("/reply/:id", replyToComment);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/add-gift-comment/", addGiftComment);
+router.post("/add-gift-comment/", addGiftCommentLimiter, addGiftComment);
 
 /**
  * @swagger
@@ -339,7 +349,7 @@ router.post("/add-gift-comment/", addGiftComment);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/update/:id", updateComment);
+router.put("/update/:id", updateCommentLimiter, updateComment);
 
 /**
  * @swagger
@@ -390,7 +400,7 @@ router.put("/update/:id", updateComment);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/get-comment/:id", getCommentUsingId);
+router.get("/get-comment/:id", getCommentUsingIdLimiter, getCommentUsingId);
 
 /**
  * @swagger
@@ -447,6 +457,6 @@ router.get("/get-comment/:id", getCommentUsingId);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/like-unlike/:commentId", likeAndUnlikeComment);
+router.post("/like-unlike/:commentId", likeAndUnlikeCommentLimiter, likeAndUnlikeComment);
 
 module.exports = router;

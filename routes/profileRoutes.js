@@ -26,6 +26,24 @@ const {
     getFollowingsUsingPagination,
 } = require("../controllers/profileController");
 
+const {
+    getUserProfileLimiter,
+    getOtherUserProfileLimiter,
+    changeProfileImageLimiter,
+    changeProfilePasswordLimiter,
+    changeProfileNameLimiter,
+    changeProfilePhoneLimiter,
+    changeProfileUsernameLimiter,
+    changeProfileBioLimiter,
+    sendVerificationToNewEmailLimiter,
+    verificationAndSetNewEmailLimiter,
+    getUserVideosLimiter,
+    getOtherUserVideosLimiter,
+    getFollowersLimiter,
+    getOtherUserFollowersLimiter,
+    getFollowingsLimiter
+} = require("../limiters/profileRoutesLimiter")
+
 /**
  * @swagger
  * /api/profile/user:
@@ -89,7 +107,7 @@ const {
  *       500:
  *         description: Internal Server Error
  */
-router.get("/user", getUserProfile);
+router.get("/user", getUserProfileLimiter , getUserProfile);
 
 /**
  * @swagger
@@ -158,7 +176,7 @@ router.get("/user", getUserProfile);
  *       500:
  *         description: Internal Server Error
  */
-router.get("/otheruser/:otherUserId", getOtherUserProfile);
+router.get("/otheruser/:otherUserId", getOtherUserProfileLimiter, getOtherUserProfile);
 
 /**
  * @swagger
@@ -206,7 +224,7 @@ router.get("/otheruser/:otherUserId", getOtherUserProfile);
  *      500:
  *         description: Internal Server Error
  */
-router.post("/change-image", upload.single("image"), changeProfileImage);
+router.post("/change-image", upload.single("image"), changeProfileImageLimiter, changeProfileImage);
 
 /**
  * @swagger
@@ -329,7 +347,7 @@ router.get("/get-other-user-profile-image/:otherUserId", getOtherUserProfileImag
  *      500:
  *         description: Internal Server Error
  */
-router.put("/change-password", changeProfilePassword);
+router.put("/change-password", changeProfilePasswordLimiter ,changeProfilePassword);
  
 /**
  * @swagger
@@ -373,7 +391,7 @@ router.put("/change-password", changeProfilePassword);
  *      500:
  *         description: Internal Server Error
  */
-router.put("/change-name", changeProfileName);
+router.put("/change-name", changeProfileNameLimiter ,changeProfileName);
 
 /**
  * @swagger
@@ -417,7 +435,7 @@ router.put("/change-name", changeProfileName);
  *      500:
  *         description: Internal Server Error
  */
-router.put("/change-phone", changeProfilePhone);
+router.put("/change-phone", changeProfilePhoneLimiter  , changeProfilePhone);
 
 /**
  * @swagger
@@ -456,7 +474,7 @@ router.put("/change-phone", changeProfilePhone);
  *      500:
  *         description: Internal Server Error
  */
-router.put("/change-username", changeProfileUsername);
+router.put("/change-username", changeProfileUsernameLimiter , changeProfileUsername);
 
 /**
  * @swagger
@@ -500,7 +518,7 @@ router.put("/change-username", changeProfileUsername);
  *      500:
  *         description: Internal Server Error
  */
-router.put("/change-bio", changeProfileBio);
+router.put("/change-bio", changeProfileBioLimiter , changeProfileBio);
 
 /**
  * @swagger
@@ -542,7 +560,7 @@ router.put("/change-bio", changeProfileBio);
  *      500:
  *         description: Internal Server Error
  */
-router.post("/change-email/send-verification-to-new-email", sendVerificationToNewEmail);
+router.post("/change-email/send-verification-to-new-email", sendVerificationToNewEmailLimiter , sendVerificationToNewEmail);
 
 /**
  * @swagger
@@ -584,7 +602,7 @@ router.post("/change-email/send-verification-to-new-email", sendVerificationToNe
  *      500:
  *         description: Internal Server Error
  */
-router.put("/change-email/verify-and-set-new-email", verificationAndSetNewEmail);
+router.put("/change-email/verify-and-set-new-email", verificationAndSetNewEmailLimiter , verificationAndSetNewEmail);
 
 /**
  * @swagger
@@ -625,7 +643,7 @@ router.put("/change-email/verify-and-set-new-email", verificationAndSetNewEmail)
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/userVideos", async (req, res) => {
+router.get("/userVideos", getUserVideosLimiter , async (req, res) => {
   try {
     const { userId } = req.user;
     let { offset } = req.query;
@@ -684,7 +702,7 @@ router.get("/userVideos", async (req, res) => {
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/otherUserVideos/:otherUserId", async (req, res) => {
+router.get("/otherUserVideos/:otherUserId", getOtherUserVideosLimiter , async (req, res) => {
   try {
     const { otherUserId } = req.params;
     let { offset } = req.query;
@@ -737,7 +755,7 @@ router.get("/otherUserVideos/:otherUserId", async (req, res) => {
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/followers", async (req, res) => { 
+router.get("/followers", getFollowersLimiter , async (req, res) => { 
   try {
     const { offset } = req.query;
     const { userId }= req.user;
@@ -796,7 +814,7 @@ router.get("/followers", async (req, res) => {
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/followers/:otherUserId", async (req, res) => { 
+router.get("/followers/:otherUserId", getOtherUserFollowersLimiter , async (req, res) => { 
   try {
     const { otherUserId } = req.params;
     const { offset } = req.query;
@@ -858,7 +876,7 @@ router.get("/followers/:otherUserId", async (req, res) => {
  *                 error:
  *                   type: string
  */
-router.get("/get-followings", getFollowingsUsingPagination);
+router.get("/get-followings", getFollowingsLimiter , getFollowingsUsingPagination);
 
 
 module.exports = router;

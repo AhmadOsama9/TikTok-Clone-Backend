@@ -13,6 +13,19 @@ const {
     getMessageUsingId,
 } = require("../controllers/chatController");
 
+const {
+    sendMessageUsingChatIdLimiter,
+    sendMessageUsingReceiverIdLimiter,
+    getMessagesUsingPaginationLimiter,
+    getMessageUsingIdLimiter,
+    getMessagesBetweenUsersUsingPaginationLimiter,
+    getUserChatsLimiter,
+    addReactionToMessageLimiter,
+    deleteMessageLimiter,
+    deleteReactionLimiter,
+
+} = require("../limiters/chatRoutesLimiter");
+
 /**
  * @swagger
  * /api/chat/send-message-using-chatId:
@@ -76,7 +89,7 @@ const {
  *                 error:
  *                   type: string
  */
-router.post("/send-message-using-chatId", sendMessageUsingChatId);
+router.post("/send-message-using-chatId", sendMessageUsingChatIdLimiter , sendMessageUsingChatId);
 
 /**
  * @swagger
@@ -131,7 +144,7 @@ router.post("/send-message-using-chatId", sendMessageUsingChatId);
  *                 error:
  *                   type: string
  */
-router.post("/send-message-using-receiverId", sendMessageUsingReceiverId);
+router.post("/send-message-using-receiverId", sendMessageUsingReceiverIdLimiter , sendMessageUsingReceiverId);
 
 /**
  * @swagger
@@ -215,7 +228,7 @@ router.post("/send-message-using-receiverId", sendMessageUsingReceiverId);
  *                 error:
  *                   type: string
  */
-router.get("/:chatId/get-messages", getMessagesUsingPagination);
+router.get("/:chatId/get-messages", getMessagesUsingPaginationLimiter , getMessagesUsingPagination);
 
 /**
  * @swagger
@@ -292,7 +305,7 @@ router.get("/:chatId/get-messages", getMessagesUsingPagination);
  *                 error:
  *                   type: string
  */
-router.get("/message/get/:messageId", getMessageUsingId);
+router.get("/message/get/:messageId", getMessageUsingIdLimiter , getMessageUsingId);
 
 /**
  * @swagger
@@ -376,7 +389,7 @@ router.get("/message/get/:messageId", getMessageUsingId);
  *                 error:
  *                   type: string
  */
-router.get("/:user2Id/get-messages-between-users", getMessagesBetweenUsersUsingPagination);
+router.get("/:user2Id/get-messages-between-users", getMessagesBetweenUsersUsingPaginationLimiter , getMessagesBetweenUsersUsingPagination);
 
 /**
  * @swagger
@@ -440,7 +453,7 @@ router.get("/:user2Id/get-messages-between-users", getMessagesBetweenUsersUsingP
  *                 error:
  *                   type: string
  */
-router.get("/get", getUserChats);
+router.get("/get", getUserChatsLimiter , getUserChats);
 
 /**
  * @swagger
@@ -495,7 +508,7 @@ router.get("/get", getUserChats);
  *       500:
  *         description: Server error
  */
-router.post("/add-reaction", addReactionToMessage);
+router.post("/add-reaction", addReactionToMessageLimiter , addReactionToMessage);
 
 /**
  * @swagger
@@ -538,7 +551,7 @@ router.post("/add-reaction", addReactionToMessage);
  *       500:
  *         description: Server error
  */
-router.delete("/delete-message/:messageId", deleteMessage);
+router.delete("/delete-message/:messageId", deleteMessageLimiter , deleteMessage);
 
 /**
  * @swagger
@@ -579,6 +592,6 @@ router.delete("/delete-message/:messageId", deleteMessage);
  *       '500':
  *         description: Server error
  */
-router.delete("/delete-reaction/:chatId", deleteReaction);
+router.delete("/delete-reaction/:chatId", deleteReactionLimiter , deleteReaction);
 
 module.exports = router;

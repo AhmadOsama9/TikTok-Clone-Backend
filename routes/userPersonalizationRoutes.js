@@ -6,6 +6,11 @@ const {
 } = require("../controllers/userPersonalizationController");
 
 
+const { 
+    createUserPersonalizationLimiter,
+    getRecommendedVideosLimiter
+} = require("../limiters/userPersonalizationRoutesLimiter")
+
 /**
  * @swagger
  * /api/user-personalization/create-user-personalization:
@@ -59,7 +64,7 @@ const {
  *       500:
  *         description: Server error
  */
-router.post("/create-user-personalization", createUserPersonalization);
+router.post("/create-user-personalization", createUserPersonalizationLimiter , createUserPersonalization);
 
 
 /**
@@ -130,7 +135,7 @@ router.post("/create-user-personalization", createUserPersonalization);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/recommend-videos", getRecommendedVideos);
+router.get("/recommend-videos", getRecommendedVideosLimiter , getRecommendedVideos);
 
 
 module.exports = router;

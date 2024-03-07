@@ -6,6 +6,11 @@ const {
     unFollowUser,
 } = require("../controllers/followController");
 
+const {
+    followUserLimiter,
+    unFollowUserLimiter,
+} = require("../limiters/followRoutesLimiter");
+
 /**
  * @swagger
  * /api/follow/follow:
@@ -42,7 +47,7 @@ const {
  *       '500':
  *         description: Internal server error
  */
-router.post("/follow", followUser);
+router.post("/follow", followUserLimiter , followUser);
 
 /** 
  * @swagger
@@ -80,6 +85,6 @@ router.post("/follow", followUser);
  *       '500':
  *         description: Internal server error
  */
-router.delete("/unfollow", unFollowUser);
+router.delete("/unfollow", unFollowUserLimiter  , unFollowUser);
 
 module.exports = router;
