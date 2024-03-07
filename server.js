@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+const compression = require("compression");
 
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
@@ -21,7 +22,6 @@ require("dotenv").config();
 //middlewares
 const authenticateJWT = require('./middlewares/authMiddleware');
 const apiKeyMiddleware = require('./middlewares/apiKeyMiddleware');
-const { generalLimiter, videoUploadLimiter, imageUploadLimiter } = require('./middlewares/rateLimiterMiddleware');
 
 
 //routes
@@ -44,10 +44,7 @@ const UserPersonalizationRoutes = require("./routes/userPersonalizationRoutes");
 // Middleware to check for API key
 app.use(apiKeyMiddleware);
 
-app.use(generalLimiter);
-
-app.use("/change-profile-image", imageUploadLimiter);
-app.use("/upload-video", videoUploadLimiter);
+app.use(compression());
 
 const UserStatus = require("./config/db").UserStatus;
 // Middleware to validate JWT and populate req.user
