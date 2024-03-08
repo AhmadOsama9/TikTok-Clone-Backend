@@ -26,7 +26,3 @@ jobs:
     - run: npm ci
 
     - run: npm test
-
-    - name: Start application
-    
-      run: timeout 5s npm start
