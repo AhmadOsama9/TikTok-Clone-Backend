@@ -23,7 +23,7 @@ const validator = require('validator');
 const storage = require("../config/cloudStorage");
 const bucketName = process.env.IMAGE_BUCKET_NAME || "kn_story_app";
 
-const fetchVideoData = require("../helper/fetchVideoData");
+const { fetchProfileVideoData } = require("../helper/fetchVideoData")
 const { getModel } = require("../helper/initializeAndGetModel");
 const getSignedUrl = require("../cloudFunctions/getSignedUrl");
 
@@ -79,26 +79,35 @@ async function deleteAllFiles() {
 async function getFollowersUsingPagination(userId, offset = 0) {
     const followers = await Follow.findAll({ 
         where: { followingId: userId },
-        limit: 7,
+        limit: process.env.FOLLOWERS_AND_FOLLOWINGS_LIMIT || 10,
         offset: offset,
         include: [{
-            model: User, as: 'followers',
-            include: [{
+            model: User, as: 'followerUser',
+            include: [
+                {
                 model: Profile, as: 'profile',
                 attributes: ['imageFileName'],
-            }]
+                },
+                {
+                    model: UserStatus , as: 'userStatus',
+                    attributes: ['isVerified']
+                }
+
+        ],
+            attributes: ['id', 'username'],
         }]
     });
 
     const followersData = await Promise.all(followers.map(async follower => { 
         let imageUrl = null;
-        if (follower.followers.profile.imageFileName) 
-            imageUrl = await getSignedUrl(follower.followers.profile.imageFileName);
+        if (follower.followerUser.profile.imageFileName) 
+            imageUrl = await getSignedUrl(follower.followerUser.profile.imageFileName);
 
         return {
-            id: follower.followers.id,
-            username: follower.followers.username,
+            id: follower.followerUser.id,
+            username: follower.followerUser.username,
             imageUrl: imageUrl,
+            isVerified: follower.followerUser.userStatus.isVerified,
         }
     }));
 
@@ -114,26 +123,34 @@ const getFollowingsUsingPagination = async (req, res) => {
 
         const followings = await Follow.findAll({
             where: { followerId: userId },
-            limit: 7,
+            limit: process.env.FOLLOWERS_AND_FOLLOWINGS_LIMIT || 10,
             offset: offset,
             include: [{
-                model: User, as: 'following',
-                include: [{
+                model: User, as: 'followingUser',
+                include: [
+                    {
                     model: Profile, as: 'profile',
                     attributes: ['imageFileName'],
-                }]
+                    },
+                    {
+                        model: UserStatus, as: 'userStatus',
+                        attributes: ['isVerified'] 
+                    }
+            ],
+                attributes: ['id', 'username']
             }]
         });
 
         const followingsData = await Promise.all(followings.map(async following => {
             let imageUrl = null;
-            if (following.following.profile.imageFileName)
-                imageUrl = await getSignedUrl(following.following.profile.imageFileName);
+            if (following.followingUser.profile.imageFileName)
+                imageUrl = await getSignedUrl(following.followingUser.profile.imageFileName);
 
             return {
-                id: following.following.id,
-                username: following.following.username,
+                id: following.followingUser.id,
+                username: following.followingUser.username,
                 imageUrl: imageUrl,
+                isVerified: following.followingUser.userStatus.isVerified,
             }
         }));
 
@@ -157,7 +174,7 @@ async function getVideosUsingPagination(userId, offset = 0) {
     console.log("videos", videos);
     const videoIds = videos.map(video => video.id);
 
-    const videoData = await fetchVideoData(videoIds, userId);
+    const videoData = await fetchProfileVideoData(videoIds, userId);
 
     return videoData;
 }
@@ -228,6 +245,11 @@ const getOtherUserProfile = async (req, res) => {
                     attributes: ['isVerified']
                 }
             ],
+            attributes: ['id', 'username']
+        });
+
+        const currentUserFollowOtherUser = Follow.findOne({
+            where: { followerId: req.user.userId, followingId: otherUserId },
             attributes: ['id']
         });
 
@@ -242,70 +264,19 @@ const getOtherUserProfile = async (req, res) => {
         
         const userProfile = {
             bio: user.profile.bio,
+            username: user.username,
             followersCount,
             followingsCount,
             videos: videoData,
             photoUrl: imageUrl,
             numberOfVideos: videoData.length,
-            isverified: user.userStatus.isVerified
+            isverified: user.userStatus.isVerified,
+            isFollowing: currentUserFollowOtherUser ? true : false
         };
 
         res.status(200).json(userProfile);
     } catch (error) {
         res.status(500).json({error: error.message});
-    }
-}
-
-
-const getUserProfileImage = async (req, res) => {
-    try {
-
-        const { userId  } = req.user;
-
-        const userProfile = await Profile.findOne({ 
-            where: { userId: userId },
-            attributes: ['imageFileName']
-        });
-        if (!userProfile) {
-            return res.status(404).json({ error: "Profile not found" });
-        }
-
-        if (!userProfile.imageFileName) { 
-            return res.status(404).json({ error: "Profile Image not found" });
-        }
-
-        const imageUrl = await getSignedUrl(userProfile.imageFileName);
-
-        return res.status(200).json({ userImageUrl: imageUrl });
-
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
-    }
-}
-
-
-const getOtherUserProfileImage = async (req, res) => {
-    try {
-
-        const { otherUserId  } = req.params;
-
-        const otherUserProfile = await Profile.findOne({ 
-            where: { userId: otherUserId },
-            attributes: ['imageFileName']
-        });
-        if (!otherUserProfile) {
-            return res.status(404).json({ error: "Profile not found" });
-        }
-
-        if (!otherUserProfile.imageFileName) { 
-            return res.status(404).json({ error: "Profile Image not found" });
-        }
-        const otherUserImageUrl = await getSignedUrl(otherUserProfile.imageFileName);
-
-        return res.status(200).json({ otherUserImageUrl: otherUserImageUrl });
-
-    } catch (error) {
-        return res.status(500).json({ error: error.message });
     }
 }
 
@@ -793,8 +764,6 @@ module.exports = {
     changeProfilePhone,
     changeProfileUsername,
     changeProfileBio,
-    getUserProfileImage,
-    getOtherUserProfileImage,
     getVideosUsingPagination,
     getFollowersUsingPagination,
     getFollowingsUsingPagination,

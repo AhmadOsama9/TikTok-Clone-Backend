@@ -30,7 +30,7 @@ const { sequelize } = require("../config/db");
 const getSignedUrl = require("../cloudFunctions/getSignedUrl");
 const uploadToCloudStorage = require("../cloudFunctions/uploadFiles");
 const deleteFromCloudStorage = require("../cloudFunctions/deleteFiles");
-const fetchVideoData = require("../helper/fetchVideoData");
+const { fetchVideoData } = require("../helper/fetchVideoData");
 const mapCommentsData = require("../helper/mapCommentsData");
 
 const { getModel } = require("../helper/initializeAndGetModel");
@@ -703,40 +703,9 @@ const autocompleteVideos = async (req, res) => {
                     [Op.like]: description + '%'
                 }
             },
-            attributes: ['id', 'description', 'createdAt'],
+            attributes: ['id', 'description'],
             limit: process.env.AUTO_COMPLETE_LIMIT || 5,
-            include: [
-                {
-                    model: User,
-                    as: 'creator',
-                    attributes: ['username'],
-                    include: [
-                        {
-                            model: Profile,
-                            as: 'profile',
-                            attributes: ['imageFileName'],
-                        }
-                    ],
-                },
-                {
-                    model: VideoMetadata,
-                    as: 'metadata',
-                    attributes: ['likeCount', 'shareCount', 'popularityScore'],
-                }
-            ],
-            order: [[{ model: VideoMetadata, as: 'metadata' }, 'popularityScore', 'DESC']]
         });
-
-        for (let video of videos) {
-            if (video.creator && video.creator.profile && video.creator.profile.imageFileName) {
-                const imageURL = await getSignedUrl(video.creator.profile.imageFileName);
-                const creator = {
-                    username: video.creator.username,
-                    imageURL: imageURL
-                };
-                video.setDataValue('creator', creator);
-            }
-        }
 
         return res.status(200).json({ videos });
 
@@ -749,10 +718,7 @@ const viewVideo = async (req, res) => {
     let transaction;
     try {
         const { userId } = req.user;
-        const { videoId, viewStrength } = req.body;
-
-        if (!viewStrength || viewStrength < 1 || viewStrength > 4)
-            return res.status(400).json({ message: "Invalid view strength" });
+        const { videoId } = req.body;
 
         if (!videoId)
             return res.status(400).json({ message: "Video ID is required" });
@@ -782,7 +748,7 @@ const viewVideo = async (req, res) => {
                 await existingView.increment('viewStrength', { by: 1, transaction });
             }
         } else {
-            await VideoView.create({ userId, videoId, viewStrength }, { transaction });
+            await VideoView.create({ userId, videoId, viewStrength: 1 }, { transaction });
         }
 
         await transaction.commit();
@@ -918,6 +884,34 @@ const deleteVideo = async (req, res) => {
     }
 }
 
+const getVideoRates = async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { videoId } = req.params;
+        const { offset = 0} = req.query;
+
+        if (!videoId)
+            return res.status(400).json({ message: "Video ID is required" });
+
+        const video = await Video.findByPk(videoId,{
+            attributes: ['id']
+        });
+        if (!video)
+            return res.status(404).json({ message: "Video not found" });
+
+        const rates = await Rate.findAll({
+            where: { videoId },
+            attributes: ['userId', 'rate'],
+            limit: process.env.VIDEO_RATES_LIMIT || 5,
+            offset,
+        });
+
+        return res.status(200).json({ rates });
+
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
 
 module.exports = {
     uploadVideo,
@@ -934,4 +928,5 @@ module.exports = {
     getFollowersVideos,
     viewVideo,
     deleteVideo,
+    getVideoRates,
 }

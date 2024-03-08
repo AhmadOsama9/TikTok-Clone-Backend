@@ -88,6 +88,8 @@ async function dropModels() {
   await sequelize.drop();
 }
 
+//syncModels().catch(console.error);
+
     
 module.exports = {
     User,

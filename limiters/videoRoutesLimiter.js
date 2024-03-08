@@ -129,6 +129,15 @@ const getCommentsUsingPaginationLimiter = rateLimit({
   message: "Too many comments retrieval requests, please try again after 15 minutes"
 });
 
+const getVideoRatesLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each user to 100 requests per windowMs
+  keyGenerator: function(req, res) {
+    return req.user.userId;
+  },
+  message: "Too many comments retrieval requests, please try again after 15 minutes"
+});
+
 
 
 module.exports = {
@@ -145,5 +154,6 @@ module.exports = {
     autocompleteVideosLimiter,
     deleteVideoLimiter,
     getCreatorCommentsLimiter,
-    getCommentsUsingPaginationLimiter
+    getCommentsUsingPaginationLimiter,
+    getVideoRatesLimiter
 }

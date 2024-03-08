@@ -20,7 +20,10 @@ const createUserPersonalization = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const { userId } = req.user;
-        const { videoId, liked, viewed, shared, commented, rated } = req.body;
+        const { videoId, liked, viewed, shared, commented, rated, giftType } = req.body;
+
+        if (!viewed && !liked && !shared && !commented && !rated && !giftType)
+            return res.status(400).json({ message: 'At least one interaction is required' });
 
         if (!videoId)
             return res.status(400).json({ message: 'Video ID is required' });
@@ -41,13 +44,6 @@ const createUserPersonalization = async (req, res) => {
         if (!videoCategories.length)
             return res.status(404).json({ message: 'Video not found' });
 
-        const rating = await Rate.findOne({
-            where: {
-                userId: userId,
-                videoId: videoId
-            }, 
-            attributes: ['rate']
-        });
 
         for (let i = 0; i < videoCategories.length; i++) {
             let category = videoCategories[i].name;
@@ -69,27 +65,49 @@ const createUserPersonalization = async (req, res) => {
             if (liked) interactionCount += 10;
             if (commented) interactionCount += 20;
             if (shared) interactionCount += 30;
-            if (rating) {
+            if (rated) {
                 switch (true) {
-                    case (rating.rate >= 1 && rating.rate < 2):
+                    case (rated >= 1 && rated < 2):
                         interactionCount -= 5;
                         break;
-                    case (rating.rate >= 2 && rating.rate < 3):
+                    case (rated >= 2 && rated < 3):
                         interactionCount -= 10;
                         break;
-                    case (rating.rate >= 3 && rating.rate < 4):
+                    case (rated >= 3 && rated < 4):
                         interactionCount += 15;
                         break;
-                    case (rating.rate >= 4 && rating.rate < 5):
+                    case (rated >= 4 && rated < 5):
                         interactionCount += 30;
                         break;
-                    case (rating.rate == 5):
+                    case (rated == 5):
                         interactionCount += 40;
                         break;
                     default:
                         interactionCount--;
                         break;
                 }
+            }
+            if(giftType) {
+                switch (giftType) {
+                    case "1":
+                        interactionCount += 10;
+                        break;
+                    case "2":
+                        interactionCount += 20;
+                        break;
+                    case "3":
+                        interactionCount += 30;
+                        break;
+                    case "4":
+                        interactionCount += 40;
+                        break;
+                    case "5":
+                        interactionCount += 50;
+                        break;
+                    default:
+                        break;
+                }
+
             }
             
             if (userPersonalization.currentInterest < userPersonalization.peakInterest) {
@@ -111,8 +129,8 @@ const createUserPersonalization = async (req, res) => {
                 interactionCount += boost;
             }
 
-            //also will be higher if we use the gift comment  
-            interactionCount = Math.min((interactionCount / 105) * 5, 5);
+
+            interactionCount = Math.min((interactionCount / 155) * 5, 5);
 
             userPersonalization.totalInteractions += 1;
             userPersonalization.currentInterest = Math.round((userPersonalization.currentInterest * (userPersonalization.totalInteractions - 1) + interactionCount) / userPersonalization.totalInteractions);

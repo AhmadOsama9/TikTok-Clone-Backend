@@ -34,6 +34,7 @@ const {
     getFollowersVideos,
     viewVideo,
     deleteVideo,
+    getVideoRates,
 } = require("../controllers/videoController");
 
 const { 
@@ -50,7 +51,8 @@ const {
     autocompleteVideosLimiter,
     deleteVideoLimiter,
     getCreatorCommentsLimiter,
-    getCommentsUsingPaginationLimiter
+    getCommentsUsingPaginationLimiter,
+    getVideoRatesLimiter
 } = require("../limiters/videoRoutesLimiter")
 
 /**
@@ -519,9 +521,6 @@ router.post("/share", shareVideoLimiter , shareVideo);
  *               videoId:
  *                 type: integer
  *                 description: The ID of the video
- *               viewStrength:
- *                 type: integer
- *                 description: The strength of the view (1-3)
  *     responses:
  *       200:
  *         description: Video viewed successfully
@@ -533,6 +532,59 @@ router.post("/share", shareVideoLimiter , shareVideo);
  *         description: Internal server error
  */
 router.post("/view", viewVideoLimiter , viewVideo);
+/**
+ * @swagger
+ * /api/video/rates/{videoId}:
+ *   get:
+ *     tags:
+ *      - Videos
+ *     summary: Retrieve the rates of a specific video
+ *     security:
+ *      - bearerAuth: []
+ *     parameters:
+ *      - in: header
+ *        name: X-API-KEY
+ *        schema:
+ *          type: string
+ *        required: true
+ *        description: x-api-key
+ *      - in: path
+ *        name: videoId
+ *        schema:
+ *          type: integer
+ *        required: true
+ *        description: The ID of the video
+ *      - in: query
+ *        name: offset
+ *        schema:
+ *          type: integer
+ *        required: false
+ *        description: The offset for pagination
+ *     responses:
+ *       200:
+ *         description: The rates of the video
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rates:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       userId:
+ *                         type: integer
+ *                       rate:
+ *                         type: integer
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Video not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get("/rates/:videoId", getVideoRatesLimiter , getVideoRates);
 
 /**
  * @swagger

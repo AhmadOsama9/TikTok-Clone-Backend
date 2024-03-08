@@ -46,7 +46,9 @@ const {
  *               commented:
  *                 type: boolean
  *               rated:
- *                 type: boolean
+ *                 type: integer
+ *               giftType:
+ *                 type: integer
  *     responses:
  *       200:
  *         description: User personalization updated

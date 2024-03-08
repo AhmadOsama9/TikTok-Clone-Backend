@@ -29,7 +29,7 @@ const addRate = async (req, res) => {
         if (rate)
             return res.status(400).json({ message: "You already rated this video" });
 
-        await Rate.create({ userId, videoId, rating }, { transaction: t });
+        await Rate.create({ userId, videoId, rate: rating }, { transaction: t });
 
         const newTotalRatings = videoMetadata.totalRatings + 1;
         const newTotalRating = videoMetadata.totalRating + rating;
@@ -50,7 +50,66 @@ const addRate = async (req, res) => {
     }
 }
 
+const updateRate = async (req, res) => {
+    const t = await sequelize.transaction();
+
+    try {
+        const { userId } = req.user;
+        const { videoId, rating } = req.body;
+
+        if (!videoId || !rating) {
+            return res.status(400).json({ message: "videoId and rating are required" });
+        }
+
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({ message: "Rating should be between 1 and 5" });
+        }
+
+        const rate = await Rate.findOne({ where: { userId, videoId } }, { transaction: t });
+        if (!rate)
+            return res.status(404).json({ message: "Rate not found" });
+
+        await rate.update({ rate: rating }, { transaction: t });
+
+        await t.commit();
+
+        return res.status(200).json({ message: "Rating updated successfully" });
+    } catch (error) {
+        await t.rollback();
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+const removeRate = async (req, res) => {
+    const t = await sequelize.transaction();
+
+    try {
+        const { userId } = req.user;
+        const { videoId } = req.body;
+
+        if (!videoId) {
+            return res.status(400).json({ message: "videoId is required" });
+        }
+
+        const rate = await Rate.findOne({ where: { userId, videoId } }, { transaction: t });
+        if (!rate)
+            return res.status(404).json({ message: "Rate not found" });
+
+        await rate.destroy({ transaction: t });
+
+        await t.commit();
+
+        return res.status(200).json({ message: "Rating removed successfully" });
+    } catch (error) {
+        await t.rollback();
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+
 
 module.exports = {
     addRate,
+    updateRate,
+    removeRate
 }

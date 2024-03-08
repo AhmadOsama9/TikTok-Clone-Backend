@@ -49,12 +49,14 @@ User.hasMany(Video, {
     onDelete: 'CASCADE',
 });
 
+// A user can follow many users (they are "following" these users)
 User.hasMany(Follow, {
     foreignKey: 'followerId',
     as: 'following',
     onDelete: 'CASCADE',
 });
-  
+
+// A user can be followed by many users (they have many "followers")
 User.hasMany(Follow, {
     foreignKey: 'followingId',
     as: 'followers',
@@ -216,9 +218,18 @@ UserAuth.belongsTo(User, {
 
 
 //Follow Relations
+
+// Each follow belongs to a user who is doing the following
+Follow.belongsTo(User, {
+    foreignKey: 'followerId',
+    as: 'followerUser', // Changed alias to 'followerUser'
+    onDelete: 'CASCADE',
+});
+
+// Each follow belongs to a user who is being followed
 Follow.belongsTo(User, {
     foreignKey: 'followingId',
-    as: 'followers',
+    as: 'followingUser', // Changed alias to 'followingUser'
     onDelete: 'CASCADE',
 });
 

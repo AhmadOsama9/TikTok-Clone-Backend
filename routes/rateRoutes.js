@@ -3,11 +3,15 @@ const router = express.Router();
 
 const {
     addRate,
+    updateRate,
+    removeRate
 } = require("../controllers/rateController");
 
 
 const {
-    addRateLimiter
+    addRateLimiter,
+    updateRateLimiter,
+    removeRateLimiter
 } = require("../limiters/rateRoutesLimiter")
 
 /**
@@ -69,10 +73,84 @@ const {
  */
 router.post("/add", addRateLimiter, addRate);
 
-//get the people who made the rate on that video, username, imageUrl, rate
-//also using pagination 10
-//videoId is required, also offset of course
+/**
+ * @swagger
+ * /api/rate/update:
+ *   put:
+ *     tags:
+ *       - Rate
+ *     summary: Update a rating for a video
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: x-api-key
+ *     requestBody:
+ *       description: Rating data
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               videoId:
+ *                 type: integer
+ *                 description: The ID of the video
+ *               rating:
+ *                 type: integer
+ *                 description: The rating for the video
+ *     responses:
+ *       200:
+ *         description: Rating updated successfully
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Rating not found
+ *       500:
+ *         description: Internal server error
+ */
+router.put("/update", updateRateLimiter, updateRate);
 
-
+/**
+ * @swagger
+ * /api/rate/remove:
+ *   delete:
+ *     tags:
+ *       - Rate
+ *     summary: Remove a rating for a video
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: header
+ *         name: X-API-KEY
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: x-api-key
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               videoId:
+ *                 type: integer
+ *                 description: The ID of the video
+ *     responses:
+ *       200:
+ *         description: Rating removed successfully
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Rating not found
+ *       500:
+ *         description: Internal server error
+ */
+router.delete("/remove", removeRateLimiter, removeRate);
 
 module.exports = router;

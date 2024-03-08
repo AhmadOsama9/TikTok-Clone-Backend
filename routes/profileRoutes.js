@@ -19,8 +19,6 @@ const {
     changeProfilePhone,
     changeProfileUsername,
     changeProfileBio,
-    getUserProfileImage,
-    getOtherUserProfileImage,
     getVideosUsingPagination,
     getFollowersUsingPagination,
     getFollowingsUsingPagination,
@@ -225,82 +223,6 @@ router.get("/otheruser/:otherUserId", getOtherUserProfileLimiter, getOtherUserPr
  *         description: Internal Server Error
  */
 router.post("/change-image", upload.single("image"), changeProfileImageLimiter, changeProfileImage);
-
-/**
- * @swagger
- * /api/profile/get-image:
- *   get:
- *     tags:
- *      - profile
- *     summary: Get profile image
- *     description: This API is used to get the profile image of the user. It requires a valid JWT token in the Authorization header.
- *     security:
- *      - bearerAuth: []
- *     parameters:
- *      - in: header
- *        name: X-API-KEY
- *        required: true
- *        schema:
- *          type: string
- *        description: API key
- *     responses:
- *      200:
- *         description: Successfully retrieved image URL
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 imageUrl:
- *                   type: string
- *      404:
- *         description: User, Profile or Profile Image not found
- *      500:
- *         description: Internal Server Error
- */
-router.get("/get-image", getUserProfileImage);
-
-/**
- * @swagger
- * /api/profile/get-other-user-profile-image/{otherUserId}:
- *   get:
- *     tags:
- *      - profile
- *     summary: Get other user's profile image
- *     description: This API is used to get the profile image of another user. It requires a valid JWT token in the Authorization header.
- *     security:
- *      - bearerAuth: []
- *     parameters:
- *      - in: header
- *        name: X-API-KEY
- *        required: true
- *        schema:
- *          type: string
- *        description: API key
- *      - in: path
- *        name: otherUserId
- *        required: true
- *        schema:
- *          type: string
- *        description: The ID of the other user
- *     responses:
- *      200:
- *         description: Successfully retrieved image URL
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 otherUserImageUrl:
- *                   type: string
- *      400:
- *         description: User not found
- *      404:
- *         description: Profile or Profile Image not found
- *      500:
- *         description: Internal Server Error
- */
-router.get("/get-other-user-profile-image/:otherUserId", getOtherUserProfileImage);
 
 /**
  * @swagger
@@ -829,30 +751,29 @@ router.get("/followers/:otherUserId", getOtherUserFollowersLimiter , async (req,
 
 /**
  * @swagger
- * /api/profile/get-followings?offset=0:
+ * /api/profile/followings:
  *   get:
  *     tags:
  *      - profile
- *     summary: Get all users that a specific user is following, with pagination
- *     operationId: getFollowingsUsingPagination
+ *     summary: Retrieve a list of followings for a user
+ *     description: This API is used to retrieve the list of users that the authenticated user is following. It requires a valid JWT token in the Authorization header.
  *     security:
  *      - bearerAuth: []
  *     parameters:
  *      - in: header
- *        name: x-api-key
+ *        name: X-API-KEY
  *        required: true
  *        schema:
  *          type: string
- *        description: The API key.
+ *        description: API key
  *      - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *         required: false
- *         description: The number of users to skip before starting to fetch.
+ *        name: offset
+ *        schema:
+ *          type: integer
+ *        description: The number of items to skip before starting to collect the result set
  *     responses:
- *      '200':
- *         description: Followings retrieved successfully
+ *      200:
+ *         description: The list of followings for the user
  *         content:
  *           application/json:
  *             schema:
@@ -866,17 +787,11 @@ router.get("/followers/:otherUserId", getOtherUserFollowersLimiter , async (req,
  *                     type: string
  *                   imageUrl:
  *                     type: string
- *      '500':
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
+ *                   isVerified:
+ *                     type: boolean
+ *      500:
+ *         description: Internal Server Error
  */
-router.get("/get-followings", getFollowingsLimiter , getFollowingsUsingPagination);
-
+router.get("/followings", getFollowingsUsingPagination);
 
 module.exports = router;

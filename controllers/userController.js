@@ -13,7 +13,7 @@ const validator = require('validator');
 const { Op } = require("sequelize");
 
 
-const { getSignedUrl } = require("./profileController");
+const getSignedUrl = require("../cloudFunctions/getSignedUrl");
 
 
 const signup = async (req, res) => {
@@ -521,7 +521,13 @@ const searchUsersUsingPagination = async (req, res) => {
                 model: UserPopularity,
                 as: 'popularity',
                 attributes: ['popularityScore'],
-            }],
+            },
+            {
+                model: UserStatus,
+                as: 'userStatus',
+                attributes: ['isVerified']
+            }
+        ],
             order: [[{ model: UserPopularity, as: 'popularity' }, 'popularityScore', 'DESC']]
         });
 
@@ -555,7 +561,7 @@ const autocompleteUsers = async (req, res) => {
                 }
             },
             attributes: ['id', 'username'],
-            limit: process.env.AUTO_COMPLETE_LIMIT || 5,
+            limit: process.env.AUTO_COMPLETE_USER_LIMIT || 5,
             include: [{
                 model: Profile,
                 as: 'profile',
@@ -564,7 +570,13 @@ const autocompleteUsers = async (req, res) => {
                 model: UserPopularity,
                 as: 'popularity',
                 attributes: ['popularityScore'],
-            }],
+            },
+            {
+                model: UserStatus,
+                as: 'userStatus',
+                attributes: ['isVerified']
+            }
+        ],
             order: [[{ model: UserPopularity, as: 'popularity' }, 'popularityScore', 'DESC']]
         });
 
