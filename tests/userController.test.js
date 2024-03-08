@@ -20,9 +20,9 @@ beforeAll(async () => {
 //the jest takes too long to close the connection
 //when I close it manually it just takes a second
 //but here it takes over 5 minutes what the hell is this nonsense
-afterAll(async () => {
-  await close().catch(console.error);
-});
+// afterAll(async () => {
+//   await close().catch(console.error);
+// });
 
 
 describe('signup', () => {
