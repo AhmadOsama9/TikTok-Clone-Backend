@@ -138,9 +138,13 @@ async function connect() {
   }
 }
 
-
 async function close() {
   console.log('Closing connection...');
-  await sequelize.close();
-  console.log('Connection closed');
+  try {
+    await sequelize.close();
+    console.log('Connection closed');
+  } catch (error) {
+    console.error('Unable to close the connection:', error);
+  }
 }
+
