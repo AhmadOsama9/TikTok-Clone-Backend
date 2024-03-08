@@ -5,7 +5,8 @@
     "main": "index.js",
     "scripts": {
       "start": "nodemon server.js",
-      "test": "npx dotenv-cli -e .env.test jest"
+      "test": "npx dotenv-cli -e .env.test jest",
+      "clinic": "clinic doctor -- node ./node_modules/jest/bin/jest.js"
     },
     "keywords": [],
     "author": "",
