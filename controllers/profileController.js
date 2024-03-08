@@ -15,8 +15,10 @@ const Jimp = require("jimp");
 const { Op } = require('sequelize');
 const validator = require('validator');
 
-const nsfwjs = require("nsfwjs");
-const tf = require("@tensorflow/tfjs-node");
+//will be importing the tfjs inside the functions
+//cause it causes a problem in the tests when being imported here
+//const tf = require("@tensorflow/tfjs-node");
+
 
 const storage = require("../config/cloudStorage");
 const bucketName = process.env.IMAGE_BUCKET_NAME || "kn_story_app";
@@ -335,6 +337,8 @@ const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
 
 
 const classifyImage = async (buffer) => {
+    const tf = require("@tensorflow/tfjs-node");
+
     const imageTensor = tf.node.decodeImage(buffer);
     const model = getModel();
 

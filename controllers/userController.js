@@ -13,7 +13,6 @@ const validator = require('validator');
 const { Op } = require("sequelize");
 
 
-
 const { getSignedUrl } = require("./profileController");
 
 

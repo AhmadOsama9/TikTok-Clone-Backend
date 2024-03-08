@@ -56,16 +56,22 @@ const decayUserPersonalization = async (userId) => {
     }
 };
 
-cron.schedule("0 3 */2 * *", async () => {
-    try {
-        const users = await User.findAll({ attributes: ['id'] });
-        for (const user of users) {
-            await decayUserPersonalization(user.id);
+const scheduleDecayUserPersonalization = () => {
+    cron.schedule("0 3 */2 * *", async () => {
+        try {
+            const users = await User.findAll({ attributes: ['id'] });
+            for (const user of users) {
+                await decayUserPersonalization(user.id);
+            }
+        } catch (error) {
+            console.log("error decaying user personalization: ", error);
         }
-    } catch (error) {
-        console.log("error decaying user personalization: ", error);
-    }
-});
+    });
+};
+
+module.exports = {
+    scheduleDecayUserPersonalization,
+}
 
 
 // decayUserPersonalization().then(() => {

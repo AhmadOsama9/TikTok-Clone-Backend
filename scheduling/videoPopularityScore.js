@@ -32,10 +32,16 @@ const updateVideoPopularityScore = async () => {
         console.error("Error updating video popularity scores:", error);
     }
 };
-
-cron.schedule("0 5 */3 * *", updateVideoPopularityScore);
+const scheduleVideoPopularityUpdate = () => {
+    cron.schedule("0 5 */3 * *", updateVideoPopularityScore);
+};
 //we can use a decay for the video popularity score
 //maybe after one day or two
+
+
+module.exports = {
+    scheduleVideoPopularityUpdate,
+}
 
 // updateVideoPopularityScore().then(() => { 
 //     console.log('Video popularity scores updated');

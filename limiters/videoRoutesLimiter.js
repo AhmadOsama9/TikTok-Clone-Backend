@@ -10,6 +10,7 @@ const uploadVideoLimiter = rateLimit({
   message: "Too many video upload requests, please try again after an hour"
 });
 
+
 const getVideoThumbnailLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each user to 100 requests per windowMs
@@ -27,6 +28,7 @@ const getVideoLimiter = rateLimit({
   },
   message: "Too many video retrieval requests, please try again after 15 minutes"
 });
+
 
 const getFollowingsVideosLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

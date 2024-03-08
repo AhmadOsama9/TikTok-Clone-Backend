@@ -14,8 +14,11 @@ const { Op } = require("sequelize");
 const Sequelize = require("sequelize");
 const { addNotification } = require("./notificationsController");
 
-const nsfwjs = require("nsfwjs");
-const tf = require("@tensorflow/tfjs-node");
+
+//will be importing the tfjs inside the functions
+//cause it causes a problem in the tests when being imported here
+//const nsfwjs = require("nsfwjs");
+
 const Jimp = require("jimp");
 const ffmpeg = require("fluent-ffmpeg");
 const stream = require("stream");
@@ -155,7 +158,12 @@ const pornThreshold = process.env.PORN_THRESHOLD || 0.8;
 const sexyThreshold = process.env.SEXY_THRESHOLD || 0.85;
 const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
 
+
+//if any pornability then crash
 const checkVideoContent = async (videoPath ,res) => {
+
+    const tf = require("@tensorflow/tfjs-node");
+
     try {
         console.log("checkVideoContent function called")
         const model = getModel();
@@ -174,27 +182,26 @@ const checkVideoContent = async (videoPath ,res) => {
 
                 const pornProbability = predictions.find(prediction => prediction.className === "Porn").probability;
                 const sexyProbability = predictions.find(prediction => prediction.className === "Sexy").probability;
-                const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability
+                const hentaiProbability = predictions.find(prediction => prediction.className === "Hentai").probability;
 
-                if (pornProbability > pornThreshold || sexyProbability > sexyThreshold || hentaiProbability > hentaiThreshold) {
+                if (pornProbability > pornThreshold) {
                     console.log("pornProbability: ", pornProbability);
-                    console.log("sexyProbability: ", sexyProbability);
-                    console.log("hentaiProbability: ", hentaiProbability);
-                    throw new Error("Inappropriate content");
-                } else {
+                    throw new Error("Inappropriate content found");
+                } else if (sexyProbability <= sexyThreshold && hentaiProbability <= hentaiThreshold) {
                     console.log("No inappropriate content found");
                     successfulFrames++;
                 }
             } catch (error) {
                 console.log("Error decoding frame: ", error);
+                throw error; // Stop processing further frames
             }
         }
 
         const successfulFramePercentage = (successfulFrames / framesStream.length) * 100;
         console.log("Percentage of successful frames: ", successfulFramePercentage);
 
-        if (successfulFramePercentage < 50) {
-            throw new Error("Less than 50% of frames were successfully processed");
+        if (successfulFramePercentage < 90) {
+            throw new Error("Less than 90% of frames were successfully processed");
         }
 
     } catch (error) {
@@ -204,7 +211,7 @@ const checkVideoContent = async (videoPath ,res) => {
 }
 
 const validateThumbnail = async (imagePath) => {
-    let buffer;
+    const tf = require("@tensorflow/tfjs-node");
     try {
         let buffer = await fs.promises.readFile(imagePath);
         if (!buffer)

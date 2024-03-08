@@ -66,7 +66,13 @@ const updateUserPopularityScores = async () => {
 //For example, in MySQL, the BIGINT type can store integers up to 9223372036854775807.
 //So yeah I won't scale it down
 
-cron.schedule("0 4 */2 * *", updateUserPopularityScores);
+const scheduleUserPopularityUpdate = () => {
+    cron.schedule("0 4 */2 * *", updateUserPopularityScores);
+};
+
+module.exports = {
+    scheduleUserPopularityUpdate,
+}
 
 // updateUserPopularityScores().then(() => {
 //     console.log('Popularity scores updated');
