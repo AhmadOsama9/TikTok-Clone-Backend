@@ -7,61 +7,96 @@ const UserPopularity = require("../config/db").UserPopularity;
 const UserStatus = require("../config/db").UserStatus;
 const VideoMetadata = require("../config/db").VideoMetadata;
 
-
 const { Op } = require("sequelize");
+
+
+
+const BATCH_SIZE = process.env.BATCH_SIZE || 100; // Adjust this value based on your system's capacity
+const PARALLEL_JOBS = process.env.PARALLEL_JOBS || 5; // Adjust this value based on your system's capacity
 
 const updateUserPopularityScores = async () => {
     try {
-        const users = await User.findAll({ 
-            attributes: ['id'],
-            include: [{
-                model: UserStatus,
-                as: 'userStatus',
-                attributes: ['isVerified']
-            }]
-        });
-
-        for (const user of users) {
-            let popularity = await UserPopularity.findOne({ where: { userId: user.id } });
-
-            if (!popularity) {
-                popularity = await UserPopularity.create({ userId: user.id, popularityScore: 0 });
-            }
-
-            const videos = await Video.findAll({ 
-                where: { creatorId: user.id },
+        let offset = 0;
+        while (true) {
+            const users = await User.findAll({
+                limit: BATCH_SIZE,
+                offset: offset * BATCH_SIZE,
                 attributes: ['id'],
                 include: [{
-                    model: VideoMetadata,
-                    as: 'metadata',
-                    attributes: ['likeCount', 'shareCount', 'viewCount']
+                    model: UserStatus,
+                    as: 'userStatus',
+                    attributes: ['isVerified']
                 }]
             });
 
-            const totalViews = videos.reduce((sum, video) => sum + video.metadata.viewCount, 0);
-            const totalLikes = videos.reduce((sum, video) => sum + video.metadata.likeCount, 0);
-            const totalShares = videos.reduce((sum, video) => sum + video.metadata.shareCount, 0);
-            const totalComments = await Comment.count({ where: { videoId: { [Op.in]: videos.map(video => video.id) } } });
-            const followersCount = await Follow.count({ where: { followingId: user.id } });
-
-            let score = 0;
-            if (user.userStatus.isVerified) {
-                score += 100; // Give a boost for verified users
+            if (users.length === 0) {
+                break;
             }
-            score += videos.length * 5; // 10 points for each video
-            score += totalViews; // 1 point for each view
-            score += totalLikes * 2; // 1 point for each like
-            score += totalComments * 2; // 2 points for each comment
-            score += totalShares * 3; // 3 points for each share
-            score += followersCount * 5; // 5 points for each follower
 
-            await popularity.update({ popularityScore: score });
+            await Promise.all(users.map((user, index) => {
+                if (index % PARALLEL_JOBS === 0) {
+                    return new Promise(resolve => setTimeout(resolve, 0));
+                }
+
+                return updateUserPopularityScore(user);
+            }));
+
+            offset++;
         }
     } catch (error) {
         console.error("Error updating popularity scores:", error);
     }
 };
 
+
+const updateUserPopularityScore = async (user) => {
+    let popularity = await UserPopularity.findOne({ where: { userId: user.id } });
+
+    if (!popularity) {
+        popularity = await UserPopularity.create({ userId: user.id, popularityScore: 0, updatedAt: new Date(0) });
+    }
+
+    const [newVideos, newComments, newFollowers] = await Promise.all([
+        Video.findAll({
+            where: { 
+                creatorId: user.id,
+                createdAt: { [Op.gt]: popularity.updatedAt }
+            },
+            attributes: ['id'],
+            include: [{
+                model: VideoMetadata,
+                as: 'metadata',
+                attributes: ['likeCount', 'shareCount', 'viewCount']
+            }]
+        }),
+        Comment.count({ 
+            where: { 
+                videoId: { [Op.in]: newVideos.map(video => video.id) },
+                createdAt: { [Op.gt]: popularity.updatedAt }
+            } 
+        }),
+        Follow.count({ 
+            where: { 
+                followingId: user.id,
+                createdAt: { [Op.gt]: popularity.updatedAt }
+            } 
+        })
+    ]);
+
+    const newLikes = newVideos.reduce((sum, video) => sum + video.metadata.likeCount, 0);
+    const newShares = newVideos.reduce((sum, video) => sum + video.metadata.shareCount, 0);
+    const newViews = newVideos.reduce((sum, video) => sum + video.metadata.viewCount, 0);
+
+    let score = popularity.popularityScore;
+    score += newVideos.length * 5;
+    score += newViews;
+    score += newLikes * 2;
+    score += newComments * 2;
+    score += newShares * 3;
+    score += newFollowers * 5;
+
+    await popularity.update({ popularityScore: score, updatedAt: new Date() });
+};
 //In the context of databases, most databases can handle large integers. 
 //For example, in MySQL, the BIGINT type can store integers up to 9223372036854775807.
 //So yeah I won't scale it down

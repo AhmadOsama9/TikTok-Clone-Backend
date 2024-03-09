@@ -1,0 +1,7 @@
+I think that if our database becomes much more bigger
+we can use a queue to perform those schedules 
+but as for now for the first phase I mean
+it should be fine 
+
+so I think we need to keep on monitoring the 
+perfomance tests

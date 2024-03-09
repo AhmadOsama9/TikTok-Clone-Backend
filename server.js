@@ -4,6 +4,7 @@ const { connect } = require("./config/db");
 const { scheduleDecayUserPersonalization } = require("./scheduling/decayUserPersonalization");
 const { scheduleUserPopularityUpdate } = require("./scheduling/userPopularityUpdate");
 const { scheduleVideoPopularityUpdate } = require("./scheduling/videoPopularityScore");
+const { scheduleCleanUp } = require("./scheduling/clearDiskStorage")
 const { initializeModel } = require("./helper/initializeAndGetModel");
 
 const port = process.env.PORT || 3000;
@@ -15,6 +16,7 @@ const server = app.listen(port, async () => {
         scheduleDecayUserPersonalization();
         scheduleUserPopularityUpdate();
         scheduleVideoPopularityUpdate();
+        scheduleCleanUp();
         await initializeModel();
     } catch (error) {
         console.log("Error in server.js", error);

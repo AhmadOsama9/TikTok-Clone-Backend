@@ -8,12 +8,11 @@ const Rate = require("../config/db").Rate;
 const Comment = require("../config/db").Comment;
 const getSignedUrl = require("../cloudFunctions/getSignedUrl");
 
-
 const fetchVideoData = async (videoId, userId, metadata = null) => {
     if (!Array.isArray(videoId)) {
         videoId = [videoId];
     }
-  
+
     const includeArray = [
         {
             model: VideoCategory,
@@ -38,7 +37,7 @@ const fetchVideoData = async (videoId, userId, metadata = null) => {
             ]
         }
     ];
-  
+
     if (!metadata) {
         includeArray.push({
             model: VideoMetadata,
@@ -46,39 +45,48 @@ const fetchVideoData = async (videoId, userId, metadata = null) => {
             attributes: ['viewCount', 'likeCount', 'averageRating', 'shareCount'],
         });
     }
-  
+
     const videos = await Video.findAll({
         where: { id: videoId },
         include: includeArray,
     });
-  
+
     if (!videos || videos.length === 0)
         return null;
-  
+
+    // Fetch all user likes, user ratings, and comment counts in batch operations
+    const userLikes = await VideoLike.findAll({
+        where: { userId, videoId }
+    });
+
+    const userRatings = await Rate.findAll({
+        where: { userId, videoId }
+    });
+
+    const commentsCounts = await Comment.count({
+        where: { videoId },
+        group: ['videoId']
+    });
+
     const videosData = await Promise.all(videos.map(async (video) => {
-        const userLike = await VideoLike.findOne({
-            where: { userId, videoId: video.id }
-        });
-  
-        const userRating = await Rate.findOne({
-            where: { userId, videoId: video.id }
-        });
-  
+        // Find user like, user rating, and comment count from the fetched data
+        const userLike = userLikes.find(like => like.videoId === video.id);
+        const userRating = userRatings.find(rating => rating.videoId === video.id);
+        const commentsCount = commentsCounts.find(count => count.videoId === video.id) || 0;
+
         let videoUrl = null, thumbnailUrl = null, profileImage = null;
-  
+
         if (video.fileName)
             videoUrl = await getSignedUrl(video.fileName);
-  
+
         if (video.thumbnailFileName)
             thumbnailUrl = await getSignedUrl(video.thumbnailFileName);
         
         if (video.creator.profile.imageFileName)
             profileImage = await getSignedUrl(video.creator.profile.imageFileName);
 
-        const commentsCount = await Comment.count({ where: { videoId: video.id } });
-  
         const videoMetadata = metadata || video.metadata;
-  
+
         return {
             id: video.id,
             description: video.description,
@@ -98,15 +106,14 @@ const fetchVideoData = async (videoId, userId, metadata = null) => {
             createdAt: video.createdAt,
         };
     }));
-  
+
     return videosData;
 };
-
 const fetchProfileVideoData = async (videoId, userId, metadata = null) => {
     if (!Array.isArray(videoId)) {
         videoId = [videoId];
     }
-  
+
     const includeArray = [
         {
             model: VideoCategory,
@@ -119,7 +126,7 @@ const fetchProfileVideoData = async (videoId, userId, metadata = null) => {
             attributes: ['userId'],
         },
     ];
-  
+
     if (!metadata) {
         includeArray.push({
             model: VideoMetadata,
@@ -127,36 +134,45 @@ const fetchProfileVideoData = async (videoId, userId, metadata = null) => {
             attributes: ['viewCount', 'likeCount', 'averageRating', 'shareCount'],
         });
     }
-  
+
     const videos = await Video.findAll({
         where: { id: videoId },
         include: includeArray,
     });
-  
+
     if (!videos || videos.length === 0)
         return null;
-  
+
+    // Fetch all user likes, user ratings, and comment counts in batch operations
+    const userLikes = await VideoLike.findAll({
+        where: { userId, videoId }
+    });
+
+    const userRatings = await Rate.findAll({
+        where: { userId, videoId }
+    });
+
+    const commentsCounts = await Comment.count({
+        where: { videoId },
+        group: ['videoId']
+    });
+
     const videosData = await Promise.all(videos.map(async (video) => {
-        const userLike = await VideoLike.findOne({
-            where: { userId, videoId: video.id }
-        });
-  
-        const userRating = await Rate.findOne({
-            where: { userId, videoId: video.id }
-        });
-  
+        // Find user like, user rating, and comment count from the fetched data
+        const userLike = userLikes.find(like => like.videoId === video.id);
+        const userRating = userRatings.find(rating => rating.videoId === video.id);
+        const commentsCount = commentsCounts.find(count => count.videoId === video.id) || 0;
+
         let videoUrl = null, thumbnailUrl = null;
-  
+
         if (video.fileName)
             videoUrl = await getSignedUrl(video.fileName);
-  
+
         if (video.thumbnailFileName)
             thumbnailUrl = await getSignedUrl(video.thumbnailFileName);
-  
-        const commentsCount = await Comment.count({ where: { videoId: video.id } });
-  
+
         const videoMetadata = metadata || video.metadata;
-  
+
         return {
             id: video.id,
             description: video.description,
@@ -174,7 +190,7 @@ const fetchProfileVideoData = async (videoId, userId, metadata = null) => {
             createdAt: video.createdAt,
         };
     }));
-  
+
     return videosData;
 };
 

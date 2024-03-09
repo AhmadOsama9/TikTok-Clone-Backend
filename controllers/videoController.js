@@ -893,7 +893,7 @@ const getVideoRates = async (req, res) => {
         if (!videoId)
             return res.status(400).json({ message: "Video ID is required" });
 
-        const video = await Video.findByPk(videoId,{
+        const video = await Video.findByPk(videoId, {
             attributes: ['id']
         });
         if (!video)
@@ -904,14 +904,52 @@ const getVideoRates = async (req, res) => {
             attributes: ['userId', 'rate'],
             limit: process.env.VIDEO_RATES_LIMIT || 5,
             offset,
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['username'],
+                    include: [
+                        {
+                            model: Profile,
+                            as: 'profile',
+                            attributes: ['imageFileName'],
+                        },
+                        {
+                            model: UserStatus,
+                            as: 'userStatus',
+                            attributes: ['isVerified']
+                        }
+                    ],
+                }
+            ],
         });
 
-        return res.status(200).json({ rates });
+        const ratesWithSignedUrls = await Promise.all(rates.map(async rate => {
+            let imageUrl = null;
+            if (rate.user.profile.imageFileName)
+                imageUrl = await getSignedUrl(rate.user.profile.imageFileName);
+
+            const { imageFileName, ...profile } = rate.user.profile.toJSON();
+
+            return {
+                ...rate.toJSON(),
+                user: {
+                    ...rate.user.toJSON(),
+                    profile: {
+                        ...profile,
+                        imageUrl
+                    }
+                }
+            };
+        }));
+
+        return res.status(200).json({ rates: ratesWithSignedUrls });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
-}
+};
 
 module.exports = {
     uploadVideo,
