@@ -292,10 +292,10 @@ const uploadVideo = async (req, res) => {
             throw new Error("Failed to read video or image");
         }
 
-        const MAX_VIDEO_SIZE = parseFloat(process.env.MAX_VIDEO_SIZE);
-        if (videoFile.size > MAX_VIDEO_SIZE) {
-            throw new Error(`File size too large. Please upload a video less than ${MAX_VIDEO_SIZE} bytes.`);
-        }
+        // const MAX_VIDEO_SIZE = parseFloat(process.env.MAX_VIDEO_SIZE);
+        // if (videoFile.size > MAX_VIDEO_SIZE) {
+        //     throw new Error(`File size too large. Please upload a video less than ${MAX_VIDEO_SIZE} bytes.`);
+        // }
 
         const user = await User.findOne({ 
             where: { id: userId },

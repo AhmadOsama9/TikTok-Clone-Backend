@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const multer = require('multer');
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 1024 * 1024 * 0.5 // 0.5MB
+    fileSize: parseFloat(process.env.MAX_IMAGE_SIZE)
   }
 });
 

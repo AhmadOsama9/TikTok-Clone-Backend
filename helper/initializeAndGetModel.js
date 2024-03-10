@@ -4,6 +4,7 @@ let model;
 
 const initializeModel = async () => {
     model = await nsfwjs.load();
+    console.log("initialized the nsfw model");
 };
 
 const getModel = () => {

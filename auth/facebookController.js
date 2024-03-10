@@ -6,6 +6,7 @@ const sequelize = require("../config/db").sequelize;
 
 const axios = require("axios");
 const crypto = require("crypto");
+const CryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const randomstring = require("randomstring");
 
@@ -25,6 +26,8 @@ const facebookController = async (req, res) => {
         const email = req.user.profile.emails[0].value;
 
         const existingUser = await User.findOne({ where: { email } });
+        let userData = null;
+
         if (existingUser) {
             const userAuth = await UserAuth.findOne({ where: { userId: existingUser.id, authType: 2 } });
             if (userAuth.authType === 1)
@@ -38,7 +41,7 @@ const facebookController = async (req, res) => {
 
             const token = jwt.sign({ userId: existingUser.id }, process.env.JWT_SECRET);
 
-            const userData = {
+            userData = {
                 uid: existingUser.id,
                 name: existingUser.name,
                 email: existingUser.email,
@@ -48,24 +51,20 @@ const facebookController = async (req, res) => {
                 username: existingUser.username,
             }
 
-            //here we also need to return to the app
-
         } else {
-            const userData = await createNewFacebookUser(email, profile);
-            if (!userData)
-                return res.status(400).json({ message: "Facebook login failed" });
-
-            //return the userData
-            
-            
+            userData = await createNewFacebookUser(email, profile);
         }
+
+        const cipherText = CryptoJS.AES.encrypt(JSON.stringify(userData), process.env.CRYPTO_SECRET).toString();
+
+        res.redirect(`process.env.FLUTTER_AUTH_LOGIN_URL?data=${encodeURIComponent(cipherText)}`);
+
 
     } catch (error) {
         console.error('Error in facebookController:', error);
         return res.status(500).json({ message: "Internal server error" });
     }
 }
-
 
 
 async function validateFacebookToken(token) {

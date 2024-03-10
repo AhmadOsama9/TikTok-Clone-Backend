@@ -3,6 +3,7 @@ const app = express();
 const compression = require("compression");
 const helmet = require("helmet");
 
+
 const swaggerJsDoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 var sanitizer = require('sanitize')();
@@ -43,6 +44,8 @@ app.use(apiKeyMiddleware);
 app.use(compression());
 
 app.use(helmet());
+
+app.use(express.json({ limit: '50kb' }));
 
 const UserStatus = require("./config/db").UserStatus;
 // Middleware to validate JWT and populate req.user

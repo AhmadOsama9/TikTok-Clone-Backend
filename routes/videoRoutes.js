@@ -16,9 +16,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: process.env.MAX_VIDEO_SIZE || 70 * 1024 * 1024,
+    fileSize: parseFloat(process.env.MAX_VIDEO_SIZE)
   }
 });
+
 const {
     uploadVideo,
     getVideoThumbnail,
@@ -103,7 +104,7 @@ const {
  *       500:
  *         description: Failed to read video or image, Internal Server Error
  */
-router.post("/upload-video", uploadVideoLimiter , upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
+router.post("/upload", uploadVideoLimiter, upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
 
 /**
  * @swagger
@@ -586,55 +587,6 @@ router.post("/view", viewVideoLimiter , viewVideo);
  */
 router.get("/rates/:videoId", getVideoRatesLimiter , getVideoRates);
 
-/**
- * @swagger
- * /api/video/upload:
- *   post:
- *     tags:
- *      - Videos
- *     summary: Upload Video
- *     description: This API is used to upload a video and its thumbnail. It requires a valid JWT token in the Authorization header and the video and thumbnail files in the request body.
- *     security:
- *      - bearerAuth: []
- *     parameters:
- *      - in: header
- *        name: X-API-KEY
- *        required: true
- *        schema:
- *          type: string
- *        description: API key
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               video:
- *                 type: string
- *                 format: binary
- *                 description: The video file
- *               image:
- *                 type: string
- *                 format: binary
- *                 description: The image file
- *               description:
- *                 type: string
- *                 description: The video description
- *               category:
- *                 type: string
- *                 description: The video category
- *     responses:
- *       200:
- *         description: Video uploaded successfully
- *       400:
- *         description: Please upload a video and an image, File size too large. Please upload a video less than 10MB, or Invalid file type. Please upload a video file
- *       404:
- *         description: User not found
- *       500:
- *         description: Failed to read video or image, Internal Server Error
- */
-router.post("/upload-video", uploadVideoLimiter , upload.fields([{ name: 'video', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadVideo);
 
 /**
  * @swagger
