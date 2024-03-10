@@ -159,9 +159,7 @@ const sexyThreshold = process.env.SEXY_THRESHOLD || 0.85;
 const hentaiThreshold = process.env.HENTAI_THRESHOLD || 0.9;
 
 
-//if any pornability then crash
 const checkVideoContent = async (videoPath ,res) => {
-
     const tf = require("@tensorflow/tfjs-node");
 
     try {
@@ -175,6 +173,7 @@ const checkVideoContent = async (videoPath ,res) => {
         console.log("Frames size is : ", framesStream.length);
 
         let successfulFrames = 0;
+        let inappropriateFrameCount = 0;
         for (const frame of framesStream) {
             try {
                 const tensor = tf.node.decodeImage(frame);
@@ -186,6 +185,8 @@ const checkVideoContent = async (videoPath ,res) => {
 
                 if (pornProbability > pornThreshold) {
                     console.log("pornProbability: ", pornProbability);
+                    // Save the inappropriate frame as a JPEG file
+                    fs.writeFileSync(path.join('./uploads', `inappropriate_frame_${inappropriateFrameCount++}.jpeg`), frame);
                     throw new Error("Inappropriate content found");
                 } else if (sexyProbability <= sexyThreshold && hentaiProbability <= hentaiThreshold) {
                     console.log("No inappropriate content found");
