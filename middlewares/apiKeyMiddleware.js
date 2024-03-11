@@ -7,7 +7,7 @@
 // });
 
 function apiKeyMiddleware  (req, res, next) {
-    if (req.path.startsWith("/api-docs")) {
+    if (req.path.startsWith("/api-docs", "/api/auth/")) {
         next();
     } else {
         const apiKey = req.get('X-API-KEY');
