@@ -6,7 +6,7 @@ passport.use(
         {
             clientID: process.env.FACEBOOK_APP_ID,
             clientSecret: process.env.FACEBOOK_APP_SECRET,
-            callbackURL: "https://storyappbackend.onrender.com/api/auth/facebook/callback",
+            callbackURL: "/api/auth/facebook/callback",
             passReqToCallback: true,
             profileFields: ['id', 'displayName', 'email']
         },
