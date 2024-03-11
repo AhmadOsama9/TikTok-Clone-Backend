@@ -2,50 +2,41 @@ const rateLimit = require("express-rate-limit");
 
 // Define rate limiters
 const uploadVideoLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // limit each user to 5 requests per windowMs
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 1, // limit each user to 1 request per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many video upload requests, please try again after an hour"
+  message: "طلب رفع الفيديو مرفوض , يرجى المحاولة بعد 24 ساعة"
 });
 
-
-const getVideoThumbnailLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
-  keyGenerator: function(req, res) {
-    return req.user.userId;
-  },
-  message: "Too many thumbnail retrieval requests, please try again after 15 minutes"
-});
 
 const getVideoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 50, // limit each user to 300 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many video retrieval requests, please try again after 15 minutes"
+  message: "طلب الفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 
 const getFollowingsVideosLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 50, // limit each user to 300 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many video retrieval requests, please try again after 15 minutes"
+  message: "طلب الفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const getFollowersVideosLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 50, // limit each user to 300 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many video retrieval requests, please try again after 15 minutes"
+  message: "طلب الفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const updateVideoDescriptionLimiter = rateLimit({
@@ -54,7 +45,7 @@ const updateVideoDescriptionLimiter = rateLimit({
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many description update requests, please try again after an hour"
+  message: "طلب تحديث الفيديو مرفوض , يرجى المحاولة بعد ساعة"
 });
 
 const likeAndUnlikeVideoLimiter = rateLimit({
@@ -63,34 +54,34 @@ const likeAndUnlikeVideoLimiter = rateLimit({
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many like/unlike requests, please try again after 15 minutes"
+  message: "طلب الاعجاب بالفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const shareVideoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 50, // limit each user to 50 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many video share requests, please try again after 15 minutes"
+  message: "طلب مشاركة الفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const viewVideoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 50, // limit each user to 50 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many video view requests, please try again after 15 minutes"
+  message: "طلب مشاهدة الفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const searchVideosLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 200, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many video search requests, please try again after 15 minutes"
+  message: "طلب البحث عن الفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const autocompleteVideosLimiter = rateLimit({
@@ -99,34 +90,34 @@ const autocompleteVideosLimiter = rateLimit({
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many autocomplete requests, please try again after 15 minutes"
+  message: "طلب البحث عن الفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const deleteVideoLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // limit each user to 10 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many video delete requests, please try again after an hour"
+  message: "طلب حذف الفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const getCreatorCommentsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 200, // limit each user to 200 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many creator comments retrieval requests, please try again after 15 minutes"
+  message: "طلب الحصول على التعليقات مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const getCommentsUsingPaginationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 200, // limit each user to 200 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many comments retrieval requests, please try again after 15 minutes"
+  message: "طلب الحصول على التعليقات مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const getVideoRatesLimiter = rateLimit({
@@ -135,14 +126,13 @@ const getVideoRatesLimiter = rateLimit({
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many comments retrieval requests, please try again after 15 minutes"
+  message: "طلب الحصول على تقييمات الفيديو مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 
 
 module.exports = {
     uploadVideoLimiter,
-    getVideoThumbnailLimiter,
     getVideoLimiter,
     getFollowingsVideosLimiter,
     getFollowersVideosLimiter,

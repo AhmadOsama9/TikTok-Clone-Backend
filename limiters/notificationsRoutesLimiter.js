@@ -7,34 +7,34 @@ const getNotificationsLimiter = rateLimit({
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many notification retrieval requests, please try again after 15 minutes"
+  message: "طلب الحصول على الاشعارات مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const markNotificationAsReadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // limit each user to 50 requests per windowMs
+  max: 100, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many notification read requests, please try again after an hour"
+  message: "طلب تحديد الاشعار كمقروء مرفوض , يرجى المحاولة بعد ساعة"
 });
 
 const markAllNotificationsAsReadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // limit each user to 50 requests per windowMs
+  max: 100, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many bulk notification read requests, please try again after an hour"
+  message: "طلب تحديد جميع الاشعارات كمقروءة مرفوض , يرجى المحاولة بعد ساعة"
 });
 
 const deleteNotificationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // limit each user to 50 requests per windowMs
+  max: 100, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many notification deletion requests, please try again after an hour"
+  message: "طلب حذف الاشعار مرفوض , يرجى المحاولة بعد ساعة"
 });
 
 

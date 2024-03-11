@@ -2,30 +2,30 @@ const rateLimit = require("express-rate-limit");
 
 // Define rate limiter
 const addRateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // limit each user to 50 requests per windowMs
-  keyGenerator: function(req, res) {
+  windowMs: 30 * 60 * 1000, // 30 minutes
+  max: 100, // limit each user to 50 requests per windowMs
+  keyGenerator: function (req, res) {
     return req.user.userId;
   },
-  message: "Too many rating addition requests, please try again after an hour"
+  message: "طلب اضافة تقييم مرفوض , يرجى المحاولة بعد 30 دقيقة"
 });
 
 const updateRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // limit each user to 50 requests per windowMs
-  keyGenerator: function(req, res) {
+  max: 100, // limit each user to 50 requests per windowMs
+  keyGenerator: function (req, res) {
     return req.user.userId;
   },
-  message: "Too many rating addition requests, please try again after an hour"
+  message: "طلب تحديث التقييم مرفوض , يرجى المحاولة بعد ساعة"
 });
 
 const removeRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // limit each user to 50 requests per windowMs
-  keyGenerator: function(req, res) {
+  max: 100, // limit each user to 50 requests per windowMs
+  keyGenerator: function (req, res) {
     return req.user.userId;
   },
-  message: "Too many rating addition requests, please try again after an hour"
+  message: "طلب حذف التقييم مرفوض , يرجى المحاولة بعد ساعة"
 });
 
 

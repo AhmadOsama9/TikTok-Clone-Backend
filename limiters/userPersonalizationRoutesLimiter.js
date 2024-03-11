@@ -2,12 +2,12 @@ const rateLimit = require("express-rate-limit");
 
 // Define rate limiters
 const createUserPersonalizationLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 50, // limit each user to 50 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many personalization creation requests, please try again after an hour"
+  message: "طلب الحصول على الفيديوهات الموصى بها مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const getRecommendedVideosLimiter = rateLimit({
@@ -16,7 +16,7 @@ const getRecommendedVideosLimiter = rateLimit({
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
-  message: "Too many recommended videos requests, please try again after 15 minutes"
+  message: "طلب الحصول على الفيديوهات الموصى بها مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 
