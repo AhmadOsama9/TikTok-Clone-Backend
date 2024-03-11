@@ -11,14 +11,11 @@ const {
     setReportIsViewed,
 } = require("../controllers/reportController");
 
-const { 
+const {
     createReportLimiter,
-    getReportByIdLimiter,
-    getUnviewedReportsLimiter,
-    getAllReportsLimiter,
     updateReportLimiter,
-    deleteReportLimiter,
-    setReportIsViewedLimiter
+
+
 } = require("../limiters/reportRoutesLimiter")
 
 
@@ -85,7 +82,7 @@ const {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/create", createReportLimiter , createReport);
+router.post("/create", createReportLimiter, createReport);
 
 /**
  * @swagger
@@ -148,7 +145,7 @@ router.post("/create", createReportLimiter , createReport);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/update/:id", updateReportLimiter , updateReport);
+router.put("/update/:id", updateReportLimiter, updateReport);
 
 /**
  * @swagger
@@ -193,7 +190,7 @@ router.put("/update/:id", updateReportLimiter , updateReport);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/get/:id", getReportByIdLimiter , getReportById);
+router.get("/get/:id", getReportById);
 
 /**
  * @swagger
@@ -236,7 +233,7 @@ router.get("/get/:id", getReportByIdLimiter , getReportById);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/get-all", getAllReportsLimiter , getAllReports);
+router.get("/get-all", getAllReports);
 
 /**
  * @swagger
@@ -274,7 +271,7 @@ router.get("/get-all", getAllReportsLimiter , getAllReports);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/get-unviewed", getUnviewedReportsLimiter , getUnviewedReports);
+router.get("/get-unviewed", getUnviewedReports);
 
 /**
  * @swagger
@@ -323,7 +320,7 @@ router.get("/get-unviewed", getUnviewedReportsLimiter , getUnviewedReports);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/set-viewed/:id", setReportIsViewedLimiter , setReportIsViewed);
+router.put("/set-viewed/:id", setReportIsViewed);
 
 /**
  * @swagger
@@ -372,7 +369,7 @@ router.put("/set-viewed/:id", setReportIsViewedLimiter , setReportIsViewed);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete("/delete/:id", deleteReportLimiter , deleteReport);
+router.delete("/delete/:id", deleteReport);
 
 
 module.exports = router;

@@ -21,39 +21,38 @@ const upload = multer({
 });
 
 const {
-    uploadVideo,
-    getVideoThumbnail,
-    getVideo, 
-    updateVideoDescription,
-    getCreatorComments,
-    getCommentsUsingPagination,
-    likeAndUnlikeVideo,
-    shareVideo,
-    searchVideosUsingPagination,
-    autocompleteVideos,
-    getFollowingsVideos,
-    getFollowersVideos,
-    viewVideo,
-    deleteVideo,
-    getVideoRates,
+  uploadVideo,
+  getVideoThumbnail,
+  getVideo,
+  updateVideoDescription,
+  getCreatorComments,
+  getCommentsUsingPagination,
+  likeAndUnlikeVideo,
+  shareVideo,
+  searchVideosUsingPagination,
+  autocompleteVideos,
+  getFollowingsVideos,
+  getFollowersVideos,
+  viewVideo,
+  deleteVideo,
+  getVideoRates,
 } = require("../controllers/videoController");
 
-const { 
-    uploadVideoLimiter,
-    getVideoThumbnailLimiter,
-    getVideoLimiter,
-    getFollowingsVideosLimiter,
-    getFollowersVideosLimiter,
-    updateVideoDescriptionLimiter,
-    likeAndUnlikeVideoLimiter,
-    shareVideoLimiter,
-    viewVideoLimiter,
-    searchVideosLimiter,
-    autocompleteVideosLimiter,
-    deleteVideoLimiter,
-    getCreatorCommentsLimiter,
-    getCommentsUsingPaginationLimiter,
-    getVideoRatesLimiter
+const {
+  uploadVideoLimiter,
+  getVideoLimiter,
+  getFollowingsVideosLimiter,
+  getFollowersVideosLimiter,
+  updateVideoDescriptionLimiter,
+  likeAndUnlikeVideoLimiter,
+  shareVideoLimiter,
+  viewVideoLimiter,
+  searchVideosLimiter,
+  autocompleteVideosLimiter,
+  deleteVideoLimiter,
+  getCreatorCommentsLimiter,
+  getCommentsUsingPaginationLimiter,
+  getVideoRatesLimiter
 } = require("../limiters/videoRoutesLimiter")
 
 /**
@@ -143,7 +142,7 @@ router.post("/upload", uploadVideoLimiter, upload.fields([{ name: 'video', maxCo
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/thumbnail/:videoId", getVideoThumbnailLimiter , getVideoThumbnail);
+router.get("/thumbnail/:videoId", getVideoThumbnail);
 
 /**
  * @swagger
@@ -219,7 +218,7 @@ router.get("/thumbnail/:videoId", getVideoThumbnailLimiter , getVideoThumbnail);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/get/:videoId", getVideoLimiter , getVideo);
+router.get("/get/:videoId", getVideoLimiter, getVideo);
 
 /**
  * @swagger
@@ -294,7 +293,7 @@ router.get("/get/:videoId", getVideoLimiter , getVideo);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/followings", getFollowingsVideosLimiter , getFollowingsVideos);
+router.get("/followings", getFollowingsVideosLimiter, getFollowingsVideos);
 
 /**
  * @swagger
@@ -369,7 +368,7 @@ router.get("/followings", getFollowingsVideosLimiter , getFollowingsVideos);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.get("/followers", getFollowersVideosLimiter , getFollowersVideos);
+router.get("/followers", getFollowersVideosLimiter, getFollowersVideos);
 
 
 /**
@@ -415,7 +414,7 @@ router.get("/followers", getFollowersVideosLimiter , getFollowersVideos);
  *       '500':
  *         description: Internal server error
  */
-router.put("/:videoId/update-description", updateVideoDescriptionLimiter , updateVideoDescription);
+router.put("/:videoId/update-description", updateVideoDescriptionLimiter, updateVideoDescription);
 
 /**
  * @swagger
@@ -454,7 +453,7 @@ router.put("/:videoId/update-description", updateVideoDescriptionLimiter , updat
  *       500:
  *         description: Internal server error
  */
-router.post("/like-and-unlike", likeAndUnlikeVideoLimiter , likeAndUnlikeVideo);
+router.post("/like-and-unlike", likeAndUnlikeVideoLimiter, likeAndUnlikeVideo);
 
 /**
  * @swagger
@@ -493,7 +492,7 @@ router.post("/like-and-unlike", likeAndUnlikeVideoLimiter , likeAndUnlikeVideo);
  *       500:
  *         description: Internal server error
  */
-router.post("/share", shareVideoLimiter , shareVideo);
+router.post("/share", shareVideoLimiter, shareVideo);
 
 /**
  * @swagger
@@ -532,7 +531,7 @@ router.post("/share", shareVideoLimiter , shareVideo);
  *       500:
  *         description: Internal server error
  */
-router.post("/view", viewVideoLimiter , viewVideo);
+router.post("/view", viewVideoLimiter, viewVideo);
 /**
  * @swagger
  * /api/video/rates/{videoId}:
@@ -585,7 +584,7 @@ router.post("/view", viewVideoLimiter , viewVideo);
  *       500:
  *         description: Internal server error
  */
-router.get("/rates/:videoId", getVideoRatesLimiter , getVideoRates);
+router.get("/rates/:videoId", getVideoRatesLimiter, getVideoRates);
 
 
 /**
@@ -657,7 +656,7 @@ router.get("/rates/:videoId", getVideoRatesLimiter , getVideoRates);
  *       500:
  *         description: Internal server error
  */
-router.get("/search", searchVideosLimiter , searchVideosUsingPagination);
+router.get("/search", searchVideosLimiter, searchVideosUsingPagination);
 
 /**
  * @swagger
@@ -689,7 +688,7 @@ router.get("/search", searchVideosLimiter , searchVideosUsingPagination);
  *       500:
  *         description: Internal server error
  */
-router.get("/autocomplete", autocompleteVideosLimiter , autocompleteVideos);
+router.get("/autocomplete", autocompleteVideosLimiter, autocompleteVideos);
 
 /**
  * @swagger
@@ -732,7 +731,7 @@ router.get("/autocomplete", autocompleteVideosLimiter , autocompleteVideos);
  *             schema:
  *               $ref: '#/definitions/Error'
  */
-router.delete("/delete/:videoId", deleteVideoLimiter , deleteVideo);
+router.delete("/delete/:videoId", deleteVideoLimiter, deleteVideo);
 
 /**
  * @swagger
@@ -822,7 +821,7 @@ router.delete("/delete/:videoId", deleteVideoLimiter , deleteVideo);
  *       404:
  *         description: Video not found
  */
-router.get("/creator-comments/:videoId", getCreatorCommentsLimiter , getCreatorComments);
+router.get("/creator-comments/:videoId", getCreatorCommentsLimiter, getCreatorComments);
 
 
 /**
@@ -913,7 +912,7 @@ router.get("/creator-comments/:videoId", getCreatorCommentsLimiter , getCreatorC
  *       404:
  *         description: Video not found
  */
-router.get("/comments/:videoId", getCommentsUsingPaginationLimiter , getCommentsUsingPagination);
+router.get("/comments/:videoId", getCommentsUsingPaginationLimiter, getCommentsUsingPagination);
 
 
 module.exports = router;

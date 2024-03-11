@@ -28,10 +28,6 @@ const {
     verifyOtpAndSetNewPasswordLimiter,
     sendVerificationCodeLimiter,
     checkBanStatusLimiter,
-    banUserLimiter,
-    unbanUserLimiter,
-    setUserIsVerifiedLimiter,
-    getUserInfoLimiter,
     referredUserLimiter,
     searchUsersUsingPaginationLimiter,
     autocompleteLimiter
@@ -412,7 +408,7 @@ router.get("/check-ban-status", checkBanStatusLimiter ,checkBanStatus);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/ban/:toBeBannedUserId", banUserLimiter ,banUser);
+router.put("/ban/:toBeBannedUserId",banUser);
 
 /**
  * @swagger
@@ -467,7 +463,7 @@ router.put("/ban/:toBeBannedUserId", banUserLimiter ,banUser);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/unban/:toBeUnbannedUserId", unbanUserLimiter , unbanUser);
+router.put("/unban/:toBeUnbannedUserId", unbanUser);
 
 /**
  * @swagger
@@ -522,7 +518,7 @@ router.put("/unban/:toBeUnbannedUserId", unbanUserLimiter , unbanUser);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put("/verify/:toBeVerifiedUserId", setUserIsVerifiedLimiter ,setUserIsVerified);
+router.put("/verify/:toBeVerifiedUserId",setUserIsVerified);
 
 /**
  * @swagger
@@ -583,7 +579,7 @@ router.put("/verify/:toBeVerifiedUserId", setUserIsVerifiedLimiter ,setUserIsVer
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get("/info/:otherUserId", getUserInfoLimiter , getUserInfo);
+router.get("/info/:otherUserId", getUserInfo);
 
 /**
  * @swagger

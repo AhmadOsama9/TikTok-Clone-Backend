@@ -12,7 +12,7 @@ const {
 } = require("../controllers/commentController");
 
 const {
-    addCommentLimiter,
+   
     deleteCommentLimiter,
     replyToCommentLimiter,
     addGiftCommentLimiter,
@@ -84,7 +84,7 @@ const {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/add", addCommentLimiter, addComment);
+router.post("/add", addComment);
 
 /**
  * @swagger
