@@ -2,7 +2,6 @@ const express = require("express");
 const app = express();
 const compression = require("compression");
 const helmet = require("helmet");
-const passport = require("./auth/facebookPassport");
 
 
 const swaggerJsDoc = require("swagger-jsdoc");
@@ -16,6 +15,7 @@ port = process.env.PORT || 3000;
 //configs
 const swaggerOptions = require("./config/swaggerConfig");
 require("dotenv").config();
+const passport = require("./auth/facebookPassport");
 
 //middlewares
 const authenticateJWT = require('./middlewares/authMiddleware');
