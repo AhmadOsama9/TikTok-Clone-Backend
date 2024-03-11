@@ -18,11 +18,11 @@ const addComment = async (req, res) => {
             attributes: ['id', 'creatorId']
         });
         if (!video) {
-            return res.status(404).json({ message: 'Video not found' });
+            return res.status(404).json({ message: 'الفيديو غير موجود' });
         }
 
         if (!content || content.trim() === '')
-            return res.status(400).json({ message: 'Content is required' });
+            return res.status(400).json({ message: 'يجب ان تكتب محتوي في التعليق' });
 
         const userStatus = await UserStatus.findOne({ 
             where: { userId: userId },
@@ -77,7 +77,7 @@ const addGiftComment = async (req, res) => {
         const { userId } = req.user;
 
         if (!videoId || !giftType)
-            return res.status(500).json({ message: "Invalid data" });
+            return res.status(500).json({ message: "بيانات خاطئة" });
 
         transaction = await sequelize.transaction();
 
@@ -88,25 +88,25 @@ const addGiftComment = async (req, res) => {
 
         if (!video) {
             await transaction.rollback();
-            return res.status(404).json({ message: 'Video not found' });
+            return res.status(404).json({ message: 'الفيديو غير موجود' });
         }
 
         if (!user) {
             await transaction.rollback();
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ message: 'المستخدم غير موجود' });
         }
 
         if (giftType < 1 || giftType > 5)
-            return res.status(400).json({ message: "Invalid gift type" });
+            return res.status(400).json({ message: "نوع الهدية خاطئ" });
 
         const giftPrices = JSON.parse(process.env.GIFT_PRICES);
         const giftPrice = giftPrices[giftType.toString()];
         if (!giftPrice || giftPrice < 0)
-            return res.status(400).json({ message: "Invalid gift type" });
+            return res.status(400).json({ message: "نوع الهدية خاطئ" });
 
         if (user.balance < giftPrice) {
             await transaction.rollback();
-            return res.status(400).json({ message: "Insufficient balance" });
+            return res.status(400).json({ message: "لا يوجد رصيد كافي" });
         }
 
         await user.decrement('balance', { by: giftPrice, transaction });
@@ -144,7 +144,7 @@ const addGiftComment = async (req, res) => {
         const receiver = await User.findByPk(receiverId, { attributes: ['id', 'balance'] }, { transaction });
         if (!receiver) {
             await transaction.rollback();
-            return res.status(404).json({ message: "Receiver not found" });
+            return res.status(404).json({ message: "مستقبل الهدية غير موجود" });
         }
 
         await receiver.increment('balance', { by: giftPrice, transaction });
@@ -173,10 +173,10 @@ const replyToComment = async (req, res) => {
         const commentId = req.params.id;
 
         if (!content || content.trim() === '')
-            return res.status(400).json({ message: 'Content is required' });
+            return res.status(400).json({ message: "يجب ان تكتب محتوي في التعليق" });
 
         if (!commentId)
-            return res.status(400).json({ message: 'Comment id is required' });
+            return res.status(400).json({ message: 'يجب ارسال رقم التعليق' });
 
         transaction = await sequelize.transaction();
 
@@ -185,7 +185,7 @@ const replyToComment = async (req, res) => {
         });
         if (!comment) {
             await transaction.rollback();
-            return res.status(404).json({ message: 'Comment not found' });
+            return res.status(404).json({ message: 'التعليق غير موجود' });
         }
 
         const userStatus = await UserStatus.findOne({ 
@@ -234,18 +234,18 @@ const updateComment = async (req, res) => {
         
         const comment = await Comment.findByPk(commentId);
         if (!comment) {
-            return res.status(404).json({ message: 'Comment not found' });
+            return res.status(404).json({ message: 'التعليق غير موجود' });
         }
 
         if (comment.userId !== userId) {
-            return res.status(403).json({ message: 'You are not authorized to update this comment' });
+            return res.status(403).json({ message: 'ليس لديك الصلاحية لتعديل هذا التعليق' });
         }
 
         if (!content || content.trim() === '')
-            return res.status(400).json({ message: 'Content is required' });
+            return res.status(400).json({ message: 'يجب ان تكتب محتوي في التعليق' });
 
         if (comment.content === content)
-            return res.status(400).json({ message: 'Content is the same' });
+            return res.status(400).json({ message: 'محتوي التعليق يجب ان يتغير' });
 
         comment.content = content;
         await comment.save();
@@ -263,18 +263,18 @@ const getCommentUsingId = async (req, res) => {
         const commentId = req.params.id;
 
         if (!commentId)
-            return res.status(400).json({ message: 'Comment id is required' });
+            return res.status(400).json({ message: 'يجب ادخال رقم التعليق' });
 
         const userStatus = await UserStatus.findOne({ 
             where: { userId },
             attributes: ['isAdmin']
         });
         if (!userStatus || !userStatus.isAdmin)
-            return res.status(403).json({ message: 'You are not authorized to view this comment' });
+            return res.status(403).json({ message: 'ليس لديك الصلاحية لرؤية هذا التعليق' });
 
         const comment = await Comment.findByPk(commentId);
         if (!comment) {
-            return res.status(404).json({ message: 'Comment not found' });
+            return res.status(404).json({ message: 'التعليق غير موجود' });
         }
         return res.status(200).json(comment);
     } catch (error) {
@@ -289,17 +289,17 @@ const deleteComment = async (req, res) => {
         const commentId = req.params.id;
 
         if (!commentId)
-            return res.status(400).json({ message: 'Comment id is required' });
+            return res.status(400).json({ message: 'يجب ادخال رقم التعليق' });
 
         const comment = await Comment.findByPk(commentId, {
             attributes: ['id', 'videoId', 'userId']
         });
         if (!comment)
-            return res.status(404).json({ message: 'Comment not found' });
+            return res.status(404).json({ message: 'التعليق غير موجود' });
 
         const video = await Video.findByPk(comment.videoId);
         if (!video)
-            return res.status(404).json({ message: 'Video not found' });
+            return res.status(404).json({ message: 'الفيديو غير موجود' });
 
         const userStatus = await UserStatus.findOne({ 
             where: { userId },
@@ -307,17 +307,17 @@ const deleteComment = async (req, res) => {
         });
 
         if (!userStatus)
-            return res.status(404).json({ message: 'UserStatus not found' });
+            return res.status(404).json({ message: 'حالة المستخدم غير موجودة' });
 
         const isAdmin = userStatus.isAdmin;
         const isCommentOwner = comment.userId === userId;
         const isVideoCreator = video.creatorId === userId;
 
         if (!isAdmin && !isCommentOwner && !isVideoCreator)
-            return res.status(403).json({ message: 'You are not authorized to delete this comment' });
+            return res.status(403).json({ message: 'ليس لديك الصلاحية لحذف التعليق' });
 
         await comment.destroy();
-        return res.status(200).json({ message: 'Comment deleted' });
+        return res.status(200).json({ message: 'تم حذف التعليق بنجاح' });
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
@@ -331,7 +331,7 @@ const likeAndUnlikeComment = async (req, res) => {
         const { commentId } = req.params;
 
         if (!commentId)
-            return res.status(400).json({ message: 'Comment id is required' });
+            return res.status(400).json({ message: 'يجب ادخال رقم التعليق' });
 
         transaction = await sequelize.transaction();
 
@@ -340,7 +340,7 @@ const likeAndUnlikeComment = async (req, res) => {
         });
         if (!comment) {
             await transaction.rollback();
-            return res.status(404).json({ message: 'Comment not found' });
+            return res.status(404).json({ message: 'التعليق غير موجود' });
         }
 
         const existingLike = await CommentLike.findOne({
@@ -359,7 +359,7 @@ const likeAndUnlikeComment = async (req, res) => {
 
         await transaction.commit();
 
-        return res.status(200).json({ message: "Success" });
+        return res.status(200).json({ message: "تم الاعجاب بنجاح" });
 
     } catch (error) {
         if (transaction) await transaction.rollback();

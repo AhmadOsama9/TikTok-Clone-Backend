@@ -19,14 +19,14 @@ const sendMessageUsingChatId = async (req, res) => {
                 attributes: ['id', 'chatId'],
             });
             if (!replyMessage || replyMessage.chatId !== chatId)
-                return res.status(404).json({ message: "Message not found or not in the same chat" });
+                return res.status(404).json({ message: "الرسالة غير موجودة او في محادثة اخري" });
         }
 
         if (!chatId || !message)
         return res.status(400).json({ message: "Invalid request" });
 
         if (!message || message.trim() === '')
-        return res.status(400).json({ message: 'Content is required' });
+        return res.status(400).json({ message: 'يجب ان تكتب محتوي في الرسالة' });
 
         const chat = await Chat.findOne({
             where: {
@@ -37,7 +37,7 @@ const sendMessageUsingChatId = async (req, res) => {
         });
 
         if (!chat) {
-            return res.status(404).json({ message: "Chat not found" });
+            return res.status(404).json({ message: "المحادثة غير موجودة" });
         }
 
         const newMessage = await Message.create({
@@ -62,23 +62,23 @@ const sendMessageUsingReceiverId = async (req, res) => {
 
     if (replyTo) {
         if (!Number.isInteger(replyTo)) 
-            return res.status(400).json({ message: "Invalid input: replyTo should be an integer" });
+            return res.status(400).json({ message: "ادخال خاطئ: يجب ان ترسل رقم الرسالة" });
 
         const replyMessage = await Message.findByPk(replyTo, {
             attributes: ['id']
         });
         if (!replyMessage)
-            return res.status(404).json({ message: "Message not found" });
+            return res.status(404).json({ message: "الرسالة غير موجودة" });
     }
 
     if (!receiverId || !message)
-        return res.status(400).json({ message: "All Fields must be sent" });
+        return res.status(400).json({ message: "كل الخانات يجب ان تكون مكتوبة" });
 
     if (!message || message.trim() === '')
-        return res.status(400).json({ message: 'Content is required' });
+        return res.status(400).json({ message: 'يجب ان تكتب محتوي في الرسالة' });
 
     if (userId === receiverId)
-        return res.status(400).json({ message: "You can't send a message to yourself" });
+        return res.status(400).json({ message: "لا يمكنك ان ترسل رسالة الي نفسك" });
 
     const transaction = await sequelize.transaction();
 
@@ -99,13 +99,13 @@ const sendMessageUsingReceiverId = async (req, res) => {
 
         if (replyTo) {
             if (!Number.isInteger(replyTo)) 
-                return res.status(400).json({ message: "Invalid input: replyTo should be an integer" });
+                return res.status(400).json({ message: "ادخال خاطئ: يجب ان ترسل رقم الرسالة" });
 
             const replyMessage = await Message.findByPk(replyTo, {
                 attributes: ['id', 'chatId']
             });
             if (!replyMessage || replyMessage.chatId !== chat.id)
-                return res.status(404).json({ message: "Message not found or not in the same chat" });
+                return res.status(404).json({ message: "الرسالة غير موجودة او في محادثة اخري" });
         }
 
         const newMessage = await Message.create({
@@ -138,7 +138,7 @@ const getMessages = async (req, res, chatId, userId) => {
     });
 
     if (!chat) {
-        return res.status(404).json({ message: "Chat not found" });
+        return res.status(404).json({ message: "المحادثة غير موجودة" });
     }
 
     const messages = await Message.findAll({
@@ -209,7 +209,7 @@ const getMessagesBetweenUsersUsingPagination = async (req, res) => {
         });
 
         if (!chat) {
-            return res.status(404).json({ message: "Chat not found" });
+            return res.status(404).json({ message: "المحادثة غير موجودة" });
         }
 
         const messages = await getMessages(req, res, chat.id, userId);
@@ -321,15 +321,15 @@ const addReactionToMessage = async (req, res) => {
         const { message, chat } = await validateMessageAndChat(messageId, chatId, userId);
 
         if (message.senderId === userId)
-            return res.status(403).json({ message: "You can't react to your own message" });
+            return res.status(403).json({ message: "لا يمكنك ان تتفاعل مع رسالتك" });
 
         if (reaction < 1 || reaction > 4)
-            return res.status(400).json({ message: "Invalid reaction" });
+            return res.status(400).json({ message: "تفاعل خاطئ" });
 
         message.reaction = reaction;
         await message.save();
 
-        return res.status(200).json({ message: "Reaction added successfully" });
+        return res.status(200).json({ message: "تم ارسال التفاعل بنجاح" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -350,16 +350,16 @@ const deleteReaction = async (req, res) => {
         const { message, chat } = await validateMessageAndChat(messageId, chatId, userId);
 
         if (message.senderId === userId)
-            return res.status(403).json({ message: "You can't delete a react on your own message" });
+            return res.status(403).json({ message: "لا يمكنك ان تحذف التفاعل مع رسالتك" });
         
         if (message.reaction == null)
-            return res.status(403).json({ message: "No reaction to delete" });
+            return res.status(403).json({ message: "لا يوجد تفاعل للحذف" });
 
         message.reaction = null;
 
         await message.save();
 
-        return res.status(200).json({ message: "Reaction deleted successfully" });
+        return res.status(200).json({ message: "تم حذف التفاعل بنجاح" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -378,14 +378,14 @@ const deleteMessage = async (req, res) => {
             attributes: ['id', 'senderId'],
         });
         if (!message)
-            return res.status(404).json({ message: "Message not found" });
+            return res.status(404).json({ message: "الرسالة غير موجودة" });
 
         if (message.senderId !== userId)
-            return res.status(403).json({ message: "You are not authorized to delete this message" });
+            return res.status(403).json({ message: "ليس لديك الصلاحية لحذف الرسالة" });
 
         await message.destroy();
 
-        return res.status(200).json({ message: "Message deleted successfully" });
+        return res.status(200).json({ message: "تم حذف الرسالة بنجاح" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -405,11 +405,11 @@ const getMessageUsingId = async (req, res) => {
             attributes: ['isAdmin'],
         });
         if (!userStatus || !userStatus.isAdmin)
-            return res.status(403).json({ message: "You are not authorized to perform this action" });
+            return res.status(403).json({ message: "ليس لديك الصلاحية للقيام بهذا الفعل" });
 
         const message = await Message.findByPk(messageId);
         if (!message) {
-            return res.status(404).json({ message: 'Message not found' });
+            return res.status(404).json({ message: 'الرسالة غير موجودة' });
         }
         return res.status(200).json(message);
 

@@ -8,22 +8,22 @@ async function makeAdmin (userId) {
 
         const user = await User.findByPk(userId);
         if (!user)
-            throw Error('User not found');
+            throw Error('المستخدم غير موجود');
 
         const userStatus = await UserStatus.findOne({ 
             where: { userId },
             attributes: ['id', 'isAdmin']
         });
         if (!userStatus)
-            throw Error('User status not found');
+            throw Error('حالة المستخدم غير موجودة');
 
         userStatus.isAdmin = true;
 
         await userStatus.save();
-        console.log("User is now an admin");
+        console.log("المستخدم أصبح مديراً");
 
     } catch (error) {
-        console.log("Error in making a user an admin ", error);
+        console.log("خطأ في تحويل المستخدم الي مدير ", error);
         throw new Error(error.message);
     }
 };
