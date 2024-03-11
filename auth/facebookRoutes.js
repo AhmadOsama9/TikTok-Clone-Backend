@@ -5,18 +5,18 @@ const passport = require("passport");
 
 const facebookController = require("./facebookController");
 
-
 router.get(
     "/facebook",
     passport.authenticate("facebook", { scope: ["email"] })
 );
 
-
 router.get(
-    "/facebook/callbak",
+    "/facebook/callback",
     passport.authenticate("facebook", { failureRedirect: "/login" }),
     facebookController
 );
 
 
 module.exports = router;
+
+
