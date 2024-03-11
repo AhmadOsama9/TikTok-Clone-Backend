@@ -259,13 +259,13 @@ const uploadVideo = async (req, res) => {
         let description = req.body.description;
 
         if (!description || !categories)
-            return res.status(400).json({ message: "يجب ادخال فئة ووصف الفيديو" });
+            return res.status(400).json({ message: "Description and categories are required" });
 
         if (typeof categories === 'string')
             categories = [categories];
         
         if (!Array.isArray(categories))
-            return res.status(400).json({ message: "الفئة يجب ان تكون مصفوفة"});
+            return res.status(400).json({ message: "Categories should be an array" });
 
         description = description.toLowerCase();
 
@@ -352,7 +352,7 @@ const uploadVideo = async (req, res) => {
             throw new Error(error);
         }
 
-        return res.status(200).json({message: "تم رفع الفيديو بنجاح", videoId: video.id});
+        return res.status(200).json({message: "Video uploaded successfully", videoId: video.id});
     } catch (error) {
         if (!responseSent) {
             responseSent = true;
@@ -383,11 +383,11 @@ const getVideoThumbnail = async (req, res) => {
         const videoId = req.params.videoId;
         const video = await Video.findOne({ where: { id: videoId } });
         if (!video) {
-            return res.status(404).json({ message: "الفيديو غير موجود" });
+            return res.status(404).json({ message: "Video not found" });
         }
 
         if (!video.thumbnailFileName) {
-            return res.status(404).json({ message: "صورة الفيديو غير موجودة" });
+            return res.status(404).json({ message: "Thumbnail not found cause filename is missing" });
         }
 
         const url = await getSignedUrl(video.thumbnailFileName);
@@ -407,11 +407,11 @@ const getCommentsUsingPagination = async (req, res) =>{
         const { offset = 0} = req.query;
 
         if (!videoId )
-            return res.status(400).json({ message: "يجب ادخال رقم الفيديو"});
+            return res.status(400).json({ message: "Video ID is required" });
 
         const video = await Video.findByPk(videoId);
         if (!video) 
-            return res.status(404).json({ message: "الفيديو غير موجود"});
+            return res.status(404).json({ message: "Video not found" });
 
         const videoCreatorId = video.creatorId;
 
@@ -466,11 +466,11 @@ const getCreatorComments = async (req, res) => {
         const { videoId } = req.params;
 
         if (!videoId)
-            return res.status(400).json({ message: "يجب ادخال رقم الفيديو" });
+            return res.status(400).json({ message: "Video ID is required" });
 
         const video = await Video.findByPk(videoId);
         if (!video)
-            return res.status(404).json({ message: "الفيديو غير موجود"});
+            return res.status(404).json({ message: "Video not found" });
 
         const videoCreatorId = video.creatorId;
 
@@ -512,7 +512,7 @@ const updateVideoDescription = async (req, res) => {
         const videoId = req.params.videoId;
 
         if (!req.body.description) {
-            return res.status(400).json({ message: "يجب ادخال وصف الفيديو" });
+            return res.status(400).json({ message: "Description is required" });
         }
 
         const video = await Video.findOne({ 
@@ -520,19 +520,19 @@ const updateVideoDescription = async (req, res) => {
             attributes: ['id', 'creatorId', 'description'],
         });
         if (!video) {
-            return res.status(404).json({ message: "الفيديو غير موجود"});
+            return res.status(404).json({ message: "Video not found" });
         }
 
         if (video.creatorId !== userId) {
-            return res.status(403).json({ message: "غير مصرح لك بتعديل وصف الفيديو"});
+            return res.status(403).json({ message: "You are not authorized to update this video" });
         }
 
         if (video.description === req.body.description)
-            return res.status(200).json({ message: "وصف الفيديو محدث بنفس القيمة"});
+            return res.status(200).json({ message: "Video description is already up to date" });
 
         await video.update({ description: req.body.description });
         
-        return res.status(200).json({ message: "تم تحديث وصف الفيديو" });
+        return res.status(200).json({ message: "Video description updated successfully" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -583,7 +583,7 @@ const likeAndUnlikeVideo = async (req, res) => {
     const { videoId } = req.body;
 
     if (!videoId) {
-        return res.status(400).json({ message: "يجب ادخال رقم الفيديو" });
+        return res.status(400).json({ message: "Video ID is required" });
     }
 
     const like = await VideoLike.findOne({ where: { userId, videoId } });
@@ -593,11 +593,11 @@ const likeAndUnlikeVideo = async (req, res) => {
         if (like) {
             await unlikeVideo(userId, videoId, transaction);
             await transaction.commit();
-            return res.status(200).json({ message: "تم الغاء الاعجاب بالفيديو" });
+            return res.status(200).json({ message: "Video unliked successfully" });
         } else {
             await likeVideo(userId, videoId, transaction, like);
             await transaction.commit();
-            return res.status(200).json({ message: "تم الاعجاب بالفيديو بنجاح" });
+            return res.status(200).json({ message: "Video liked successfully" });
         }
     } catch (error) {
         await transaction.rollback();
@@ -611,7 +611,7 @@ const shareVideo = async (req, res) => {
         const { videoId } = req.body;
 
         if (!videoId) {
-            return res.status(400).json({ message: "يجب ادخال رقم الفيديو" });
+            return res.status(400).json({ message: "Video ID is required" });
         }
 
         const videoMetadata = await VideoMetadata.findOne({ 
@@ -619,12 +619,12 @@ const shareVideo = async (req, res) => {
             attributes: ['id'],
         });
         if (!videoMetadata)
-            return res.status(404).json({ message: "بيانات الفيديو غير موجودة" });
+            return res.status(404).json({ message: "Video metadata not found" });
 
         // Increment the shareCount atomically
         await videoMetadata.increment('shareCount');
 
-        return res.status(200).json({ message: "تم مشاركة الفيديو بنجاح" });
+        return res.status(200).json({ message: "Video shared successfully" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -639,7 +639,7 @@ const searchVideosUsingPagination = async (req, res) => {
         description = description.toLowerCase();
         
         if (!description)
-            return res.status(400).json({ error: "يجب ادخال الوصف" });
+            return res.status(400).json({ error: 'description is required' });
 
         const videos = await Video.findAll({
             where: {
@@ -696,7 +696,7 @@ const autocompleteVideos = async (req, res) => {
         description = description.toLowerCase();
         
         if (!description)
-            return res.status(400).json({ error: "يجب ادخال الوصف"});
+            return res.status(400).json({ error: 'description is required' });
 
         const videos = await Video.findAll({
             where: {
@@ -722,13 +722,13 @@ const viewVideo = async (req, res) => {
         const { videoId } = req.body;
 
         if (!videoId)
-            return res.status(400).json({ message: "يجب ادخال رقم الفيديو"});
+            return res.status(400).json({ message: "Video ID is required" });
 
         const video = await Video.findByPk(videoId, {
             attributes: ['id', 'creatorId']
         });
         if (!video)
-            return res.status(404).json({ message: "الفيديو غير موجود"});
+            return res.status(404).json({ message: "Video not found" });
 
         transaction = await sequelize.transaction();
 
@@ -738,7 +738,7 @@ const viewVideo = async (req, res) => {
             transaction,
         });
         if (!videoMetadata)
-            return res.status(404).json({ message: "بيانات الفيديو غير موجودة"});
+            return res.status(404).json({ message: "Video metadata not found" });
 
         await videoMetadata.increment('viewCount', { transaction });
 
@@ -753,7 +753,7 @@ const viewVideo = async (req, res) => {
         }
 
         await transaction.commit();
-        return res.status(200).json({ message: "تمت مشاهدة الفيديو بنجاح" });
+        return res.status(200).json({ message: "Video viewed successfully" });
 
     } catch (error) {
         if (transaction) await transaction.rollback();
@@ -768,7 +768,7 @@ const getVideo = async (req, res) => {
       const videoId = req.params.videoId;
       const videoData = await fetchVideoData(videoId, userId);
       if (!videoData) {
-        return res.status(404).json({ message: "الفيديو غير موجود"});
+        return res.status(404).json({ message: 'Video not found' });
       }
       res.json({ videos: [videoData] });
     } catch (error) {
@@ -877,7 +877,7 @@ const deleteVideo = async (req, res) => {
         // Commit the transaction
         await t.commit();
 
-        return res.status(200).json({ message: "تم حذف الفيديو بنجاح" });
+        return res.status(200).json({ message: 'Video deleted successfully' });
     } catch (error) {
         // If there's an error, rollback the transaction
         await t.rollback();
@@ -892,13 +892,13 @@ const getVideoRates = async (req, res) => {
         const { offset = 0} = req.query;
 
         if (!videoId)
-            return res.status(400).json({ message: "يجب ادخال رقم الفيديو"});
+            return res.status(400).json({ message: "Video ID is required" });
 
         const video = await Video.findByPk(videoId, {
             attributes: ['id']
         });
         if (!video)
-            return res.status(404).json({ message: "الفيديو غير موجود"});
+            return res.status(404).json({ message: "Video not found" });
 
         const rates = await Rate.findAll({
             where: { videoId },
