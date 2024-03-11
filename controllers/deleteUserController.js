@@ -17,7 +17,7 @@ const deleteUserController = async (req, res) => {
             attributes: ['isAdmin'],
         });
         if (!userStatus || !userStatus.isAdmin)
-            return res.status(403).json({ message: 'You are not authorized to perform this action' });
+            return res.status(403).json({ message: 'ليس لديك الصلاحية بالقيام بهذا' });
 
         transaction = await sequelize.transaction();
 
@@ -55,7 +55,7 @@ const deleteUserController = async (req, res) => {
 
         await transaction.commit();
 
-        return res.status(200).json({ message: 'User has been deleted' });
+        return res.status(200).json({ message: 'تم حذف المستخدم بنجاح' });
 
     } catch (error) {
         if (transaction) await transaction.rollback();

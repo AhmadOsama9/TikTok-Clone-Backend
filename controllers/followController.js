@@ -13,15 +13,15 @@ const followUser = async (req, res) => {
         const { followId } = req.body;
 
         if (userId === followId)
-            return res.status(400).json({ message: "You can't follow yourself" });
+            return res.status(400).json({ message: "لا يمكنك متابعة نفسك" });
 
         if (!followId) {
-            return res.status(400).json({ message: "followId is required" });
+            return res.status(400).json({ message: "يجب ادخال رقم المستخدم" });
         }
 
         const user = await User.findOne({ where: { id: followId } });
         if (!user)
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({ message: "المستخدم غير موجود" });
 
         const follow = await Follow.findOne({ 
             where: { 
@@ -30,7 +30,7 @@ const followUser = async (req, res) => {
             } 
         });
         if (follow)
-            return res.status(400).json({ message: "You already follow this user" });
+            return res.status(400).json({ message: "انت بالفعل تتابع هذا المستخدم" });
 
         await Follow.create({ followerId: userId, followingId: followId }, { transaction });
             
@@ -38,7 +38,7 @@ const followUser = async (req, res) => {
 
         await transaction.commit();
 
-        return res.status(200).json({ message: "User followed successfully" });
+        return res.status(200).json({ message: "تم متابعة المستخدم بنجاح" });
 
     } catch (error) {
         await transaction.rollback();
@@ -52,12 +52,12 @@ const unFollowUser = async (req, res) => {
         const { followId } = req.body;
 
         if (!followId) {
-            return res.status(400).json({ message: "followId is required" });
+            return res.status(400).json({ message: "يجب ادخال رقم المستخدم" });
         }
 
         const user = await User.findOne({ where: { id: followId } });
         if (!user)
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({ message: "المستخدم غير موجود" });
 
         const follow = await Follow.findOne({ 
             where: { 
@@ -66,11 +66,11 @@ const unFollowUser = async (req, res) => {
             } 
         });
         if (!follow)
-            return res.status(400).json({ message: "You don't follow this user" });
+            return res.status(400).json({ message: "انت لا تتابع هذا المستخدم" });
 
         await follow.destroy();
 
-        return res.status(200).json({ message: "User unfollowed successfully" });
+        return res.status(200).json({ message: "تم الغاء المتابعة بنجاح" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });

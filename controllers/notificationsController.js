@@ -13,22 +13,22 @@ const { Op } = require("sequelize");
 async function addNotification (userId, videoId, commentId, otherUserId, notificationType, title, transaction) {
     try {
         if (userId === otherUserId) {
-            console.log("You can't notify yourself");
+            console.log("لا يمكنك اضافة اشعار لنفسك");
             return;
         }
 
         if ((!videoId || !commentId) && !otherUserId)
-            throw new Error('Invalid notification');
+            throw new Error('اشعار غير صالح');
 
         if (notificationType < 1 || notificationType > 5)
-            throw new Error('Invalid notification type');
+            throw new Error('نوع الاشعار غير صالح');
 
         if (videoId) {
             const video = await Video.findByPk(videoId, {
                 attributes: ['id']
             });
             if (!video)
-                throw new Error('Video not found');
+                throw new Error('الفيديو غير موجود');
         }
 
         if (commentId) {
@@ -37,7 +37,7 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
                 transaction
             });
             if (!comment)
-                throw new Error('Comment not found');
+                throw new Error('التعليق غير موجود');
         }
 
         if (otherUserId) {
@@ -45,7 +45,7 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
                 attributes: ['id']
             });
             if (!user)
-                throw new Error('User not found');
+                throw new Error('المستخدم غير موجود');
         }
 
         const similarNotification = await Notification.findOne({
@@ -62,19 +62,19 @@ async function addNotification (userId, videoId, commentId, otherUserId, notific
         let body;
         switch (notificationType) {
             case 1:
-                body = 'Your video has been liked.';
+                body = 'تم اعجاب بفيديوك.';
                 break;
             case 2:
-                body = 'Your video has received a comment.';
+                body = 'تم تعليق على فيديوك.';
                 break;
             case 3:
-                body = 'You have a new follower.';
+                body = 'لديك متابع جديد.';
                 break;
             case 4:
-                body = 'You have been mentioned.';
+                body = 'لديك منشن في تعليق.';
                 break;
             case 5:
-                body = 'Your video has received a gift comment.';
+                body = 'مبروك! استقبلت هدية علي فيديوك.';
                 break;
         }
 
@@ -118,15 +118,15 @@ const markNotificationAsRead = async (req, res) => {
             attributes: ['id', 'isRead']
         });
         if (!notification) {
-            return res.status(400).json({ error: "Notification not found" });
+            return res.status(400).json({ error: "اشعار غير موجود" });
         }
 
         if (notification.isRead)
-            return res.status(400).json({ error: "Notification already read" });
+            return res.status(400).json({ error: "الاشعار مقروء بالفعل" });
 
         await notification.update({ isRead: true });
         
-        return res.status(200).json({ message: "Notification marked as read" });
+        return res.status(200).json({ message: "الاشعار اصبح مقروء" });
 
     } catch (error) {
 
@@ -140,7 +140,7 @@ const markAllNotificationsAsRead = async (req, res) => {
 
         await Notification.update({ isRead: true }, { where: { userId: userId } });
         
-        return res.status(200).json({ message: "All notifications marked as read" });
+        return res.status(200).json({ message: "كل الاشعارات اصبحت مقروءة" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message })
@@ -161,12 +161,12 @@ const deleteNotification = async (req, res) => {
             attributes: ['id']
         });
         if (!notification) {
-            return res.status(400).json({ error: "Notification not found" });
+            return res.status(400).json({ error: "الاشعار غير موجود" });
         }
 
         await notification.destroy();
 
-        return res.status(200).json({ message: "Notification deleted" });
+        return res.status(200).json({ message: "تم حذف الاشعار بنجاح" });
     } catch (error) {
         return res.status(500).json({ error: error.message })
     }
