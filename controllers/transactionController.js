@@ -56,22 +56,22 @@ const addBalance = async (req, res) => {
         const { cardCode } = req.body;
 
         if (!cardCode)
-            return res.status(400).send({ message: "يجب ادخال كود الكارت" });
+            return res.status(400).send({ message: "Card code is required" });
 
         const user = await User.findOne({ 
             where: { id: userId },
             attributes: ['id', 'balance']
         });
         if (!user)
-            return res.status(404).send({ message: "المستخدم غير موجود" });
+            return res.status(404).send({ message: "User not found" });
 
         const balance = await rechargeBalance({ code: cardCode, userId: userId });
 
         if (!balance)
-            return res.status(400).send({ message: "كود الكارت خاطئ" });
+            return res.status(400).send({ message: "Invalid card code" });
 
         if (balance < 0 || isNaN(balance))
-            return res.status(400).send({ message: "كود الكارت خاطئ" });
+            return res.status(400).send({ message: "Invalid card code" });
 
         user.balance += balance;
         await user.save({ transaction });
@@ -83,7 +83,7 @@ const addBalance = async (req, res) => {
 
         await transaction.commit();
 
-        return res.status(200).send({ message: "تم شحن الكارت بنجاح" });
+        return res.status(200).send({ message: "Balance added successfully" });
 
     } catch (error) { 
         await transaction.rollback();
@@ -98,7 +98,7 @@ const sendGift = async (req, res) => {
         const { receiverId, amount } = req.body;
 
         if (amount <= 0) {
-            return res.status(400).send({ message: "المبلغ يجب ان يكون اكبر من صفر" });
+            return res.status(400).send({ message: "Invalid balance" });
         }
 
         const sender = await User.findOne({ 
@@ -106,7 +106,7 @@ const sendGift = async (req, res) => {
             attributes: ['id', 'balance']
         });
         if (!sender) {
-            return res.status(404).send({ message: "المرسل غير موجود" });
+            return res.status(404).send({ message: "User not found" });
         }
 
         const receiver = await User.findOne({ 
@@ -114,11 +114,11 @@ const sendGift = async (req, res) => {
             attributes: ['id', 'balance']
         });
         if (!receiver) {
-            return res.status(404).send({ message: "المستقبل غير موجود" });
+            return res.status(404).send({ message: "Receiver not found" });
         }
 
         if (sender.balance < amount) {
-            return res.status(400).send({ message: "رصيدك لا يكفي"});
+            return res.status(400).send({ message: "Insufficient balance" });
         }
 
         sender.balance -= amount;
@@ -133,7 +133,7 @@ const sendGift = async (req, res) => {
         }, { transaction: t });
 
         await t.commit();
-        return res.status(200).send({ message: "تم ارسال الهدية بنجاح"});
+        return res.status(200).send({ message: "Gift sent successfully" });
 
     } catch (error) {
         await t.rollback();

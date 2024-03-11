@@ -30,7 +30,7 @@ const signup = async (req, res) => {
         name = name.toLowerCase();
 
         if (!validator.isEmail(email)) {
-            return res.status(400).json({ error: "بريد الكتروني خاطئ" });
+            return res.status(400).json({ error: 'Invalid email address' });
         }
 
         const existingUser = await User.findOne({
@@ -44,7 +44,7 @@ const signup = async (req, res) => {
         });
         
         if (existingUser) {
-            return res.status(400).json({ error: "مستخدم بهذا البريد الاكتروني, رقم الهاتف, اسم المستخدم موجود بالفعل" });
+            return res.status(400).json({ error: 'User with this email, phone number, or username already exists' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -96,7 +96,7 @@ const signup = async (req, res) => {
 
         await transaction.commit();
 
-        return res.status(200).json({ message: "تم ارسال كود التفعيل بنجاح" });
+        return res.status(200).json({ message: "Sent The Code to that email" });
     } catch (error) {
         if (transaction) 
             await transaction.rollback();
@@ -113,7 +113,7 @@ const verifyEmailCode = async (req, res) => {
         email = email.toLowerCase();
 
         if (!validator.isEmail(email)) {
-            return res.status(400).json({ error: "بريد الكتروني خاطئ" });
+            return res.status(400).json({ error: 'Invalid email address' });
         }
 
         const user = await User.findOne({ 
@@ -123,7 +123,7 @@ const verifyEmailCode = async (req, res) => {
         );
         if (!user) {
             await transaction.rollback();
-            return res.status(400).json({ error: "مستخدم بهذا البريد الالكتروني موجود بالفعل" });
+            return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
         const userAuth = await UserAuth.findOne({ 
@@ -132,17 +132,17 @@ const verifyEmailCode = async (req, res) => {
             { transaction });
         if (!userAuth || !userAuth.authCode) {
             await transaction.rollback();
-            return res.status(400).json({ error: "يجب ارسال كود التفعيل" });
+            return res.status(400).json({ error: 'No verification code sent' });
         }
 
         if (code !== userAuth.authCode) {
             await transaction.rollback();
-            return res.status(400).json({ error: "كود التفعيل خاطئ" });
+            return res.status(400).json({ error: 'Invalid verification code' });
         }
 
         if (userAuth.authCodeExpiry < Date.now()) {
             await transaction.rollback();
-            return res.status(400).json({ error: "انتهت صلاحية كود التفعيل" });
+            return res.status(400).json({ error: 'Verification code expired' });
         }
 
         userAuth.authVerified = true;
@@ -194,7 +194,7 @@ const login = async (req, res) => {
         });
 
         if (!user) {
-            return res.status(400).json({ error: "لا يوجد مستخدم بهذا البريد الالكتروني" });
+            return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
         const [userStatus, userAuth] = await Promise.all([
@@ -206,16 +206,16 @@ const login = async (req, res) => {
         ]);
 
         if (userStatus.isBanned) {
-            return res.status(400).json({ error: "هذا المستخدم محظور" });
+            return res.status(400).json({ error: 'This user is banned' });
         }
 
         if (!userAuth.authVerified) {
-            return res.status(400).json({ error: "يجب تفعيل البريد الالكتروني" });
+            return res.status(400).json({ error: 'Email not verified' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(400).json({ error: "كلمة المرور خاطئة" });
+            return res.status(400).json({ error: 'Invalid password' });
         }
 
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
@@ -245,7 +245,7 @@ const sendOtp = async (req, res) => {
         email = email.toLowerCase();
 
         if (!validator.isEmail(email)) {
-            return res.status(400).json({ error: "البريد الالكتروني خاطئ" });
+            return res.status(400).json({ error: 'Invalid email address' });
         }
 
         const user = await User.findOne({ 
@@ -261,13 +261,13 @@ const sendOtp = async (req, res) => {
         });
 
         if (!user) {
-            return res.status(400).json({ error: "لا يوجد مستخدم بهذا البريد الالكتروني" });
+            return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
         const userAuth = user.userAuth;
 
         if (userAuth.authCode && Date.now() < userAuth.authCodeExpiry) {
-            return res.status(200).json({ message: "تم ارسال كود التفعيل مسبقاً. يرجى التحقق من بريدك الالكتروني" });
+            return res.status(200).json({ message: 'An OTP has already been sent. Please check your email.' });
         }
 
         const otp = randomstring.generate({
@@ -296,7 +296,7 @@ const sendOtp = async (req, res) => {
 
         await transporter.sendMail(mailOptions);
 
-        return res.status(200).json({ message: "تم ارسال كود التفعيل الي بريدك الالكتروني" });
+        return res.status(200).json({ message: 'OTP has been sent to your email' });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
@@ -314,7 +314,7 @@ const verifyOtpAndSetNewPassword = async (req, res) => {
             attributes: ['id', 'password'], 
         });
         if (!user) {
-            return res.status(400).json({ error: "لا يوجد مستخدم بهذا البريد الالكتروني" });
+            return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
         const userAuth = await UserAuth.findOne({ 
@@ -339,7 +339,7 @@ const verifyOtpAndSetNewPassword = async (req, res) => {
 
         await transaction.commit();
 
-        return res.status(200).json({ message: "تم تغيير كلمة المرور بنجاح" });
+        return res.status(200).json({ message: 'Password has been changed successfully' });
 
     } catch (error) {
         await transaction.rollback();
@@ -357,7 +357,7 @@ const sendVerificationCode = async (req, res) => {
             attributes: ['id'], 
         });
         if (!user) {
-            return res.status(400).json({ error: "لا يوجد مستخدم بهذا البريد الالكتروني" });
+            return res.status(400).json({ error: 'User with this email does not exist' });
         }
 
         const userAuth = await UserAuth.findOne({ 
@@ -365,14 +365,14 @@ const sendVerificationCode = async (req, res) => {
             attributes: ['id', 'authCode', 'authCodeExpiry'],
         });
         if (!userAuth) {
-            return res.status(400).json({ error: "تفعيل الحساب غير موجود" });
+            return res.status(400).json({ error: 'User authentication record not found' });
         }
         if (userAuth.authVerified) {
-            return res.status(400).json({ error: "البريد الالكتروني مفعل بالفعل" });
+            return res.status(400).json({ error: 'Email already verified' });
         }
 
         if (userAuth.authCode && Date.now() < userAuth.authCodeExpiry) {
-            return res.status(200).json({ message: "تم ارسال كود التفعيل مسبقاً. يرجى التحقق من بريدك الالكتروني" });
+            return res.status(200).json({ message: 'A Verification code has already been sent. Please check your email.' });
         }
 
         const verificationCode = randomstring.generate({
@@ -409,7 +409,7 @@ const sendVerificationCode = async (req, res) => {
 
         await transporter.sendMail(mailOptions);
 
-        return res.status(200).json({ message: "تم ارسال كود التفعيل الي بريدك الالكتروني" });
+        return res.status(200).json({ message: 'Verification code sent to your email' });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -422,21 +422,21 @@ const checkBanStatus = async (req, res) => {
         const { userId } = req.user;
 
         if (!userId) 
-            return res.status(400).json({ error: "يجب ارسال رقم المستخدم" });
+            return res.status(400).json({ error: 'User id is required' });
 
         const userStatus = await UserStatus.findOne({ 
             where: { userId },
             attributes: ['isBanned'],
         });
         if (!userStatus) {
-            return res.status(400).json({ error: "حالة المستخدم غير موجودة"});
+            return res.status(400).json({ error: 'User status for this id does not exist' });
         }
 
         if (userStatus.isBanned) {
-            return res.status(403).json({error: "لقد تم حظرك"});
+            return res.status(403).json({error: "You are banned"});
         }
 
-        return res.status(200).json({ message: "لقد تم التحقق من حالة المستخدم"});
+        return res.status(200).json({ message: "You are not banned" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -450,29 +450,29 @@ const referredUser = async (req, res) => {
         const { referralCode } = req.body;
 
         if (!referralCode) {
-            return res.status(400).json({ error: "يجب ادخال كود الاحالة" });
+            return res.status(400).json({ error: 'Referral code is required' });
         }
 
         const referredUser = await User.findByPk(userId);
         if (!referredUser) {
-            return res.status(400).json({ error: "المستخدم غير موجود" });
+            return res.status(400).json({ error: 'User with this id does not exist' });
         }
 
         const referralUser = await User.findOne({ where: { referralCode } });
         if (!referralUser) {
-            return res.status(400).json({ error: "كود الاحالة غير صحيح"});
+            return res.status(400).json({ error: 'User with this referral code does not exist' });
         }
 
         if (referralUser.id === userId) {
-            return res.status(400).json({ error: "لا يمكنك احالة نفسك"});
+            return res.status(400).json({ error: 'You cannot refer yourself' });
         }
 
         if (referralUser.id > referredUser.id) {
-            return res.status(400).json({ error: "لا يمكنك احالة مستخدم اقدم منك"});
+            return res.status(400).json({ error: 'You cannot refer a user who has a lower id than you' });
         }
 
         if (referredUser.referred) {
-            return res.status(400).json({ error: "لقد تم احالتك بالفعل"});
+            return res.status(400).json({ error: 'You have already been referred' });
         }
 
         transaction = await sequelize.transaction();
@@ -483,7 +483,7 @@ const referredUser = async (req, res) => {
 
         await transaction.commit();
 
-        return res.status(200).json({ message: "تم احالتك بنجاح" });
+        return res.status(200).json({ message: 'You have been referred successfully' });
 
     } catch (error) {
         if (transaction) {
@@ -502,7 +502,7 @@ const searchUsersUsingPagination = async (req, res) => {
         username = username.toLowerCase();
         
         if (!username)
-            return res.status(400).json({ error: "يجب ادخال اسم المستخدم" });
+            return res.status(400).json({ error: 'Username is required' });
 
         const users = await User.findAll({
             where: {
@@ -552,7 +552,7 @@ const autocompleteUsers = async (req, res) => {
         username = username.toLowerCase();
         
         if (!username)
-            return res.status(400).json({ error: "يجب ادخال اسم المستخدم" });
+            return res.status(400).json({ error: 'Username is required' });
 
         const users = await User.findAll({
             where: {
@@ -600,11 +600,11 @@ const banUser = async (req, res) => {
         const toBeBannedUserId = req.params.toBeBannedUserId;
 
         if (!toBeBannedUserId) {
-            return res.status(400).json({ error: "يجب ادخال رقم المستخدم" });
+            return res.status(400).json({ error: 'User id is required' });
         }
 
         if (userId === toBeBannedUserId) {
-            return res.status(400).json({ error: 'لا يمكنك حظر نفسك'});
+            return res.status(400).json({ error: 'You cannot ban yourself' });
         }
 
         const userStatus = await UserStatus.findOne({ where: { userId, isAdmin: true } });
@@ -614,7 +614,7 @@ const banUser = async (req, res) => {
 
         await UserStatus.update({ isBanned: true }, { where: { userId: toBeBannedUserId } });
 
-        return res.status(200).json({ message: "تم حظر المستخدم بنجاح"});
+        return res.status(200).json({ message: "User has been banned successfully" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -627,11 +627,11 @@ const unbanUser = async (req, res) => {
         const toBeUnbannedUserId = req.params.toBeUnbannedUserId;
 
         if (!toBeUnbannedUserId) {
-            return res.status(400).json({ error: "يجب ادخال رقم المستخدم" });
+            return res.status(400).json({ error: 'User id is required' });
         }
 
         if (userId === toBeUnbannedUserId) {
-            return res.status(400).json({ error: 'لا يمكنك رفع الحظر عن نفسك'});
+            return res.status(400).json({ error: 'You cannot unban yourself' });
         }
 
         const userStatus = await UserStatus.findOne({ where: { userId, isAdmin: true } });
@@ -641,7 +641,7 @@ const unbanUser = async (req, res) => {
 
         await UserStatus.update({ isBanned: false }, { where: { userId: toBeUnbannedUserId } });
 
-        return res.status(200).json({ message: "تم رفع الحظر عن المستخدم بنجاح"});
+        return res.status(200).json({ message: "User has been unbanned successfully" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -664,12 +664,12 @@ const getUserInfo = async (req, res) => {
             attributes: ['id', 'name', 'email', 'phone', 'referralCode', 'username'],
         });
         if (!otherUser) {
-            return res.status(400).json({ error: "لا يوجد مستخدم بهذا الرقم" });
+            return res.status(400).json({ error: 'User with this id does not exist' });
         }
 
         const otherUserStatus = await UserStatus.findOne({ where: { userId: otherUserId }, attributes: ['isVerified'] });
         if (!otherUserStatus) {
-            return res.status(400).json({ error: "حالة المستخدم غير موجودة"});
+            return res.status(400).json({ error: 'User status for this id does not exist' });
         }
 
         return res.status(200).json({
@@ -693,7 +693,7 @@ const setUserIsVerified = async (req, res) => {
         const toBeVerifiedUserId = req.params.toBeVerifiedUserId;
 
         if (!toBeVerifiedUserId) {
-            return res.status(400).json({ error: "يجب ادخال رقم المستخدم"});
+            return res.status(400).json({ error: 'User id is required' });
         }
 
         const userStatus = await UserStatus.findOne({ where: { userId }, attributes: ['isAdmin'] });
@@ -703,17 +703,17 @@ const setUserIsVerified = async (req, res) => {
 
         const toBeVerifiedUserStatus = await UserStatus.findOne({ where: { userId: toBeVerifiedUserId }, attributes: ['id', 'isVerified'] });
         if (!toBeVerifiedUserStatus) {
-            return res.status(400).json({ error: "حالة المستخدم غير موجودة"});
+            return res.status(400).json({ error: 'User status for this id does not exist' });
         }
 
         if (toBeVerifiedUserStatus.isVerified) {
-            return res.status(400).json({ error: "المستخدم موثق بالفعل"});
+            return res.status(400).json({ error: 'User is already verified' });
         }
 
         toBeVerifiedUserStatus.isVerified = true;
         await toBeVerifiedUserStatus.save();
 
-        return res.status(200).json({ message: "تم توثيق المستخدم بنجاح"});
+        return res.status(200).json({ message: "User has been verified successfully" });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
