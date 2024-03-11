@@ -2,77 +2,69 @@ const rateLimit = require("express-rate-limit");
 
 // Define rate limiters
 const addCommentLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 100, // limit each user to 100 requests per windowMs
-  keyGenerator: function(req, res) {
+  windowMs: 30 * 60 * 1000, // 30 minutes
+  max: 300, // limit each user to 300 requests per windowMs
+  keyGenerator: function (req, res) {
     return req.user.userId;
   },
-  message: "Too many comment addition requests, please try again after an hour"
+  message: "طلب اضافة تعليق مرفوض , يرجى المحاولة بعد 30 دقيقة"
 });
 
 const deleteCommentLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // limit each user to 50 requests per windowMs
-  keyGenerator: function(req, res) {
+  windowMs: 30 * 60 * 1000, // 30 minutes
+  max: 100, // limit each user to 100 requests per windowMs
+  keyGenerator: function (req, res) {
     return req.user.userId;
   },
-  message: "Too many comment deletion requests, please try again after an hour"
+  message: "طلب حذف التعليق مرفوض , يرجى المحاولة بعد 30 دقيقة"
 });
 
 const replyToCommentLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 30 * 60 * 1000, // 30 minutes
   max: 100, // limit each user to 100 requests per windowMs
-  keyGenerator: function(req, res) {
+  keyGenerator: function (req, res) {
     return req.user.userId;
   },
-  message: "Too many comment reply requests, please try again after an hour"
+  message: "طلب الرد على التعليق مرفوض , يرجى المحاولة بعد 30 دقيقة"
 });
 
-const addGiftCommentLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // limit each user to 50 requests per windowMs
-  keyGenerator: function(req, res) {
-    return req.user.userId;
-  },
-  message: "Too many gift comment addition requests, please try again after an hour"
-});
+
 
 const updateCommentLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 30 * 60 * 1000, // 30 minutes
   max: 50, // limit each user to 50 requests per windowMs
-  keyGenerator: function(req, res) {
+  keyGenerator: function (req, res) {
     return req.user.userId;
   },
-  message: "Too many comment update requests, please try again after an hour"
+  message: "طلب تحديث التعليق مرفوض , يرجى المحاولة بعد 30 دقيقة"
 });
 
 const getCommentUsingIdLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each user to 100 requests per windowMs
-  keyGenerator: function(req, res) {
+  keyGenerator: function (req, res) {
     return req.user.userId;
   },
-  message: "Too many comment retrieval requests, please try again after 15 minutes"
+  message: "طلب الحصول على التعليق مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 const likeAndUnlikeCommentLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: 15 * 60 * 1000, // 1 hour
   max: 100, // limit each user to 100 requests per windowMs
-  keyGenerator: function(req, res) {
+  keyGenerator: function (req, res) {
     return req.user.userId;
   },
-  message: "Too many comment like/unlike requests, please try again after an hour"
+  message: "طلب الاعجاب بالتعليق مرفوض , يرجى المحاولة بعد 15 دقيقة"
 });
 
 
 module.exports = {
-    addCommentLimiter,
-    deleteCommentLimiter,
-    replyToCommentLimiter,
-    addGiftCommentLimiter,
-    updateCommentLimiter,
-    getCommentUsingIdLimiter,
-    likeAndUnlikeCommentLimiter
+  addCommentLimiter,
+  deleteCommentLimiter,
+  replyToCommentLimiter,
+  updateCommentLimiter,
+  getCommentUsingIdLimiter,
+  likeAndUnlikeCommentLimiter
 }
 
 

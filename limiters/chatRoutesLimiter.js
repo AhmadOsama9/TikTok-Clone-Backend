@@ -21,7 +21,7 @@ const sendMessageUsingReceiverIdLimiter = rateLimit({
 
 const getMessagesUsingPaginationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 600, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
@@ -30,7 +30,7 @@ const getMessagesUsingPaginationLimiter = rateLimit({
 
 const getMessageUsingIdLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 500, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
@@ -39,7 +39,7 @@ const getMessageUsingIdLimiter = rateLimit({
 
 const getMessagesBetweenUsersUsingPaginationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 500, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
@@ -48,7 +48,7 @@ const getMessagesBetweenUsersUsingPaginationLimiter = rateLimit({
 
 const getUserChatsLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each user to 100 requests per windowMs
+  max: 500, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
@@ -56,8 +56,8 @@ const getUserChatsLimiter = rateLimit({
 });
 
 const addReactionToMessageLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 500, // limit each user to 500 requests per windowMs
+  windowMs: 15 * 60 * 1000, // 1 hour
+  max: 600, // limit each user to 500 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
@@ -65,8 +65,8 @@ const addReactionToMessageLimiter = rateLimit({
 });
 
 const deleteMessageLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 100, // limit each user to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000, // 1 hour
+  max: 500, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
@@ -74,8 +74,8 @@ const deleteMessageLimiter = rateLimit({
 });
 
 const deleteReactionLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 100, // limit each user to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000, // 1 hour
+  max: 500, // limit each user to 100 requests per windowMs
   keyGenerator: function(req, res) {
     return req.user.userId;
   },
