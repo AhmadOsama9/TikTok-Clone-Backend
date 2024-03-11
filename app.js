@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const compression = require("compression");
 const helmet = require("helmet");
+const passport = require("./auth/facebookPassport");
 
 
 const swaggerJsDoc = require("swagger-jsdoc");
@@ -44,6 +45,8 @@ app.use(apiKeyMiddleware);
 app.use(compression());
 
 app.use(helmet());
+
+app.use(passport.initialize());
 
 app.use(express.json({ limit: '50kb' }));
 
