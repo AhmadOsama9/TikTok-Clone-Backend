@@ -12,10 +12,10 @@ const createReport = async (req, res) => {
         const { userId } = req.user;
 
         if (!title || !description || !referenceId || !referenceType)
-            return res.status(400).json({ message: "All fields are required" });
+            return res.status(400).json({ message: "يجب ملئ كل الخانات" });
 
         if (![1, 2, 3, 4].includes(referenceType)) {
-            return res.status(400).json({ message: "Invalid referenceType" });
+            return res.status(400).json({ message: "نوع خاطئ" });
         }
 
         let referencedItem;
@@ -43,11 +43,11 @@ const createReport = async (req, res) => {
         }
 
         if (!referencedItemId) {
-            return res.status(400).json({ message: "Referenced item not found" });
+            return res.status(400).json({ message: "رقم المبلغ عليه غير موجود" });
         }
 
         if (userId === referencedItemId) {
-            return res.status(400).json({ message: "You can't report yourself" });
+            return res.status(400).json({ message: "لا يمكنك الابلاغ علي نفسك" });
         }
 
         const report = await Report.create({
@@ -73,13 +73,13 @@ const getReportById = async (req, res) => {
             attributes: ['isAdmin'],
         });
         if (!userStatus || !userStatus.isAdmin)
-            return res.status(400).json({ message: "Unauthorized" });
+            return res.status(400).json({ message: "ليس لديك الصلاحية" });
 
         const report = await Report.findByPk(req.params.id);
         if (report) {
             res.status(200).json(report);
         } else {
-            res.status(404).json({ message: 'Report not found' });
+            res.status(404).json({ message: 'البلاغ غير موجود' });
         }
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -97,7 +97,7 @@ const getAllReports = async (req, res) => {
         });
 
         if (!userStatus || !userStatus.isAdmin) {
-            return res.status(403).json({ message: 'You are not authorized to perform this action' });
+            return res.status(403).json({ message: 'ليس لديك الصلاحية للقيم بهذا' });
         }
         
         const reports = await Report.findAll();
@@ -117,7 +117,7 @@ const getUnviewedReports = async (req, res) => {
         });
 
         if (!userStatus || !userStatus.isAdmin) {
-            return res.status(403).json({ message: 'You are not authorized to perform this action' });
+            return res.status(403).json({ message: 'ليس لديك الصلاحية للقيم بهذا' });
         }
 
         const reports = await Report.findAll({
@@ -137,25 +137,25 @@ const updateReport = async (req, res) => {
         const { title, description } = req.body;
         const reportId = req.params.id;
         if (!title && !description)
-            return res.status(400).json({ message: "At least one field is required" });
+            return res.status(400).json({ message: "يجب ارسال خانة واحدة علي الاقل" });
 
         const report = await Report.findByPk(reportId, {
             attributes: ['id', 'userId']
         });
         if (!report)
-            return res.status(404).json({ message: "Report not found" });
+            return res.status(404).json({ message: 'البلاغ غير موجود' });
             
         if (userId !== report.userId)
-            return res.status(400).json({ message: "Unauthorized" });
+            return res.status(400).json({ message: "ليس لديك الصلاحية" });
 
         if (title && (title.trim() === '' || title.trim() === report.title))
-        return res.status(400).json({ message: "make sure that you sent a title and it's an updated" });
+        return res.status(400).json({ message: "تأكد من انك كتبت العنوان المحدث" });
     
         if (description && (description.trim() === '' || description.trim() === report.description))
-            return res.status(400).json({ message: "make sure that you sent a description and it's an updated" });
+            return res.status(400).json({ message: "تأكد من انك كتبت الوصف المحدث" });
 
         await report.update({ title, description });
-        return res.status(200).json({ message: 'Report updated' });
+        return res.status(200).json({ message: 'تم تحديث البلاغ' });
     } catch (err) {
        return res.status(500).json({ message: err.message });
     }
@@ -171,7 +171,7 @@ const deleteReport = async (req, res) => {
         });
 
         if (!report) {
-            return res.status(404).json({ message: 'Report not found' });
+            return res.status(404).json({ message: "البلاغ غير موجود" });
         }
 
         const userStatus = await UserStatus.findOne({ 
@@ -180,12 +180,12 @@ const deleteReport = async (req, res) => {
         });
 
         if (userId !== report.userId && (!userStatus || !userStatus.isAdmin)) {
-            return res.status(403).json({ message: 'You are not authorized to perform this action' });
+            return res.status(403).json({ message: 'ليس لديك الصلاحية للقيم بهذا' });
         }
 
         await report.destroy();
 
-        return res.status(200).json({ message: 'Report deleted successfully' });
+        return res.status(200).json({ message: 'تم حذف البلاغ بنجاح' });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
@@ -201,22 +201,22 @@ const setReportIsViewed = async (req, res) => {
             attributes: ['isAdmin'],
         });
         if (!userStatus || !userStatus.isAdmin)
-            return res.status(400).json({ message: "Unauthorized" });
+            return res.status(400).json({ message: "ليس لديك الصلاحية" });
 
         const reportId = req.params.id;
         const report = await Report.findByPk(reportId, {
             attributes: ['id', 'isViewed']
         });
         if (!report) {
-            return res.status(404).json({ message: "Report not found" });
+            return res.status(404).json({ message: "البلاغ غير موجود" });
         }
 
         if (report.isViewed) 
-            return res.status(400).json({ message: "Report already marked as viewed" });
+            return res.status(400).json({ message: "البلاغ مقروء بالفعل" });
         
         report.isViewed = true;
         await report.save();
-        res.status(200).json({ message: "Report marked as viewed" });
+        res.status(200).json({ message: "تم قراءة البلاغ بنجاح" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
