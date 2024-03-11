@@ -15,7 +15,7 @@ const {
    
     deleteCommentLimiter,
     replyToCommentLimiter,
-    addGiftCommentLimiter,
+    
     updateCommentLimiter,
     getCommentUsingIdLimiter,
     likeAndUnlikeCommentLimiter,
@@ -275,7 +275,7 @@ router.post("/reply/:id", replyToCommentLimiter, replyToComment);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post("/add-gift-comment/", addGiftCommentLimiter, addGiftComment);
+router.post("/add-gift-comment/",  addGiftComment);
 
 /**
  * @swagger
