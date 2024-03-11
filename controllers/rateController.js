@@ -11,11 +11,11 @@ const addRate = async (req, res) => {
         const { videoId, rating } = req.body;
 
         if (!videoId || !rating) {
-            return res.status(400).json({ message: "videoId and rating are required" });
+            return res.status(400).json({ message: "يجب ادخال رقم الفيديو والتقييم" });
         }
 
         if (rating < 1 || rating > 5) {
-            return res.status(400).json({ message: "Rating should be between 1 and 5" });
+            return res.status(400).json({ message: "يجب ان يكون التقييم بين 1 و 5" });
         }
 
         const videoMetadata = await VideoMetadata.findByPk(videoId, {
@@ -23,11 +23,11 @@ const addRate = async (req, res) => {
             transaction: t
         });
         if (!videoMetadata)
-            return res.status(404).json({ message: "Video not found" });
+            return res.status(404).json({ message: "الفيديو غير موجود" });
         
         const rate = await Rate.findOne({ where: { userId, videoId } }, { transaction: t });
         if (rate)
-            return res.status(400).json({ message: "You already rated this video" });
+            return res.status(400).json({ message: "انت قيمت هذا الفيديو بالفعل" });
 
         await Rate.create({ userId, videoId, rate: rating }, { transaction: t });
 
@@ -43,7 +43,7 @@ const addRate = async (req, res) => {
 
         await t.commit();
 
-        return res.status(200).json({ message: "Rating added successfully" });
+        return res.status(200).json({ message: "تم تقييم الفيديو بنجاح" });
     } catch (error) {
         await t.rollback();
         return res.status(500).json({ error: error.message });
@@ -58,22 +58,22 @@ const updateRate = async (req, res) => {
         const { videoId, rating } = req.body;
 
         if (!videoId || !rating) {
-            return res.status(400).json({ message: "videoId and rating are required" });
+            return res.status(400).json({ message: "يجب ادخال رقم الفيديو والتقييم" });
         }
 
         if (rating < 1 || rating > 5) {
-            return res.status(400).json({ message: "Rating should be between 1 and 5" });
+            return res.status(400).json({ message: "يجب ان يكون التقييم بين 1 و 5" });
         }
 
         const rate = await Rate.findOne({ where: { userId, videoId } }, { transaction: t });
         if (!rate)
-            return res.status(404).json({ message: "Rate not found" });
+            return res.status(404).json({ message: "التفييم غير موجود" });
 
         await rate.update({ rate: rating }, { transaction: t });
 
         await t.commit();
 
-        return res.status(200).json({ message: "Rating updated successfully" });
+        return res.status(200).json({ message: "تم تعديل التقييم بنجاح" });
     } catch (error) {
         await t.rollback();
         return res.status(500).json({ error: error.message });
@@ -88,18 +88,18 @@ const removeRate = async (req, res) => {
         const { videoId } = req.body;
 
         if (!videoId) {
-            return res.status(400).json({ message: "videoId is required" });
+            return res.status(400).json({ message: "يجب ارسال رقم الفيديو" });
         }
 
         const rate = await Rate.findOne({ where: { userId, videoId } }, { transaction: t });
         if (!rate)
-            return res.status(404).json({ message: "Rate not found" });
+            return res.status(404).json({ message: "التقييم غير موجود" });
 
         await rate.destroy({ transaction: t });
 
         await t.commit();
 
-        return res.status(200).json({ message: "Rating removed successfully" });
+        return res.status(200).json({ message: "تم حذف التقييم بنجاح" });
     } catch (error) {
         await t.rollback();
         return res.status(500).json({ error: error.message });

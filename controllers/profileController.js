@@ -374,11 +374,11 @@ const changeProfileImage = async (req, res) => {
         const { userId } = req.user;
 
         if (!req.file) {
-            return res.status(400).json({ error: "Please provide an image" });
+            return res.status(400).json({ error: "يجب ارسال صورة" });
         }
 
         if (!req.file.buffer || !(req.file.buffer instanceof Buffer)) {
-            return res.status(400).json({ error: "Invalid file upload" });
+            return res.status(400).json({ error: "ملف خاطئ" });
         }
 
         const buffer = req.file.buffer;
@@ -391,13 +391,13 @@ const changeProfileImage = async (req, res) => {
             attributes: ['id', 'imageFileName'] 
         });
         if (!profile) {
-            return res.status(404).json({ error: "Profile not found" });
+            return res.status(404).json({ error: "الحساب غير موجود" });
         }
 
         const fileName = await uploadImageToCloudStorage(buffer, userId, profile);
 
         res.status(200).json({ 
-            message1: "Profile picture changed successfully", 
+            message1: "تم تغيير الصورة بنجاح", 
             message2: "Image classified successfully",
         });
     } catch (error) {
@@ -413,7 +413,7 @@ const changeProfilePassword = async (req, res) => {
         const { oldPassword, newPassword } = req.body;
 
         if (oldPassword === newPassword)
-            return res.status(400).json({ error: "they are the same password"});
+            return res.status(400).json({ error: "لا يمكنك استخدام نفس كلمة المرور القديمة"});
 
 
         const user = await User.findOne({ 
@@ -421,12 +421,12 @@ const changeProfilePassword = async (req, res) => {
             attributes: ['id', 'password']
         });
         if (!user) {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ error: "المستحدم غير موجود" });
         }
 
         const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
         if (!isPasswordValid) {
-            return res.status(400).json({ error: 'Invalid password' });
+            return res.status(400).json({ error: 'كلمة مرور خاطئة' });
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -434,7 +434,7 @@ const changeProfilePassword = async (req, res) => {
         user.password = hashedPassword;
         await user.save();
 
-        res.status(200).json({ message: "Password changed successfully" });
+        res.status(200).json({ message: "تم تغيير كلمة المرور خاطئة" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -452,16 +452,16 @@ const changeProfileName = async (req, res) => {
             attributes: ['id', 'name']
         });
         if (!user) {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ error: "المستخدم غير موجود" });
         }
 
         if (user.name === newName)
-            return res.status(400).json({ error: "they are the same name"});
+            return res.status(400).json({ error: "لا يمكنك استخدام نفس الاسم القديم"});
 
         user.name = newName;
         await user.save();
 
-        res.status(200).json({ message: "Profile name changed successfully" });
+        res.status(200).json({ message: "تم تغيير اسم الحساب بنجاح" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -474,7 +474,7 @@ const sendVerificationToNewEmail = async (req, res) => {
         newEmail = newEmail.toLowerCase();
 
         if (!validator.isEmail(newEmail)) {
-            return res.status(400).json({ error: 'Invalid email address' });
+            return res.status(400).json({ error: 'بريد الكتروني خاطئ' });
         }
 
         const userAuth = await UserAuth.findOne({ 
@@ -482,7 +482,7 @@ const sendVerificationToNewEmail = async (req, res) => {
             attributes: ['id', 'authCode', 'authCodeExpiry']
         });
         if (!userAuth) {
-            return res.status(404).json({ error: "User authentication not found" });
+            return res.status(404).json({ error: "اثبات هوية المستخدم غير موجود" });
         }
 
         const user = await User.findOne({ 
@@ -495,7 +495,7 @@ const sendVerificationToNewEmail = async (req, res) => {
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) { 
-            return res.status(400).json({ error: "Invalid password" });
+            return res.status(400).json({ error: "كلمة مرور خاطئة" });
         }
 
         const emailExists = await User.findOne({ 
@@ -503,7 +503,7 @@ const sendVerificationToNewEmail = async (req, res) => {
             attributes: ['id']
         });
         if (emailExists) {
-            return res.status(400).json({ error: "Email already exists" });
+            return res.status(400).json({ error: "البريد الالكتروني موجود بالفعل" });
         }
 
         const verificationCode = randomstring.generate({
@@ -542,7 +542,7 @@ const sendVerificationToNewEmail = async (req, res) => {
         userAuth.authCodeExpiry = new Date(Date.now() + 600000);
         await userAuth.save();
 
-        return res.status(200).json({ message: "Verification code sent successfully" });
+        return res.status(200).json({ message: "تم ارسال كود التحقق بنجاح" });
 
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -559,11 +559,11 @@ const verificationAndSetNewEmail = async (req, res) => {
         const user = await User.findOne({ where: { id: userId }, attributes: ['id', 'email'] });
 
         if (!userAuth || !user) {
-            return res.status(404).json({ error: "User or authentication not found" });
+            return res.status(404).json({ error: "المستخدم او كود التفعيل خاطئ" });
         }
 
         if (userAuth.authCode !== verificationCode || userAuth.authCodeExpiry < Date.now()) {
-            return res.status(400).json({ error: "Invalid verification code or expired" });
+            return res.status(400).json({ error: "كود تفعيل خاطئ او غير صالح" });
         }
 
         user.email = lowercasedEmail;
@@ -573,7 +573,7 @@ const verificationAndSetNewEmail = async (req, res) => {
         userAuth.authCodeExpiry = null;
         await userAuth.save();
 
-        res.status(200).json({ message: "Email changed successfully" });
+        res.status(200).json({ message: "تم تغيير البريد الالكتروني بنجاح" });
 
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -596,12 +596,12 @@ const changeProfilePhone = async (req, res) => {
             attributes: ['id'] 
         });
         if (phoneExists) { 
-            return res.status(400).json({ error: "Phone already exists" });
+            return res.status(400).json({ error: "رقم الهاتف موجود بالفعل" });
         }
 
         await User.update({ phone: newPhone }, { where: { id: userId } });
 
-        return res.status(200).json({ message: "Phone changed successfully" });
+        return res.status(200).json({ message: "تم تغيير رقم الهاتف بنجاح" });
 
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -620,7 +620,7 @@ const changeProfileUsername = async (req, res) => {
             attributes: ['id', 'username']
         });
         if (!user) {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ error: "المستخدم غير موجود" });
         }
 
         newUsername = newUsername.toLowerCase();
@@ -630,12 +630,12 @@ const changeProfileUsername = async (req, res) => {
             attributes: ['id']
         });
         if (usernameExists) {
-            return res.status(400).json({ error: "Username already exists" });
+            return res.status(400).json({ error: "اسم المستحدم موجود بالفعل" });
         }
 
         await User.update({ username: newUsername }, { where: { id: userId } });
 
-        return res.status(200).json({ message: "Username changed successfully" });
+        return res.status(200).json({ message: "تم تغيير اسم المستخدم بنجاح" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -652,12 +652,12 @@ const changeProfileBio = async (req, res) => {
             attributes: ['id', 'bio']
         });
         if (!profile) {
-            return res.status(404).json({ error: "Profile not found" });
+            return res.status(404).json({ error: "الحساب غير موجود" });
         }
 
         await Profile.update({ bio: newBio }, { where: { userId } });
 
-        res.status(200).json({ message: "Profile bio changed successfully" });
+        res.status(200).json({ message: "تم تغيير الوصف الفصير بنجاح" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -670,22 +670,22 @@ const saveVideo = async (req, res) => {
         const { videoId } = req.params;
 
         if (!videoId)
-            return res.status(400).json({ error: "Please provide a videoId" });
+            return res.status(400).json({ error: "يجب ارسال رقم الفيديو" });
 
         const video = await Video.findByPk(videoId, {
             attributes: ['id']
         });
         if (!video) {
-            return res.status(404).json({ error: "Video not found" });
+            return res.status(404).json({ error: "الفيديو غير موجود" });
         }
 
         const savedVideo = await SavedVideo.findOne({ where: { userId, videoId } });
         if (savedVideo) {
-            return res.status(400).json({ error: "Video already saved" });
+            return res.status(400).json({ error: "" });
         }
 
         await SavedVideo.create({ userId, videoId });
-        res.status(200).json({ message: "Video saved successfully" });
+        res.status(200).json({ message: "تم حفظ الفيديو بنجاح" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
@@ -698,15 +698,15 @@ const unsaveVideo = async (req, res) => {
         const { videoId } = req.params;
 
         if (!videoId)
-            return res.status(400).json({ error: "Please provide a videoId" });
+            return res.status(400).json({ error: "يجب ارسال رقم الفيديو" });
 
         const savedVideo = await SavedVideo.findOne({ where: { userId, videoId } });
         if (!savedVideo) {
-            return res.status(404).json({ error: "Video not saved" });
+            return res.status(404).json({ error: "الفيديو ليس محفوظا" });
         }
 
         await savedVideo.destroy();
-        res.status(200).json({ message: "Video unsaved successfully" });
+        res.status(200).json({ message: "تم حذف الفيديو من المحفوظ" });
 
     } catch (error) {
         return res.status(500).json({ error: error.message });
