@@ -57,8 +57,8 @@ const facebookController = async (req, res) => {
 
         const cipherText = CryptoJS.AES.encrypt(JSON.stringify(userData), process.env.CRYPTO_SECRET).toString();
 
-        res.redirect(`${process.env.FLUTTER_AUTH_FACEBOOK_LOGIN_URL}?data=${encodeURIComponent(cipherText)}`);
-
+        res.redirect(`${process.env.FLUTTER_AUTH_FACEBOOK_LOGIN_URL}?data=${cipherText}`);
+        
     } catch (error) {
         console.error('Error in facebookController:', error);
         return res.status(500).json({ message: "Internal server error" });
