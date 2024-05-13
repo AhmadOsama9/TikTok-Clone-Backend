@@ -140,6 +140,7 @@ async function connect() {
   }
 }
 
+
 async function close() {
   console.log('Closing connection...');
   try {
