@@ -36,6 +36,7 @@
         "jimp": "^0.22.10",
         "jpeg-js": "^0.4.4",
         "jsonwebtoken": "^9.0.2",
+        "long": "^5.2.3",
         "mmmagic": "^0.5.3",
         "multer": "^1.4.5-lts.1",
         "music-metadata": "^7.14.0",

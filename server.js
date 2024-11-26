@@ -17,7 +17,7 @@ const server = app.listen(port, async () => {
         scheduleUserPopularityUpdate();
         scheduleVideoPopularityUpdate();
         scheduleCleanUp();
-        await initializeModel();
+        // await initializeModel();
     } catch (error) {
         console.log("Error in server.js", error);
         server.close(() => {
