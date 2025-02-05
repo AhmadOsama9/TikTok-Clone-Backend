@@ -32,27 +32,6 @@ A robust backend system inspired by TikTok, designed to provide a **secure and e
 - **CI/CD**: GitHub Workflows
 - **API Documentation**: Swagger
 
-## 📦 Installation
-
-1. **Clone the repository:**
-   ```sh
-   git clone https://github.com/yourusername/restricted-tiktok-backend.git
-   cd restricted-tiktok-backend
-   ```
-2. **Install dependencies:**
-   ```sh
-   npm install
-   ```
-3. **Set up environment variables:**
-   - Create a `.env` file and configure the necessary environment variables.
-4. **Run the server:**
-   ```sh
-   npm start
-   ```
-5. **Run tests:**
-   ```sh
-   npm test
-   ```
 
 ## 🚀 Deployment
 This backend can be deployed using **Render, AWS, or any cloud provider** supporting Node.js applications.
