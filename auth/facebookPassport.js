@@ -1,6 +1,9 @@
 const  FacebookStrategy = require('passport-facebook').Strategy;
 const passport = require("passport");
 
+// Facebook Login was not created yet
+// but if I remember correctly it just needs the auth credentials
+
 passport.use(
     new FacebookStrategy(
         {

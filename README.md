@@ -19,7 +19,7 @@ A robust backend system inspired by TikTok, designed to provide a **secure and e
 - **Content Reporting**: Users can report inappropriate content for review.
 
 ### 🔐 User Authentication
-- **OAuth Integration**: Supports Google and Facebook login for seamless authentication.
+- **OAuth Integration**: Supports Google login for seamless authentication.
 
 ### 🧠 Smart Algorithm
 - **Personalized Video Recommendations**: AI-driven algorithm suggests relevant videos based on user interactions.
